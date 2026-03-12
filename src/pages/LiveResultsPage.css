@@ -1,0 +1,257 @@
+.results-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 40px;
+  font-size: 24px;
+  color: white;
+}
+
+.results-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.winner-banner {
+  background: white;
+  border-radius: 30px;
+  padding: 60px 40px;
+  text-align: center;
+  margin-bottom: 30px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slide-up 0.5s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.winner-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 0.6s ease-out;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.winner-text {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.winner-banner.red .winner-text {
+  color: #ef5350;
+}
+
+.winner-banner.blue .winner-text {
+  color: #2196f3;
+}
+
+.winner-banner.tie .winner-text {
+  color: #666;
+}
+
+.scores-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 30px;
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.team-score {
+  flex: 1;
+  text-align: center;
+  padding: 30px;
+  border-radius: 20px;
+  background: #f8f8f8;
+  transition: all 0.3s;
+}
+
+.team-score.winner {
+  background: linear-gradient(135deg, #58CC02, #FFC800);
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(88, 204, 2, 0.3);
+}
+
+.team-header {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+.score-big {
+  font-size: 64px;
+  font-weight: bold;
+  color: #333;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.score-label {
+  font-size: 16px;
+  color: #666;
+  font-weight: 600;
+}
+
+.vs-divider {
+  font-size: 36px;
+  font-weight: bold;
+  color: #999;
+}
+
+.ranking-section {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 24px 0;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #f8f8f8;
+  transition: all 0.3s;
+}
+
+.ranking-item:hover {
+  background: #f0f0f0;
+  transform: translateX(5px);
+}
+
+.ranking-item.current-user {
+  background: #e8f5e9;
+  border: 2px solid #58CC02;
+}
+
+.ranking-item.winner-team {
+  background: linear-gradient(135deg, #fff3e0, #e3f2fd);
+}
+
+.rank {
+  font-size: 32px;
+  font-weight: bold;
+  min-width: 60px;
+  text-align: center;
+}
+
+.player-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.player-team {
+  font-size: 20px;
+}
+
+.player-team.red {
+  color: #ef5350;
+}
+
+.player-team.blue {
+  color: #2196f3;
+}
+
+.player-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.score-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #58CC02;
+}
+
+.accuracy {
+  font-size: 14px;
+  color: #666;
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.action-button {
+  flex: 1;
+  padding: 20px;
+  border: none;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.action-button.home {
+  background: #667eea;
+  color: white;
+}
+
+.action-button.home:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+}
+
+.action-button.new-game {
+  background: #58CC02;
+  color: white;
+}
+
+.action-button.new-game:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(88, 204, 2, 0.3);
+}
