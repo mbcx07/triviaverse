@@ -1,13 +1,9 @@
 import { useMemo, useState } from 'react'
 
-type User = { nickname: string }
+import { questions } from './data/questions'
+import type { Question } from './data/questions'
 
-type Question = {
-  id: string
-  prompt: string
-  answersAccepted: string[]
-  explanation?: string
-}
+type User = { nickname: string }
 
 function normalize(s: string) {
   return s
@@ -18,20 +14,6 @@ function normalize(s: string) {
     .replace(/\s+/g, ' ')
 }
 
-const demoQuestions: Question[] = [
-  {
-    id: 'q1',
-    prompt: '¿Cuál es la capital de México?',
-    answersAccepted: ['ciudad de mexico', 'cdmx', 'mexico, ciudad de mexico'],
-    explanation: 'La capital es la Ciudad de México (CDMX).',
-  },
-  {
-    id: 'q2',
-    prompt: '¿Cuánto es 7 × 8?',
-    answersAccepted: ['56'],
-    explanation: '7 por 8 es 56.',
-  },
-]
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -39,9 +21,24 @@ export default function App() {
   const [pin, setPin] = useState('')
 
   const [idx, setIdx] = useState(0)
-  const q = useMemo(() => demoQuestions[idx] ?? null, [idx])
+  const q = useMemo<Question | null>(() => questions[idx] ?? null, [idx])
+
+  // Per-question results: questionId -> wasCorrect
+  const [results, setResults] = useState<Record<string, boolean>>({})
+
   const [answer, setAnswer] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
+
+  const totalAnswered = useMemo(() => Object.keys(results).length, [results])
+  const correctAnswered = useMemo(
+    () => Object.values(results).filter(Boolean).length,
+    [results]
+  )
+
+  const alreadyAnswered = useMemo(() => {
+    if (!q) return false
+    return Object.prototype.hasOwnProperty.call(results, q.id)
+  }, [q, results])
 
   function onLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -52,20 +49,36 @@ export default function App() {
     }
     setFeedback(null)
     setUser({ nickname: nickname.trim() })
+    setIdx(0)
+    setResults({})
+    setAnswer('')
   }
 
   function submitAnswer(e: React.FormEvent) {
     e.preventDefault()
     if (!q) return
+
     const a = normalize(answer)
+    if (!a) {
+      setFeedback('Escribe una respuesta para comprobar.')
+      return
+    }
+
     const ok = q.answersAccepted.map(normalize).includes(a)
+
+    setResults((prev) => {
+      // Count only the first attempt per question in this MVP.
+      if (Object.prototype.hasOwnProperty.call(prev, q.id)) return prev
+      return { ...prev, [q.id]: ok }
+    })
+
     setFeedback(ok ? '✅ Correcto' : '❌ Incorrecto')
   }
 
   function next() {
     setAnswer('')
     setFeedback(null)
-    setIdx((i) => (i + 1) % demoQuestions.length)
+    setIdx((i) => (i + 1) % Math.max(questions.length, 1))
   }
 
   return (
@@ -117,19 +130,28 @@ export default function App() {
           </div>
         ) : (
           <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-            <div className="text-xs text-slate-300">Lección • 5º/6º • Respuesta escrita</div>
+            <div className="flex items-center justify-between gap-3 text-xs text-slate-300">
+              <div>Lección • 5º/6º • Respuesta escrita</div>
+              <div className="text-slate-400">
+                Pregunta {questions.length ? idx + 1 : 0}/{questions.length} • Aciertos {correctAnswered}/{totalAnswered}
+              </div>
+            </div>
             <div className="mt-2 text-lg font-semibold">{q?.prompt}</div>
 
             <form className="mt-4 space-y-3" onSubmit={submitAnswer}>
               <input
-                className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Escribe tu respuesta"
+                placeholder={alreadyAnswered ? 'Ya respondiste esta pregunta' : 'Escribe tu respuesta'}
+                disabled={alreadyAnswered}
               />
 
-              <button className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500">
-                Comprobar
+              <button
+                className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500 disabled:opacity-60"
+                disabled={alreadyAnswered}
+              >
+                {alreadyAnswered ? 'Respondida' : 'Comprobar'}
               </button>
 
               {feedback ? (
