@@ -1,0 +1,24 @@
+{
+  "name": "triviaverse",
+  "version": "1.0.0",
+  "description": "PWA estilo Duolingo para trivias (5º–6º primaria), con: - Login simple: **nickname + PIN de 4 dígitos** - Modo estudio (typed answer) - Multi-usuario desde casa (cada niño entra con su nickname) - **Firestore mode**: usuarios, lecciones/preguntas y progreso",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mbcx07/triviaverse.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mbcx07/triviaverse/issues"
+  },
+  "homepage": "https://github.com/mbcx07/triviaverse#readme",
+  "dependencies": {
+    "firebase-admin": "^13.7.0"
+  }
+}
