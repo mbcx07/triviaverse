@@ -14,8 +14,14 @@ import {
   type DocumentData,
 } from 'firebase/firestore'
 
-import { db } from './firebase'
+import { assertFirebaseEnabled, db } from './firebase'
 import { normalize } from './lib/normalize'
+
+function ensureDb() {
+  assertFirebaseEnabled()
+  // db is guaranteed by assertFirebaseEnabled
+  return db!
+}
 
 export type User = {
   id: string
@@ -54,7 +60,9 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
   if (nickname.length < 2) throw new Error('Usa un nickname de 2+ caracteres.')
   if (!/^\d{4}$/.test(pin)) throw new Error('El PIN debe ser exactamente 4 dígitos.')
 
-  const userRef = doc(db, 'users', nicknameNorm)
+  const dbi = ensureDb()
+
+  const userRef = doc(dbi, 'users', nicknameNorm)
   const snap = await getDoc(userRef)
 
   if (!snap.exists()) {
@@ -75,19 +83,22 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
 }
 
 export async function listLessons(): Promise<Lesson[]> {
-  const ref = collection(db, 'lessons')
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'lessons')
   const qs = await getDocs(query(ref, orderBy('order', 'asc')))
   return qs.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
 }
 
 export async function listQuestions(lessonId: string): Promise<Question[]> {
-  const ref = collection(db, 'lessons', lessonId, 'questions')
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'lessons', lessonId, 'questions')
   const qs = await getDocs(query(ref, orderBy('order', 'asc')))
   return qs.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
 }
 
 export async function loadAttemptsForLesson(userId: string, lessonId: string): Promise<Record<string, boolean>> {
-  const ref = collection(db, 'users', userId, 'attempts')
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'attempts')
   const qs = await getDocs(query(ref, where('lessonId', '==', lessonId), limit(500)))
   const out: Record<string, boolean> = {}
   for (const d of qs.docs) {
@@ -108,10 +119,13 @@ export async function recordAttempt(params: {
 }) {
   const { userId, lessonId, questionId, answerRaw, wasCorrect, answeredCount, correctCount } = params
   const attemptId = `${lessonId}__${questionId}`
-  const attemptRef = doc(db, 'users', userId, 'attempts', attemptId)
-  const progressRef = doc(db, 'users', userId, 'progress', lessonId)
 
-  const batch = writeBatch(db)
+  const dbi = ensureDb()
+
+  const attemptRef = doc(dbi, 'users', userId, 'attempts', attemptId)
+  const progressRef = doc(dbi, 'users', userId, 'progress', lessonId)
+
+  const batch = writeBatch(dbi)
   batch.set(
     attemptRef,
     {

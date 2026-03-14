@@ -170,7 +170,7 @@ export default function App() {
     <div className="min-h-screen text-slate-100">
       <div className="mx-auto max-w-md p-4">
         <header className="flex items-center justify-between py-4">
-          <div className="text-lg font-semibold">Triviaverse</div>
+          <div className="text-lg font-semibold">Triviverso</div>
           {user ? (
             <div className="flex items-center gap-3 text-sm text-slate-300">
               <div>Hola, {user.nickname}</div>
@@ -305,7 +305,7 @@ export default function App() {
           </div>
         )}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviaverse • Piloto 4 niños</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto 4 niños</footer>
       </div>
     </div>
   )

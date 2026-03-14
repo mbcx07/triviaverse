@@ -16,8 +16,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Triviaverse',
-        short_name: 'Triviaverse',
+        name: 'Triviverso',
+        short_name: 'Triviverso',
         description: 'Trivias estilo Duolingo para 5º y 6º de primaria',
         theme_color: '#10b981',
         background_color: '#0b1220',

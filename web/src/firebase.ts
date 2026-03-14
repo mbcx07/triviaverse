@@ -1,21 +1,41 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, type Firestore } from 'firebase/firestore'
 
-function requiredEnv(name: string): string {
+function optionalEnv(name: string): string | undefined {
   const v = (import.meta as any).env?.[name] as string | undefined
-  if (!v) throw new Error(`Missing env ${name}. Copy .env.example -> .env.local and fill Firebase config.`)
-  return v
+  return v && String(v).trim() ? v : undefined
 }
 
+// For GitHub Pages (public frontend), Firebase config must be provided at build time.
+// Copy .env.example -> .env.local for local dev, and configure VITE_ env vars in CI for deploys.
 const firebaseConfig = {
-  apiKey: requiredEnv('VITE_FIREBASE_API_KEY'),
-  authDomain: requiredEnv('VITE_FIREBASE_AUTH_DOMAIN'),
-  projectId: requiredEnv('VITE_FIREBASE_PROJECT_ID'),
-  storageBucket: requiredEnv('VITE_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: requiredEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: requiredEnv('VITE_FIREBASE_APP_ID'),
-  measurementId: ((import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID as string | undefined) ?? undefined,
+  apiKey: optionalEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: optionalEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: optionalEnv('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: optionalEnv('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: optionalEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: optionalEnv('VITE_FIREBASE_APP_ID'),
+  measurementId: optionalEnv('VITE_FIREBASE_MEASUREMENT_ID'),
 }
 
-export const firebaseApp = initializeApp(firebaseConfig)
-export const db = getFirestore(firebaseApp)
+const hasFirebase = Boolean(
+  firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.storageBucket &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId
+)
+
+export const firebaseEnabled = hasFirebase
+
+export const firebaseApp = hasFirebase ? initializeApp(firebaseConfig as any) : null
+export const db: Firestore | null = hasFirebase && firebaseApp ? getFirestore(firebaseApp) : null
+
+export function assertFirebaseEnabled(): void {
+  if (!firebaseEnabled || !db) {
+    throw new Error(
+      'Firebase no está configurado. Falta definir VITE_FIREBASE_* en el build (GitHub Actions) o en .env.local.'
+    )
+  }
+}
