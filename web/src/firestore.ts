@@ -82,6 +82,21 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
   return { id: nicknameNorm, nickname, nicknameNorm }
 }
 
+export async function changePin(params: { userId: string; oldPin: string; newPin: string }) {
+  const { userId, oldPin, newPin } = params
+  if (!/^\d{4}$/.test(newPin)) throw new Error('El PIN nuevo debe ser exactamente 4 dígitos.')
+
+  const dbi = ensureDb()
+  const userRef = doc(dbi, 'users', userId)
+  const snap = await getDoc(userRef)
+  if (!snap.exists()) throw new Error('Usuario no existe.')
+
+  const data = snap.data() as any
+  if (String(data.pin ?? '') !== String(oldPin)) throw new Error('PIN actual incorrecto.')
+
+  await updateDoc(userRef, { pin: String(newPin), pinUpdatedAt: serverTimestamp() })
+}
+
 export async function listLessons(): Promise<Lesson[]> {
   const dbi = ensureDb()
   const ref = collection(dbi, 'lessons')
