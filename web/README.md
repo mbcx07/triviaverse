@@ -1,4 +1,4 @@
-# Triviaverse Web (Vite + React + TS)
+# Triviverso Web (Vite + React + TS)
 
 ## Quickstart
 

@@ -1,4 +1,4 @@
-# Triviaverse
+# Triviverso
 
 PWA estilo Duolingo para trivias (5º–6º primaria), con:
 - Login simple: **nickname + PIN de 4 dígitos**
@@ -81,15 +81,30 @@ npm run build
 
 ---
 
-## Deploy (Firebase Hosting)
+## Deploy (GitHub Pages) ✅ (gratis)
 
-Este repo está pensado para deploy automático por GitHub Actions.
+1) En GitHub: **Settings → Pages → Source: GitHub Actions**.
+2) Configura estas **Actions Variables** (Settings → Secrets and variables → Actions → Variables) para que el build tenga Firebase:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+   - (opcional) `VITE_FIREBASE_MEASUREMENT_ID`
+
+URL esperada:
+- `https://mbcx07.github.io/triviaverse/`
+
+## Deploy (Firebase Hosting) (opcional)
+
+Este repo también incluye workflow para Firebase Hosting.
 
 Requisitos en GitHub Secrets:
 - `FIREBASE_SERVICE_ACCOUNT_TRIVIAVERSE` (JSON de service account)
-- `FIREBASE_PROJECT_ID` (por ejemplo: `triviaverse`)
+- `FIREBASE_PROJECT_ID` (por ejemplo: `triviverso`)
 
-Si usas Firebase CLI localmente, los archivos relevantes están en el root:
+Archivos relevantes en el root:
 - `firebase.json`
 - `firestore.rules`
 - `firestore.indexes.json`
