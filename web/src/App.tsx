@@ -49,21 +49,45 @@ export default function App() {
     return Object.prototype.hasOwnProperty.call(results, q.id)
   }, [q, results])
 
+  function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error(message)), ms)
+      p.then(
+        (v) => {
+          clearTimeout(t)
+          resolve(v)
+        },
+        (err) => {
+          clearTimeout(t)
+          reject(err)
+        }
+      )
+    })
+  }
+
   async function onLogin(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setStatus('Entrando…')
+    setStatus('Entrando...')
     setFeedback(null)
 
     try {
-      const u = await loginWithNicknamePin(nickname, pin)
+      const u = await withTimeout(
+        loginWithNicknamePin(nickname, pin),
+        12000,
+        'La conexión a Firestore está tardando demasiado. Revisa tu Internet o vuelve a intentar en modo incógnito.'
+      )
       setUser(u)
       setAnswer('')
       setResults({})
       setIdx(0)
-      setStatus('Cargando lecciones…')
+      setStatus('Cargando lecciones...')
 
-      const ls = await listLessons()
+      const ls = await withTimeout(
+        listLessons(),
+        12000,
+        'No pude cargar lecciones (Firestore). Reintenta; si persiste, falta inicializar la base o hay un bloqueo de red.'
+      )
       setLessons(ls)
       setLessonId((prev) => prev || ls[0]?.id || '')
 
