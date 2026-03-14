@@ -3,7 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// NOTE: This app is intended to be deployed on GitHub Pages under /triviaverse/
+// If you deploy elsewhere, adjust BASE accordingly.
+const BASE = '/triviaverse/'
+
 export default defineConfig({
+  base: BASE,
   plugins: [
     react(),
     tailwindcss(),
@@ -17,8 +22,8 @@ export default defineConfig({
         theme_color: '#10b981',
         background_color: '#0b1220',
         display: 'standalone',
-        scope: '/',
-        start_url: '/',
+        scope: BASE,
+        start_url: BASE,
         icons: [
           {
             src: 'pwa-192x192.png',
