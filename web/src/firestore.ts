@@ -479,6 +479,37 @@ export function subscribeBattleRoom(roomId: string, cb: (r: BattleRoom | null) =
   })
 }
 
+export function subscribeBattleMessages(
+  roomId: string,
+  cb: (msgs: Array<{ id: string; userId: string; text: string; createdAt?: any }>) => void
+): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'battleRooms', roomId, 'messages')
+  const q = query(ref, orderBy('createdAt', 'asc'), limit(100))
+  return onSnapshot(q, (qs) => {
+    const out = qs.docs.map((d) => {
+      const data = d.data() as any
+      return { id: d.id, userId: String(data.userId || ''), text: String(data.text || ''), createdAt: data.createdAt }
+    })
+    cb(out)
+  })
+}
+
+export async function sendBattleMessage(params: { roomId: string; userId: string; text: string }) {
+  const dbi = ensureDb()
+  const text = params.text.trim().slice(0, 200)
+  if (!text) return
+  const ref = doc(collection(dbi, 'battleRooms', params.roomId, 'messages'))
+  await setDoc(ref, { userId: params.userId, text, createdAt: serverTimestamp() }, { merge: true })
+}
+
+export async function submitBattleScore(params: { roomId: string; userId: string; correct: number; answered: number }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  const field = `scores.${params.userId}`
+  await setDoc(ref, { [field]: { correct: params.correct, answered: params.answered, updatedAt: serverTimestamp() } }, { merge: true })
+}
+
 // --- Live subscriptions ---
 export function subscribeUser(userId: string, cb: (u: User) => void): Unsubscribe {
   const dbi = ensureDb()

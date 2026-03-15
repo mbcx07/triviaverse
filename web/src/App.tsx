@@ -18,6 +18,9 @@ import {
   createBattleRoom,
   joinBattleRoom,
   subscribeBattleRoom,
+  subscribeBattleMessages,
+  sendBattleMessage,
+  submitBattleScore,
   type Lesson,
   type Question,
   type User,
@@ -126,6 +129,8 @@ export default function App() {
   // battles
   const [battleRoomId, setBattleRoomId] = useState<string>('')
   const [battleRoom, setBattleRoom] = useState<any>(null)
+  const [battleMsgs, setBattleMsgs] = useState<Array<{ id: string; userId: string; text: string }>>([])
+  const [battleMsgText, setBattleMsgText] = useState('')
 
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
@@ -368,6 +373,14 @@ export default function App() {
 
       if (Object.keys(nextResults).length === 6) {
         setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+        if (tab === 'battle' && battleRoomId) {
+          await submitBattleScore({
+            roomId: battleRoomId,
+            userId: user.id,
+            correct: Object.values(nextResults).filter(Boolean).length,
+            answered: Object.keys(nextResults).length,
+          })
+        }
       }
     } catch (err: any) {
       const msg = String(err?.message || '')
@@ -839,6 +852,8 @@ export default function App() {
                   setBattleRoomId(r.id)
                   ;(window as any).__tv_unsubBattle?.()
                   ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                  ;(window as any).__tv_unsubBattleMsgs?.()
+                  ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, (m) => setBattleMsgs(m))
                 }}
               >
                 Crear batalla
@@ -862,6 +877,8 @@ export default function App() {
                       await joinBattleRoom({ roomId: battleRoomId, userId: user.id, teamId: user.teamId || 'belas' })
                       ;(window as any).__tv_unsubBattle?.()
                       ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
+                      ;(window as any).__tv_unsubBattleMsgs?.()
+                      ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, (m) => setBattleMsgs(m))
                     }}
                   >
                     Unirme
@@ -878,12 +895,45 @@ export default function App() {
                     Host: <span className="font-black text-white">{battleRoom.hostTeamId || '-'}</span> vs Guest:{' '}
                     <span className="font-black text-white">{battleRoom.guestTeamId || '—'}</span>
                   </div>
+
+                  <div className="mt-3 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10">
+                    <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80">Chat</div>
+                    <div className="mt-2 max-h-40 space-y-2 overflow-auto">
+                      {battleMsgs.map((m) => (
+                        <div key={m.id} className={`rounded-2xl px-3 py-2 text-sm ring-1 ring-white/10 ${m.userId === user?.id ? 'bg-[#1CB0F6]/20' : 'bg-white/5'}`}>
+                          <div className="text-[10px] font-black text-slate-200/70">{m.userId === user?.id ? 'Tú' : m.userId}</div>
+                          <div className="font-bold text-white">{m.text}</div>
+                        </div>
+                      ))}
+                      {!battleMsgs.length ? <div className="text-xs text-slate-300/70">Sin mensajes aún.</div> : null}
+                    </div>
+
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black text-white ring-1 ring-white/10"
+                        value={battleMsgText}
+                        onChange={(e) => setBattleMsgText(e.target.value)}
+                        placeholder="Escribe..."
+                      />
+                      <button
+                        className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
+                        onClick={async () => {
+                          if (!user) return
+                          if (!battleRoomId) return
+                          await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: battleMsgText })
+                          setBattleMsgText('')
+                        }}
+                      >
+                        Enviar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </div>
 
             <div className="mt-4 text-xs text-slate-300/70">
-              Nota: chat/amigos/audio se integran después (fase social). Primero dejamos el loop de batalla estable.
+              Siguiente: reglas completas de batalla (mismo set de misión, puntaje y ganador). Audio/llamada va en fase WebRTC.
             </div>
           </div>
         ) : tab === 'league' ? (
