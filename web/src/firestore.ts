@@ -605,6 +605,54 @@ export async function submitBattleScore(params: { roomId: string; userId: string
   await setDoc(ref, { [field]: { correct: params.correct, answered: params.answered, updatedAt: serverTimestamp() } }, { merge: true })
 }
 
+// --- Voice (WebRTC signaling via Firestore) ---
+export function subscribeVoiceSignal(
+  params: {
+    roomId: string
+    scopeKey: string
+    kind: 'offer' | 'answer'
+    cb: (data: any | null) => void
+  }
+): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId, 'webrtc', params.scopeKey, 'signals', params.kind)
+  return onSnapshot(ref, (snap) => {
+    if (!snap.exists()) return params.cb(null)
+    params.cb(snap.data() as any)
+  })
+}
+
+export function subscribeVoiceCandidates(
+  params: {
+    roomId: string
+    scopeKey: string
+    kind: 'caller' | 'callee'
+    cb: (c: any) => void
+  }
+): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'battleRooms', params.roomId, 'webrtc', params.scopeKey, 'candidates', params.kind)
+  const q = query(ref, orderBy('createdAt', 'asc'), limit(200))
+  return onSnapshot(q, (qs) => {
+    for (const d of qs.docChanges()) {
+      if (d.type !== 'added') continue
+      params.cb((d.doc.data() as any).candidate)
+    }
+  })
+}
+
+export async function publishVoiceSignal(params: { roomId: string; scopeKey: string; kind: 'offer' | 'answer'; sdp: any }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId, 'webrtc', params.scopeKey, 'signals', params.kind)
+  await setDoc(ref, { sdp: params.sdp, updatedAt: serverTimestamp() }, { merge: true })
+}
+
+export async function publishVoiceCandidate(params: { roomId: string; scopeKey: string; kind: 'caller' | 'callee'; candidate: any }) {
+  const dbi = ensureDb()
+  const ref = doc(collection(dbi, 'battleRooms', params.roomId, 'webrtc', params.scopeKey, 'candidates', params.kind))
+  await setDoc(ref, { candidate: params.candidate, createdAt: serverTimestamp() }, { merge: true })
+}
+
 // --- Live subscriptions ---
 export function subscribeUser(userId: string, cb: (u: User) => void): Unsubscribe {
   const dbi = ensureDb()
