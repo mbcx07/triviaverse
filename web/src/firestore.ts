@@ -285,6 +285,12 @@ export async function recordAttempt(params: {
     const teamId = u.teamId ? String(u.teamId) : TEAM_BELAS_ID
     const nickname = String(u.nickname || userId)
 
+    // progress per lesson (READS must happen before WRITES inside a transaction)
+    const starsNow = calcStars(answeredCount, correctCount)
+    const progressSnap = await tx.get(progressRef)
+    const prevBest = progressSnap.exists() ? Number((progressSnap.data() as any).starsBest || 0) : 0
+    const nextBest = answeredCount >= 6 ? Math.max(prevBest, starsNow) : prevBest
+
     // attempt write (immutable)
     tx.set(
       attemptRef,
@@ -300,12 +306,6 @@ export async function recordAttempt(params: {
       },
       { merge: false }
     )
-
-    // progress per lesson
-    const starsNow = calcStars(answeredCount, correctCount)
-    const progressSnap = await tx.get(progressRef)
-    const prevBest = progressSnap.exists() ? Number((progressSnap.data() as any).starsBest || 0) : 0
-    const nextBest = answeredCount >= 6 ? Math.max(prevBest, starsNow) : prevBest
 
     tx.set(
       progressRef,

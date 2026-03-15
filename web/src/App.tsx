@@ -353,7 +353,12 @@ export default function App() {
         setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
       }
     } catch (err: any) {
-      setError(err?.message || 'No se pudo guardar el intento (Firestore).')
+      const msg = String(err?.message || '')
+      if (msg.includes('Firestore transactions require all reads')) {
+        setError('Hubo un error temporal al guardar. Intenta de nuevo.')
+      } else {
+        setError(err?.message || 'No se pudo guardar el intento (Firestore).')
+      }
     }
   }
 
