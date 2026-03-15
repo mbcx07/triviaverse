@@ -161,8 +161,8 @@ export function subscribeOpenBattleRooms(
 ): Unsubscribe {
   const dbi = ensureDb()
   const ref = collection(dbi, 'battleRooms')
-  // Simple query: open rooms
-  const q = query(ref, where('status', '==', 'open'), orderBy('createdAt', 'desc'), limit(25))
+  // Keep query index-free for now (avoid composite index requirements)
+  const q = query(ref, where('status', '==', 'open'), limit(25))
   return onSnapshot(q, (qs) => {
     const rooms = qs.docs.map((d) => {
       const data = d.data() as any
