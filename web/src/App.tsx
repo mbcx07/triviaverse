@@ -137,6 +137,13 @@ export default function App() {
   const [answerText, setAnswerText] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
 
+  // order_words UI state
+  const [orderSelected, setOrderSelected] = useState<string[]>([])
+
+  // match_pairs UI state
+  const [matchLeft, setMatchLeft] = useState<string | null>(null)
+  const [matchMap, setMatchMap] = useState<Record<string, string>>({})
+
   const totalAnswered = useMemo(() => Object.keys(results).length, [results])
   const correctAnswered = useMemo(() => Object.values(results).filter(Boolean).length, [results])
 
@@ -269,6 +276,9 @@ export default function App() {
       setStatus('Cargando preguntas…')
       setFeedback(null)
       setAnswerText('')
+      setOrderSelected([])
+      setMatchLeft(null)
+      setMatchMap({})
 
       try {
         const [qs, at] = await Promise.all([listQuestions(lessonId), loadAttemptsForLesson(user.id, lessonId)])
@@ -290,17 +300,14 @@ export default function App() {
     }
   }, [user, lessonId, tab])
 
-  async function submitTextAnswer(e: React.FormEvent) {
-    e.preventDefault()
+  async function submitAnswerGeneric(answerRaw: any) {
     if (!user || !lessonId || !q) return
-
     if (alreadyAnswered) {
       setFeedback('Ya respondiste esta pregunta.')
       return
     }
 
-    const { ok } = checkAnswer(q, answerText)
-
+    const { ok } = checkAnswer(q, answerRaw)
     const nextResults = { ...results, [q.id]: ok }
     setResults(nextResults)
     setFeedback(ok ? '✅ Correcto' : '❌ Incorrecto')
@@ -310,23 +317,20 @@ export default function App() {
         userId: user.id,
         lessonId,
         questionId: q.id,
-        answerRaw: answerText,
+        answerRaw: typeof answerRaw === 'string' ? answerRaw : JSON.stringify(answerRaw),
         wasCorrect: ok,
         answeredCount: Object.keys(nextResults).length,
         correctCount: Object.values(nextResults).filter(Boolean).length,
       })
-      // optimistic UI
-      setUser({
-        ...user,
-        xpTotal: r.xpTotal,
-        streakCount: r.streakCount,
-      })
 
-      // update progressMap for route locks
-      setProgressMap((pm) => {
-        const next = { ...pm, [lessonId]: { answeredCount: Object.keys(nextResults).length, correctCount: Object.values(nextResults).filter(Boolean).length } }
-        return next
-      })
+      setUser({ ...user, xpTotal: r.xpTotal, streakCount: r.streakCount })
+      setProgressMap((pm) => ({
+        ...pm,
+        [lessonId]: {
+          answeredCount: Object.keys(nextResults).length,
+          correctCount: Object.values(nextResults).filter(Boolean).length,
+        },
+      }))
 
       if (Object.keys(nextResults).length === 6) {
         setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
@@ -334,81 +338,34 @@ export default function App() {
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el intento (Firestore).')
     }
+  }
+
+  async function submitTextAnswer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user || !lessonId || !q) return
+    await submitAnswerGeneric(answerText)
   }
 
   async function answerChoice(choiceIndex: number) {
     if (!user || !lessonId || !q) return
     if (alreadyAnswered) return
 
-    const { ok } = checkAnswer(q, choiceIndex)
-    const nextResults = { ...results, [q.id]: ok }
-    setResults(nextResults)
-    setFeedback(ok ? '✅ Correcto' : '❌ Incorrecto')
-
-    try {
-      const r = await recordAttempt({
-        userId: user.id,
-        lessonId,
-        questionId: q.id,
-        answerRaw: String(choiceIndex),
-        wasCorrect: ok,
-        answeredCount: Object.keys(nextResults).length,
-        correctCount: Object.values(nextResults).filter(Boolean).length,
-      })
-      setUser({ ...user, xpTotal: r.xpTotal, streakCount: r.streakCount })
-      setProgressMap((pm) => ({
-        ...pm,
-        [lessonId]: {
-          answeredCount: Object.keys(nextResults).length,
-          correctCount: Object.values(nextResults).filter(Boolean).length,
-        },
-      }))
-      if (Object.keys(nextResults).length === 6) {
-        setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
-      }
-    } catch (err: any) {
-      setError(err?.message || 'No se pudo guardar el intento (Firestore).')
-    }
+    await submitAnswerGeneric(choiceIndex)
   }
 
   async function answerTF(v: boolean) {
     if (!user || !lessonId || !q) return
     if (alreadyAnswered) return
 
-    const { ok } = checkAnswer(q, v)
-    const nextResults = { ...results, [q.id]: ok }
-    setResults(nextResults)
-    setFeedback(ok ? '✅ Correcto' : '❌ Incorrecto')
-
-    try {
-      const r = await recordAttempt({
-        userId: user.id,
-        lessonId,
-        questionId: q.id,
-        answerRaw: String(v),
-        wasCorrect: ok,
-        answeredCount: Object.keys(nextResults).length,
-        correctCount: Object.values(nextResults).filter(Boolean).length,
-      })
-      setUser({ ...user, xpTotal: r.xpTotal, streakCount: r.streakCount })
-      setProgressMap((pm) => ({
-        ...pm,
-        [lessonId]: {
-          answeredCount: Object.keys(nextResults).length,
-          correctCount: Object.values(nextResults).filter(Boolean).length,
-        },
-      }))
-      if (Object.keys(nextResults).length === 6) {
-        setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
-      }
-    } catch (err: any) {
-      setError(err?.message || 'No se pudo guardar el intento (Firestore).')
-    }
+    await submitAnswerGeneric(v)
   }
 
   function next() {
     setAnswerText('')
     setFeedback(null)
+    setOrderSelected([])
+    setMatchLeft(null)
+    setMatchMap({})
     setIdx((i) => (i + 1) % Math.max(questions.length, 1))
   }
 
@@ -420,6 +377,41 @@ export default function App() {
   }, [subjectGroups, world])
 
   const qType = (q as any)?.type || 'write'
+
+  const orderTokens = useMemo(() => (Array.isArray((q as any)?.tokens) ? ((q as any).tokens as string[]) : []), [q])
+  const orderPool = useMemo(() => {
+    if (!orderTokens.length) return []
+    // deterministic-ish shuffle per question
+    const seed = String((q as any)?.id || '')
+    const arr = [...orderTokens]
+    let h = 0
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+    for (let i = arr.length - 1; i > 0; i--) {
+      h = (h * 1664525 + 1013904223) >>> 0
+      const j = h % (i + 1)
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+  }, [orderTokens, q])
+
+  const matchPairs = useMemo(
+    () => (Array.isArray((q as any)?.pairs) ? ((q as any).pairs as Array<{ left: string; right: string }>) : []),
+    [q]
+  )
+  const matchRights = useMemo(() => {
+    if (!matchPairs.length) return []
+    const rights = matchPairs.map((p) => p.right)
+    // shuffle rights
+    const seed = String((q as any)?.id || '') + 'R'
+    let h = 0
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+    for (let i = rights.length - 1; i > 0; i--) {
+      h = (h * 1664525 + 1013904223) >>> 0
+      const j = h % (i + 1)
+      ;[rights[i], rights[j]] = [rights[j], rights[i]]
+    }
+    return rights
+  }, [matchPairs, q])
 
   const xpTotal = user?.xpTotal ?? 0
   const level = Math.floor(xpTotal / 100) + 1
@@ -866,7 +858,7 @@ export default function App() {
                   <button
                     key={i}
                     disabled={alreadyAnswered}
-                    className="rounded-xl bg-slate-950/40 px-3 py-3 text-left text-sm ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                    className="rounded-2xl bg-slate-950/40 px-3 py-3 text-left text-sm font-bold ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
                     onClick={() => answerChoice(i)}
                   >
                     {opt}
@@ -877,23 +869,135 @@ export default function App() {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
                   disabled={alreadyAnswered}
-                  className="rounded-xl bg-slate-950/40 px-3 py-3 text-sm ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                  className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
                   onClick={() => answerTF(true)}
                 >
                   Verdadero
                 </button>
                 <button
                   disabled={alreadyAnswered}
-                  className="rounded-xl bg-slate-950/40 px-3 py-3 text-sm ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                  className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
                   onClick={() => answerTF(false)}
                 >
                   Falso
                 </button>
               </div>
+            ) : qType === 'order_words' ? (
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+                  <div className="text-xs text-slate-300/80">Tu oración</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {orderSelected.length ? (
+                      orderSelected.map((t, i) => (
+                        <button
+                          key={i}
+                          disabled={alreadyAnswered}
+                          className="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black text-white ring-1 ring-white/10 hover:bg-white/15 disabled:opacity-60"
+                          onClick={() => {
+                            if (alreadyAnswered) return
+                            setOrderSelected((s) => s.filter((_, idx2) => idx2 !== i))
+                          }}
+                        >
+                          {t}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-sm text-slate-300/70">Toca palabras abajo para ordenarlas aquí.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+                  <div className="text-xs text-slate-300/80">Palabras</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {orderPool
+                      .filter((t) => !orderSelected.includes(t))
+                      .map((t, i) => (
+                        <button
+                          key={i}
+                          disabled={alreadyAnswered}
+                          className="rounded-2xl bg-slate-950/40 px-3 py-2 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                          onClick={() => {
+                            if (alreadyAnswered) return
+                            setOrderSelected((s) => [...s, t])
+                          }}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+
+                <button
+                  disabled={alreadyAnswered || orderSelected.length !== orderTokens.length}
+                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
+                  onClick={() => submitAnswerGeneric(orderSelected)}
+                >
+                  Comprobar
+                </button>
+              </div>
+            ) : qType === 'match_pairs' ? (
+              <div className="mt-4 space-y-3">
+                <div className="text-xs text-slate-300/80">Toca un concepto (izquierda) y luego su pareja (derecha).</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    {matchPairs.map((p, i) => {
+                      const isActive = matchLeft === p.left
+                      const chosen = matchMap[p.left]
+                      return (
+                        <button
+                          key={i}
+                          disabled={alreadyAnswered}
+                          className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-60 ${
+                            isActive ? 'bg-[#7C4DFF]/50' : 'bg-slate-950/40 hover:bg-slate-950/60'
+                          }`}
+                          onClick={() => {
+                            if (alreadyAnswered) return
+                            setMatchLeft(p.left)
+                          }}
+                        >
+                          {p.left}
+                          {chosen ? <div className="mt-1 text-xs text-slate-200/80">→ {chosen}</div> : null}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="space-y-2">
+                    {matchRights.map((r, i) => {
+                      const used = Object.values(matchMap).includes(r)
+                      return (
+                        <button
+                          key={i}
+                          disabled={alreadyAnswered || !matchLeft || used}
+                          className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-50 ${
+                            used ? 'bg-slate-800/30' : 'bg-slate-950/40 hover:bg-slate-950/60'
+                          }`}
+                          onClick={() => {
+                            if (alreadyAnswered) return
+                            if (!matchLeft) return
+                            setMatchMap((m) => ({ ...m, [matchLeft]: r }))
+                            setMatchLeft(null)
+                          }}
+                        >
+                          {r}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  disabled={alreadyAnswered || Object.keys(matchMap).length !== matchPairs.length}
+                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
+                  onClick={() => submitAnswerGeneric(matchMap)}
+                >
+                  Comprobar
+                </button>
+              </div>
             ) : (
               <form className="mt-4 space-y-3" onSubmit={submitTextAnswer}>
                 <input
-                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
+                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6] disabled:opacity-60"
                   value={answerText}
                   onChange={(e) => setAnswerText(e.target.value)}
                   placeholder={alreadyAnswered ? 'Ya respondiste esta pregunta' : 'Escribe tu respuesta'}
@@ -901,7 +1005,7 @@ export default function App() {
                 />
 
                 <button
-                  className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500 disabled:opacity-60"
+                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
                   disabled={alreadyAnswered || !q}
                 >
                   {alreadyAnswered ? 'Respondida' : 'Comprobar'}
@@ -923,7 +1027,7 @@ export default function App() {
               </div>
             ) : null}
 
-            <div className="mt-4 text-xs text-slate-400">Tipos: write/fill_blank, multiple_choice, true_false (v1).</div>
+            <div className="mt-4 text-xs text-slate-400">Tipos: write/fill_blank, multiple_choice, true_false, order_words, match_pairs (v1).</div>
           </div>
         )}
 
