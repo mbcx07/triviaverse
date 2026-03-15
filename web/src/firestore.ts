@@ -180,6 +180,21 @@ export async function loadAttemptsForLesson(userId: string, lessonId: string): P
   return out
 }
 
+export async function loadProgressMap(userId: string): Promise<Record<string, { answeredCount: number; correctCount: number }>> {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'progress')
+  const qs = await getDocs(query(ref, limit(500)))
+  const out: Record<string, { answeredCount: number; correctCount: number }> = {}
+  for (const d of qs.docs) {
+    const data = d.data() as any
+    out[d.id] = {
+      answeredCount: Number(data.answeredCount || 0),
+      correctCount: Number(data.correctCount || 0),
+    }
+  }
+  return out
+}
+
 export async function getWeeklyLeaderboard(params: {
   weekKey?: string
   scope: 'global' | 'team'

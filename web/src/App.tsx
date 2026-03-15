@@ -5,6 +5,7 @@ import {
   listLessons,
   listQuestions,
   loadAttemptsForLesson,
+  loadProgressMap,
   loginWithNicknamePin,
   recordAttempt,
   changePin,
@@ -87,6 +88,9 @@ export default function App() {
   // questionId -> wasCorrect
   const [results, setResults] = useState<Record<string, boolean>>({})
 
+  // lessonId -> progress
+  const [progressMap, setProgressMap] = useState<Record<string, { answeredCount: number; correctCount: number }>>({})
+
   const [answerText, setAnswerText] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
 
@@ -141,6 +145,10 @@ export default function App() {
       )
       setLessons(ls)
       setLessonId((prev) => prev || ls[0]?.id || '')
+
+      // load progress for route locks
+      const pm = await withTimeout(loadProgressMap(u.id), 12000, 'No pude cargar progreso (Firestore).')
+      setProgressMap(pm)
 
       setTab('home')
       setStatus(null)
@@ -354,6 +362,13 @@ export default function App() {
     setFeedback(null)
     setError(null)
     setStatus(null)
+  }
+
+  function isLessonCompleted(lessonId: string): boolean {
+    const p = progressMap[lessonId]
+    if (!p) return false
+    // v1 heuristic: seed packs are ~6 questions. Consider completed when answered >= 6.
+    return (p.answeredCount || 0) >= 6
   }
 
   return (
@@ -581,18 +596,26 @@ export default function App() {
                   <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-white/10" />
 
                   {worldGroups[0]?.lessons?.map((l, i) => {
-                    const active = l.id === lessonId
-                    // very light status (v1): current = active, completed/locked TBD
-                    const status: 'current' | 'unlocked' = active ? 'current' : 'unlocked'
+                    const completed = isLessonCompleted(l.id)
+                    const prev = worldGroups[0]?.lessons?.[i - 1]
+                    const prevCompleted = prev ? isLessonCompleted(prev.id) : true
+                    const unlocked = i === 0 ? true : prevCompleted
+                    const current = unlocked && !completed && (i === 0 || prevCompleted)
+                    const locked = !unlocked
 
                     const x = Math.sin(i * 1.2) * 60
                     return (
                       <div key={l.id} className="relative z-10" style={{ marginLeft: `${x}px` }}>
                         <button
-                          className={`group relative flex h-20 w-20 items-center justify-center rounded-full border-b-8 text-center transition-all active:border-b-0 active:translate-y-2
-                            ${status === 'current'
-                              ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20'
-                              : 'bg-slate-900/70 border-slate-700 hover:bg-slate-900'}
+                          disabled={locked}
+                          className={`group relative flex h-20 w-20 items-center justify-center rounded-full border-b-8 text-center transition-all active:border-b-0 active:translate-y-2 disabled:cursor-not-allowed disabled:opacity-70
+                            ${completed
+                              ? 'bg-[#58CC02] border-[#46A302]'
+                              : locked
+                                ? 'bg-slate-700/50 border-slate-700'
+                                : current
+                                  ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20'
+                                  : 'bg-slate-900/70 border-slate-700 hover:bg-slate-900'}
                           `}
                           onClick={() => {
                             setLessonId(l.id)
@@ -600,7 +623,7 @@ export default function App() {
                           }}
                           title={l.title || l.id}
                         >
-                          <span className="text-xs font-black text-white">{i + 1}</span>
+                          <span className="text-xs font-black text-white">{completed ? '✓' : i + 1}</span>
 
                           <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-black/70 px-3 py-1 text-xs font-bold text-white opacity-0 ring-1 ring-white/10 transition-opacity group-hover:opacity-100">
                             {l.title || l.id}
@@ -609,6 +632,10 @@ export default function App() {
                       </div>
                     )
                   })}
+                </div>
+
+                <div className="mt-3 text-xs text-slate-300/70">
+                  Tip: se desbloquea la siguiente lección cuando completas la anterior (contesta 6 preguntas).
                 </div>
               </div>
             ) : null}
