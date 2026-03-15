@@ -7,6 +7,7 @@ import {
   loadAttemptsForLesson,
   loadProgressMap,
   loginWithNicknamePin,
+  subscribeOpenBattleRooms,
   recordAttempt,
   changePin,
   ensureTeam,
@@ -112,6 +113,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [nickname, setNickname] = useState('')
   const [pin, setPin] = useState('')
+  const [teamCode, setTeamCode] = useState('')
 
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -131,6 +133,8 @@ export default function App() {
   const [battleRoom, setBattleRoom] = useState<any>(null)
   const [battleMsgs, setBattleMsgs] = useState<Array<{ id: string; userId: string; text: string }>>([])
   const [battleMsgText, setBattleMsgText] = useState('')
+  const [openRooms, setOpenRooms] = useState<Array<{ id: string; hostTeamId?: string; status?: string; subject?: string }>>([])
+  const [openLobbyOn, setOpenLobbyOn] = useState(false)
 
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
@@ -205,7 +209,7 @@ export default function App() {
 
     try {
       const u = await withTimeout(
-        loginWithNicknamePin(nickname, pin),
+        loginWithNicknamePin(nickname, pin, teamCode),
         12000,
         'La conexión a Firestore está tardando demasiado. Revisa tu Internet o vuelve a intentar en modo incógnito.'
       )
@@ -758,6 +762,17 @@ export default function App() {
                 />
               </label>
 
+              <label className="block">
+                <div className="mb-1 text-xs text-slate-300">Código de equipo (opcional, para Batallas)</div>
+                <input
+                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
+                  value={teamCode}
+                  onChange={(e) => setTeamCode(e.target.value)}
+                  placeholder="familia123"
+                />
+                <div className="mt-1 text-[11px] text-slate-400">Úsalo para jugar con tu familia como equipo.</div>
+              </label>
+
               <button className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500">Entrar</button>
 
               <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano (permitido para este prototipo).</div>
@@ -811,14 +826,32 @@ export default function App() {
           </div>
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-lg font-extrabold">Batallas (beta)</div>
-                <div className="mt-1 text-xs text-slate-300/80">Crear sala o unirte con un código.</div>
+                <div className="mt-1 text-xs text-slate-300/80">Crear sala, lobby abierto o unirte con código.</div>
               </div>
-              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
-                Volver
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${openLobbyOn ? 'bg-[#1CB0F6]/70' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  onClick={() => {
+                    setOpenLobbyOn((v) => !v)
+                    if (!openLobbyOn) {
+                      ;(window as any).__tv_unsubOpenRooms?.()
+                      ;(window as any).__tv_unsubOpenRooms = subscribeOpenBattleRooms((r) => setOpenRooms(r))
+                    } else {
+                      ;(window as any).__tv_unsubOpenRooms?.()
+                      ;(window as any).__tv_unsubOpenRooms = null
+                      setOpenRooms([])
+                    }
+                  }}
+                >
+                  Lobby
+                </button>
+                <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
+                  Volver
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
@@ -844,6 +877,32 @@ export default function App() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3">
+              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Lobby abierto (sin código)</div>
+                <div className="mt-1 text-xs text-slate-300/80">Únete a una sala abierta o crea una nueva.</div>
+
+                <div className="mt-3 space-y-2">
+                  {openRooms.map((r) => (
+                    <button
+                      key={r.id}
+                      className="w-full rounded-2xl bg-white/5 px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 hover:bg-white/10"
+                      onClick={async () => {
+                        if (!user) return
+                        setBattleRoomId(r.id)
+                        await joinBattleRoom({ roomId: r.id, userId: user.id, teamId: user.teamId || 'belas' })
+                        ;(window as any).__tv_unsubBattle?.()
+                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                        ;(window as any).__tv_unsubBattleMsgs?.()
+                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, (m) => setBattleMsgs(m))
+                      }}
+                    >
+                      Sala {r.id} • {r.subject || 'esp'} • Host {r.hostTeamId || '-'}
+                    </button>
+                  ))}
+                  {!openRooms.length ? <div className="text-xs text-slate-300/70">No hay salas abiertas ahora.</div> : null}
+                </div>
+              </div>
+
               <button
                 className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
                 onClick={async () => {

@@ -89,10 +89,15 @@ export type QuestionMatch = QuestionBase & {
 
 export type Question = QuestionWrite | QuestionMC | QuestionTF | QuestionOrder | QuestionMatch
 
-export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string): Promise<User> {
+export async function loginWithNicknamePin(
+  nicknameRaw: string,
+  pinRaw: string,
+  teamCodeRaw?: string
+): Promise<User> {
   const nickname = nicknameRaw.trim()
   const pin = pinRaw.trim()
   const nicknameNorm = normalize(nickname)
+  const teamCode = normalize(String(teamCodeRaw || ''))
 
   if (nickname.length < 2) throw new Error('Usa un nickname de 2+ caracteres.')
   if (!/^\d{4}$/.test(pin)) throw new Error('El PIN debe ser exactamente 4 dígitos.')
@@ -103,12 +108,15 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
 
   const defaultTeamId = FREE_TEAM_NICKNAMES.has(nicknameNorm) ? TEAM_BELAS_ID : undefined
 
+  const teamIdFromCode = teamCode ? teamCode : undefined
+
   if (!snap.exists()) {
     await setDoc(userRef, {
       nickname,
       nicknameNorm,
       pin, // Prototype only (plain PIN allowed by requirement). Do NOT ship to production like this.
-      teamId: defaultTeamId || null,
+      teamId: teamIdFromCode || defaultTeamId || null,
+      teamCode: teamCode || null,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
       lastActiveAt: serverTimestamp(),
@@ -123,9 +131,15 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
       lastLoginAt: serverTimestamp(),
       lastActiveAt: serverTimestamp(),
       nickname,
-      // only set a team automatically if none exists
-      ...(data.teamId ? {} : { teamId: defaultTeamId || null }),
+      ...(teamCode ? { teamCode } : {}),
+      // prefer explicit team code, otherwise only set a team automatically if none exists
+      ...(teamIdFromCode ? { teamId: teamIdFromCode } : data.teamId ? {} : { teamId: defaultTeamId || null }),
     })
+  }
+
+  // Ensure team document exists when using team code
+  if (teamIdFromCode) {
+    await ensureTeam(teamIdFromCode)
   }
 
   const snap2 = await getDoc(userRef)
@@ -141,6 +155,23 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
     teamId: data2.teamId ? String(data2.teamId) : undefined,
   }
 }
+
+export function subscribeOpenBattleRooms(
+  cb: (rooms: Array<{ id: string; hostTeamId?: string; status?: string; subject?: string }>) => void
+): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'battleRooms')
+  // Simple query: open rooms
+  const q = query(ref, where('status', '==', 'open'), orderBy('createdAt', 'desc'), limit(25))
+  return onSnapshot(q, (qs) => {
+    const rooms = qs.docs.map((d) => {
+      const data = d.data() as any
+      return { id: d.id, hostTeamId: data.hostTeamId, status: data.status, subject: data.subject }
+    })
+    cb(rooms)
+  })
+}
+
 
 export async function changePin(params: { userId: string; oldPin: string; newPin: string }) {
   const { userId, oldPin, newPin } = params
