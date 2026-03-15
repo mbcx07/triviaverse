@@ -77,7 +77,8 @@ export default function App() {
   const [portalOpen, setPortalOpen] = useState(false)
   const [celebration, setCelebration] = useState<{ title: string; xpDelta: number } | null>(null)
 
-  const [tab, setTab] = useState<'home' | 'play' | 'league'>('home')
+  const [tab, setTab] = useState<'home' | 'play' | 'league' | 'trophies'>('home')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Worlds (subjects). When null, user is on the world picker.
   const [world, setWorld] = useState<string | null>(null)
@@ -378,6 +379,11 @@ export default function App() {
 
   const qType = (q as any)?.type || 'write'
 
+  const xpTotal = user?.xpTotal ?? 0
+  const level = Math.floor(xpTotal / 100) + 1
+  const levelXp = xpTotal % 100
+  const levelProgressPct = Math.min(100, Math.max(0, (levelXp / 100) * 100))
+
   function pickRandomUnlockedLesson(): Lesson | null {
     if (!lessons.length) return null
 
@@ -435,40 +441,75 @@ export default function App() {
           </div>
           {user ? (
             <div className="flex items-center gap-2 text-sm text-slate-300">
-              <div className="hidden sm:block">Hola, {user.nickname}</div>
-              <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">XP: {user.xpTotal ?? 0}</div>
-              <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Racha: {user.streakCount ?? 0}</div>
+              {/* Desktop nav */}
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="hidden md:block">Hola, {user.nickname}</div>
 
-              <button
-                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                onClick={() => setTab('home')}
-              >
-                Mundos
-              </button>
-              <button
-                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                onClick={() => setTab('play')}
-              >
-                Jugar
-              </button>
-              <button
-                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
-                onClick={() => setTab('league')}
-              >
-                Liga
-              </button>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Nivel {level}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">XP {xpTotal}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Racha {user.streakCount ?? 0}</div>
 
-              <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
-                Config
-              </button>
-              <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={logout}>
-                Salir
-              </button>
+                <button
+                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  onClick={() => setTab('home')}
+                >
+                  Mundos
+                </button>
+                <button
+                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  onClick={() => setTab('play')}
+                >
+                  Jugar
+                </button>
+                <button
+                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  onClick={() => setTab('league')}
+                >
+                  Liga
+                </button>
+                <button
+                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  onClick={() => setTab('trophies')}
+                >
+                  Trofeos
+                </button>
+
+                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
+                  Config
+                </button>
+                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={logout}>
+                  Salir
+                </button>
+              </div>
+
+              {/* Mobile compact */}
+              <div className="flex sm:hidden items-center gap-2">
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-[11px] ring-1 ring-white/10">Nv {level}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-[11px] ring-1 ring-white/10">XP {xpTotal}</div>
+                <button
+                  className="rounded-lg bg-slate-800 px-3 py-2 text-[11px] font-bold hover:bg-slate-700"
+                  onClick={() => setMenuOpen(true)}
+                >
+                  Menú
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-sm text-slate-400">PWA piloto</div>
           )}
         </header>
+
+        {user ? (
+          <div className="mb-3 rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-slate-300/80">Nivel {level} • {levelXp}/100</div>
+              <div className="text-xs text-slate-300/80">Racha {user.streakCount ?? 0}</div>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="h-full bg-gradient-to-r from-[#1CB0F6] via-[#7C4DFF] to-[#FFC800]" style={{ width: `${levelProgressPct}%` }} />
+            </div>
+          </div>
+        ) : null}
 
         {status ? (
           <div className="mb-3 rounded-xl bg-slate-950/60 p-3 text-sm text-slate-300 ring-1 ring-white/10">{status}</div>
@@ -566,6 +607,42 @@ export default function App() {
               <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano (permitido para este prototipo).</div>
             </form>
             </div>
+          </div>
+        ) : tab === 'trophies' ? (
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            <div className="text-lg font-extrabold">Trofeos</div>
+            <div className="mt-1 text-xs text-slate-300/80">Se desbloquean con XP, racha y lecciones completadas.</div>
+
+            {(() => {
+              const completedLessons = Object.values(progressMap).filter((p) => (p?.answeredCount || 0) >= 6).length
+              const streak = user?.streakCount ?? 0
+              const trophies = [
+                { id: 'xp-100', title: 'Explorador', desc: 'Llega a 100 XP', ok: xpTotal >= 100 },
+                { id: 'xp-500', title: 'Aventurero', desc: 'Llega a 500 XP', ok: xpTotal >= 500 },
+                { id: 'streak-3', title: 'Constancia', desc: 'Racha de 3 días', ok: streak >= 3 },
+                { id: 'streak-7', title: 'Fuego', desc: 'Racha de 7 días', ok: streak >= 7 },
+                { id: 'lessons-1', title: 'Primera victoria', desc: 'Completa 1 lección', ok: completedLessons >= 1 },
+                { id: 'lessons-5', title: 'Coleccionista', desc: 'Completa 5 lecciones', ok: completedLessons >= 5 },
+              ]
+              return (
+                <div className="mt-4 grid grid-cols-1 gap-3">
+                  {trophies.map((t) => (
+                    <div
+                      key={t.id}
+                      className={`rounded-3xl p-4 ring-1 ring-white/10 ${t.ok ? 'bg-gradient-to-br from-[#FFC800]/20 via-[#1CB0F6]/10 to-[#7C4DFF]/10' : 'bg-slate-950/30'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-base font-extrabold">{t.title}</div>
+                        <div className={`rounded-xl px-2 py-1 text-xs font-black ${t.ok ? 'bg-[#58CC02] text-white' : 'bg-white/10 text-slate-200'}`}>
+                          {t.ok ? 'DESBLOQUEADO' : 'BLOQUEADO'}
+                        </div>
+                      </div>
+                      <div className="mt-1 text-sm text-slate-200/90">{t.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         ) : tab === 'league' ? (
           <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
@@ -804,6 +881,32 @@ export default function App() {
         )}
 
         <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto</footer>
+
+        {/* Mobile menu */}
+        {menuOpen && user ? (
+          <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/60 p-3 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-3xl bg-slate-950/90 p-4 text-white ring-1 ring-white/10">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-extrabold">Menú</div>
+                <button className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold" onClick={() => setMenuOpen(false)}>
+                  Cerrar
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('home'); setMenuOpen(false) }}>Mundos</button>
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('play'); setMenuOpen(false) }}>Jugar</button>
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('league'); setMenuOpen(false) }}>Liga</button>
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('trophies'); setMenuOpen(false) }}>Trofeos</button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setSettingsOpen(true); setMenuOpen(false) }}>Config</button>
+                <button className="rounded-2xl bg-rose-500/80 px-3 py-3 text-sm font-black" onClick={() => { logout(); setMenuOpen(false) }}>Salir</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Portal (random world) */}
         {portalOpen ? (
