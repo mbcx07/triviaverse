@@ -14,6 +14,10 @@ import {
   subscribeUser,
   subscribeProgressMap,
   subscribeWeeklyLeaderboard,
+  updateTeamTitle,
+  createBattleRoom,
+  joinBattleRoom,
+  subscribeBattleRoom,
   type Lesson,
   type Question,
   type User,
@@ -116,6 +120,13 @@ export default function App() {
   const [oldPin, setOldPin] = useState('')
   const [newPin, setNewPin] = useState('')
 
+  // team config
+  const [teamName, setTeamName] = useState('')
+
+  // battles
+  const [battleRoomId, setBattleRoomId] = useState<string>('')
+  const [battleRoom, setBattleRoom] = useState<any>(null)
+
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
   const [celebration, setCelebration] = useState<{ title: string; xpDelta: number } | null>(null)
@@ -126,7 +137,7 @@ export default function App() {
   // route pagination (10 missions per page)
   const [routePage, setRoutePage] = useState(0)
 
-  const [tab, setTab] = useState<'home' | 'play' | 'league' | 'trophies'>('home')
+  const [tab, setTab] = useState<'mode' | 'home' | 'play' | 'league' | 'trophies' | 'battle'>('mode')
   const [menuOpen, setMenuOpen] = useState(false)
 
   // Worlds (subjects). When null, user is on the world picker.
@@ -220,7 +231,7 @@ export default function App() {
       ;(window as any).__tv_unsubUser = subscribeUser(u.id, (uu) => setUser(uu))
       ;(window as any).__tv_unsubProgress = subscribeProgressMap(u.id, (m) => setProgressMap(m))
 
-      setTab('home')
+      setTab('mode')
       setStatus(null)
     } catch (err: any) {
       setStatus(null)
@@ -268,7 +279,7 @@ export default function App() {
     setSettingsOpen(false)
     setOldPin('')
     setNewPin('')
-    setTab('home')
+    setTab('mode')
   }
 
   // Live weekly league when requested
@@ -740,6 +751,29 @@ export default function App() {
             </form>
             </div>
           </div>
+        ) : tab === 'mode' ? (
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            <div className="text-lg font-extrabold">Elige modo</div>
+            <div className="mt-1 text-xs text-slate-300/80">Individual o Batallas (prototipo).</div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <button
+                className="rounded-3xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                onClick={() => setTab('home')}
+              >
+                <div className="text-sm opacity-90">Individual</div>
+                <div className="mt-1 text-xl">Mundos & Misiones</div>
+              </button>
+
+              <button
+                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                onClick={() => setTab('battle')}
+              >
+                <div className="text-sm opacity-90">Batallas</div>
+                <div className="mt-1 text-xl">1 vs 1 (beta)</div>
+              </button>
+            </div>
+          </div>
         ) : tab === 'trophies' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             <div className="text-lg font-extrabold">Trofeos (100)</div>
@@ -760,6 +794,96 @@ export default function App() {
                   <div className="mt-1 text-sm text-slate-200/90">{t.desc}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        ) : tab === 'battle' ? (
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-extrabold">Batallas (beta)</div>
+                <div className="mt-1 text-xs text-slate-300/80">Crear sala o unirte con un código.</div>
+              </div>
+              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
+                Volver
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+              <div className="text-sm font-extrabold">Nombre de tu equipo</div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="Team Belas"
+                />
+                <button
+                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
+                  onClick={async () => {
+                    if (!user) return
+                    const teamId = user.teamId || 'belas'
+                    await updateTeamTitle({ teamId, title: teamName || 'Team Belas' })
+                  }}
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <button
+                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                onClick={async () => {
+                  if (!user) return
+                  const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: world || 'esp' })
+                  setBattleRoomId(r.id)
+                  ;(window as any).__tv_unsubBattle?.()
+                  ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                }}
+              >
+                Crear batalla
+                <div className="mt-1 text-xs opacity-90">Genera un código para invitar</div>
+              </button>
+
+              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Unirme a una batalla</div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
+                    value={battleRoomId}
+                    onChange={(e) => setBattleRoomId(e.target.value.trim())}
+                    placeholder="Código de sala"
+                  />
+                  <button
+                    className="shrink-0 rounded-2xl bg-[#FFC800] px-4 py-3 text-sm font-black text-slate-900"
+                    onClick={async () => {
+                      if (!user) return
+                      if (!battleRoomId) return
+                      await joinBattleRoom({ roomId: battleRoomId, userId: user.id, teamId: user.teamId || 'belas' })
+                      ;(window as any).__tv_unsubBattle?.()
+                      ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
+                    }}
+                  >
+                    Unirme
+                  </button>
+                </div>
+              </div>
+
+              {battleRoom ? (
+                <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                  <div className="text-sm font-extrabold">Sala</div>
+                  <div className="mt-1 text-xs text-slate-300/80">Código: <span className="font-black text-white">{battleRoom.id}</span></div>
+                  <div className="mt-2 text-xs text-slate-300/80">Estado: <span className="font-black text-white">{battleRoom.status || 'open'}</span></div>
+                  <div className="mt-2 text-xs text-slate-300/80">
+                    Host: <span className="font-black text-white">{battleRoom.hostTeamId || '-'}</span> vs Guest:{' '}
+                    <span className="font-black text-white">{battleRoom.guestTeamId || '—'}</span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-4 text-xs text-slate-300/70">
+              Nota: chat/amigos/audio se integran después (fase social). Primero dejamos el loop de batalla estable.
             </div>
           </div>
         ) : tab === 'league' ? (
@@ -1158,15 +1282,18 @@ export default function App() {
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('mode'); setMenuOpen(false) }}>Modo</button>
                 <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('home'); setMenuOpen(false) }}>Mundos</button>
-                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('play'); setMenuOpen(false) }}>Jugar</button>
                 <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('league'); setMenuOpen(false) }}>Liga</button>
                 <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('trophies'); setMenuOpen(false) }}>Trofeos</button>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('battle'); setMenuOpen(false) }}>Batalla</button>
                 <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setSettingsOpen(true); setMenuOpen(false) }}>Config</button>
-                <button className="rounded-2xl bg-rose-500/80 px-3 py-3 text-sm font-black" onClick={() => { logout(); setMenuOpen(false) }}>Salir</button>
+              </div>
+              <div className="mt-2">
+                <button className="w-full rounded-2xl bg-rose-500/80 px-3 py-3 text-sm font-black" onClick={() => { logout(); setMenuOpen(false) }}>Salir</button>
               </div>
             </div>
           </div>

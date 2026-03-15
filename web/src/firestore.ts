@@ -413,6 +413,72 @@ export async function ensureTeam(teamId: string = TEAM_BELAS_ID) {
   }
 }
 
+export async function updateTeamTitle(params: { teamId: string; title: string }) {
+  const dbi = ensureDb()
+  const title = params.title.trim().slice(0, 40)
+  if (!title) throw new Error('Nombre de equipo inválido.')
+  const ref = doc(dbi, 'teams', params.teamId)
+  await setDoc(ref, { title, updatedAt: serverTimestamp() }, { merge: true })
+}
+
+export type BattleRoom = {
+  id: string
+  createdAt?: any
+  status?: 'open' | 'started' | 'finished'
+  hostUserId?: string
+  hostTeamId?: string
+  guestUserId?: string
+  guestTeamId?: string
+  subject?: string
+  missionId?: string
+}
+
+export async function createBattleRoom(params: { userId: string; teamId: string; subject?: string }) {
+  const dbi = ensureDb()
+  const ref = doc(collection(dbi, 'battleRooms'))
+  const data: BattleRoom = {
+    id: ref.id,
+    status: 'open',
+    hostUserId: params.userId,
+    hostTeamId: params.teamId,
+    subject: params.subject || 'esp',
+  }
+  await setDoc(ref, { ...data, createdAt: serverTimestamp() }, { merge: true })
+  return data
+}
+
+export async function joinBattleRoom(params: { roomId: string; userId: string; teamId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  await runTransaction(dbi, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Sala no existe.')
+    const r = snap.data() as any
+    if (String(r.status || 'open') !== 'open') throw new Error('Sala no está abierta.')
+    if (r.guestUserId) throw new Error('Sala llena.')
+    tx.set(
+      ref,
+      {
+        guestUserId: params.userId,
+        guestTeamId: params.teamId,
+        status: 'started',
+        startedAt: serverTimestamp(),
+      },
+      { merge: true }
+    )
+  })
+}
+
+export function subscribeBattleRoom(roomId: string, cb: (r: BattleRoom | null) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', roomId)
+  return onSnapshot(ref, (snap) => {
+    if (!snap.exists()) return cb(null)
+    const d = snap.data() as any
+    cb({ id: snap.id, ...(d as any) })
+  })
+}
+
 // --- Live subscriptions ---
 export function subscribeUser(userId: string, cb: (u: User) => void): Unsubscribe {
   const dbi = ensureDb()
