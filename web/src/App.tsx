@@ -468,8 +468,8 @@ export default function App() {
   function isLessonCompleted(lessonId: string): boolean {
     const p = progressMap[lessonId]
     if (!p) return false
-    // v1 heuristic: seed packs are ~6 questions. Consider completed when answered >= 6.
-    return (p.answeredCount || 0) >= 6
+    // v1: to advance, child must earn at least 1 star.
+    return Number(p.starsBest || 0) >= 1
   }
 
   return (

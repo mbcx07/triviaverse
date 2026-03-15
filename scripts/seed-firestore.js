@@ -73,18 +73,12 @@ const SUBJECTS = [
   { key: 'civ', title: 'Formación Cívica y Ética' },
 ];
 
-// Basic question generators (starter pack). We will extend to full 200 later.
-function qWrite(prompt, answersAccepted, explanation) {
-  return { type: 'write', prompt, answersAccepted, explanation };
-}
+// Question generators (closed types only)
 function qMC(prompt, options, correctIndex, explanation) {
   return { type: 'multiple_choice', prompt, options, correctIndex, explanation };
 }
 function qTF(prompt, answer, explanation) {
   return { type: 'true_false', prompt, answer, explanation };
-}
-function qFill(prompt, answer, explanation) {
-  return { type: 'fill_blank', prompt, answer, explanation };
 }
 function qOrder(prompt, tokens, explanation) {
   return { type: 'order_words', prompt, tokens, explanation };
@@ -95,91 +89,142 @@ function qMatch(prompt, pairs, explanation) {
   return { type: 'match_pairs', prompt, pairs: pairsObj, explanation };
 }
 
-function lessonPack(subjectKey) {
-  switch (subjectKey) {
-    case 'geo':
-      return [
-        qWrite('¿Cuál es la capital de México?', ['Ciudad de México', 'CDMX'], 'La capital de México es la Ciudad de México (CDMX).'),
-        qMC('¿En qué continente está México?', ['Europa', 'América', 'Asia', 'África'], 1, 'México está en el continente americano.'),
-        qTF('México tiene costas en el Océano Pacífico y en el Atlántico.', true, 'Tiene costas en el Pacífico y en el Golfo de México/Caribe (Atlántico).'),
-        qFill('El estado donde se encuentra Cancún es ________.', 'Quintana Roo', 'Cancún está en Quintana Roo.'),
-        qOrder('Ordena de norte a sur (aprox.):', ['Sonora', 'Jalisco', 'Chiapas'], 'Sonora (norte) → Jalisco (centro-occidente) → Chiapas (sur).'),
-        qMatch('Relaciona el estado con su capital:', [
-          ['Jalisco', 'Guadalajara'],
-          ['Yucatán', 'Mérida'],
-          ['Nuevo León', 'Monterrey'],
-        ], 'Son capitales comunes en primaria.'),
-      ];
-    case 'mat':
-      return [
-        qMC('¿Cuánto es 3/4 de 20?', ['5', '10', '15', '20'], 2, '20 × 3/4 = 15.'),
-        qWrite('Escribe el resultado: 125 + 75 =', ['200'], '125 + 75 = 200.'),
-        qTF('0.5 es igual a 1/2.', true, '0.5 = 1/2.'),
-        qFill('El perímetro de un cuadrado de lado 6 cm es ________ cm.', '24', 'Perímetro = 4×6 = 24.'),
-        qOrder('Ordena de menor a mayor:', ['0.25', '0.5', '0.75'], '0.25 < 0.5 < 0.75'),
-        qMatch('Relaciona fracción con decimal:', [
-          ['1/4', '0.25'],
-          ['1/2', '0.5'],
-          ['3/4', '0.75'],
-        ], 'Equivalencias básicas.'),
-      ];
-    case 'cien':
-      return [
-        qMC('¿Cuál es un estado de la materia?', ['Sólido', 'Rápido', 'Fuerte', 'Alto'], 0, 'Sólido es un estado de la materia.'),
-        qTF('El agua hierve aproximadamente a 100°C al nivel del mar.', true, 'En condiciones normales, hierve cerca de 100°C.'),
-        qFill('La energía del Sol que llega a la Tierra se llama energía ________.', 'solar', 'Es energía solar.'),
-        qOrder('Ordena el ciclo del agua:', ['Evaporación', 'Condensación', 'Precipitación'], 'Evaporación → Condensación → Precipitación.'),
-        qMatch('Relaciona el órgano con su función:', [
-          ['Pulmones', 'Respirar'],
-          ['Corazón', 'Bombear sangre'],
-          ['Estómago', 'Digestionar'],
-        ], 'Funciones básicas del cuerpo humano.'),
-        qWrite('Escribe un ejemplo de animal ovíparo:', ['gallina', 'tortuga', 'pez', 'rana'], 'Los ovíparos nacen de huevos.'),
-      ];
-    case 'hist':
-      return [
-        qMC('¿Qué es una línea del tiempo?', ['Un mapa', 'Un orden de eventos', 'Un cuento', 'Una canción'], 1, 'Sirve para ordenar eventos en el tiempo.'),
-        qTF('La historia estudia hechos del pasado.', true, 'Sí, se enfoca en el pasado.'),
-        qFill('Un siglo tiene ________ años.', '100', 'Un siglo = 100 años.'),
-        qOrder('Ordena de más antiguo a más reciente:', ['Abuelos', 'Papás', 'Hijos'], 'Abuelos → Papás → Hijos.'),
-        qMatch('Relaciona concepto con ejemplo:', [
-          ['Fuente histórica', 'Fotografía'],
-          ['Lugar', 'Ciudad'],
-          ['Fecha', '15 de septiembre'],
-        ], 'Ejemplos sencillos.'),
-        qWrite('Escribe una fuente histórica que puedas encontrar en casa:', ['foto', 'fotografia', 'carta', 'acta'], 'Ejemplos: fotos, cartas, documentos.'),
-      ];
-    case 'civ':
-      return [
-        qMC('¿Qué es respetar?', ['Empujar', 'Escuchar y cuidar', 'Gritar', 'Ignorar'], 1, 'Respetar es tratar bien y considerar a otros.'),
-        qTF('Decir la verdad ayuda a la confianza.', true, 'La honestidad fortalece la confianza.'),
-        qFill('Cuando compartimos, practicamos la ________.', 'solidaridad', 'Compartir y ayudar es solidaridad.'),
-        qOrder('Ordena para resolver un conflicto:', ['Calmarme', 'Escuchar', 'Hablar con respeto'], 'Primero calmarse, luego escuchar y hablar con respeto.'),
-        qMatch('Relaciona valor con acción:', [
-          ['Responsabilidad', 'Hacer la tarea'],
-          ['Respeto', 'No interrumpir'],
-          ['Honestidad', 'Decir la verdad'],
-        ], 'Valores en acciones.'),
-        qWrite('Escribe una norma que ayude en tu salón:', ['no gritar', 'levantar la mano', 'respetar turnos', 'no empujar'], 'Normas mejoran la convivencia.'),
-      ];
-    case 'esp':
-      return [
-        qMC('¿Cuál de estas palabras es un sustantivo?', ['Correr', 'Mesa', 'Rápido', 'Azul'], 1, 'Mesa es un sustantivo (nombra un objeto).'),
-        qTF('Los sustantivos nombran personas, animales, cosas o lugares.', true, 'Eso es un sustantivo.'),
-        qFill('La palabra "niño" es un ________.', 'sustantivo', 'Niño nombra a una persona.'),
-        qOrder('Ordena para formar una oración:', ['El', 'niño', 'juega'], 'El niño juega.'),
-        qMatch('Relaciona la palabra con su tipo:', [
-          ['rápido', 'Adjetivo'],
-          ['correr', 'Verbo'],
-          ['escuela', 'Sustantivo'],
-        ], 'Adjetivo describe, verbo acción, sustantivo nombra.'),
-        qWrite('Escribe un sustantivo propio (nombre de persona o lugar):', ['maria', 'juan', 'mexico', 'la paz'], 'Ejemplos: María, Juan, México, La Paz.'),
-      ];
-    default:
-      return [
-        qWrite(`Pregunta demo de ${subjectKey}: escribe "ok"`, ['ok'], 'Demo.'),
-      ];
+const CAPITALS = [
+  ['Jalisco', 'Guadalajara'],
+  ['Yucatán', 'Mérida'],
+  ['Nuevo León', 'Monterrey'],
+  ['Sonora', 'Hermosillo'],
+  ['Sinaloa', 'Culiacán'],
+  ['Chiapas', 'Tuxtla Gutiérrez'],
+  ['Quintana Roo', 'Chetumal'],
+  ['Baja California Sur', 'La Paz'],
+];
+
+const ORGANS = [
+  ['Pulmones', 'Respirar'],
+  ['Corazón', 'Bombear sangre'],
+  ['Estómago', 'Digestionar'],
+  ['Cerebro', 'Pensar'],
+];
+
+const VALUES = [
+  ['Respeto', 'No interrumpir'],
+  ['Responsabilidad', 'Hacer la tarea'],
+  ['Honestidad', 'Decir la verdad'],
+  ['Solidaridad', 'Ayudar a otros'],
+];
+
+const WORD_TYPES = [
+  ['mesa', 'Sustantivo'],
+  ['correr', 'Verbo'],
+  ['rápido', 'Adjetivo'],
+  ['escuela', 'Sustantivo'],
+  ['bonito', 'Adjetivo'],
+];
+
+function pick(list, idx, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(list[(idx + i) % list.length]);
   }
+  return out;
+}
+
+function lessonPack(subjectKey, missionN) {
+  const m = Number(missionN || 1);
+  if (subjectKey === 'mat') {
+    const a = (m % 10) + 5;
+    const b = ((m * 3) % 10) + 2;
+    const sum = a + b;
+    const opts = [sum, sum + 1, sum - 1, sum + 2].map(String);
+    return [
+      qMC(`¿Cuánto es ${a} + ${b}?`, opts, 0, `${a} + ${b} = ${sum}.`),
+      qTF('0.5 es igual a 1/2.', true, '0.5 = 1/2.'),
+      qMC('¿Cuál número es mayor?', ['0.25', '0.5', '0.75', '0.1'], 2, '0.75 es el mayor.'),
+      qOrder('Ordena de menor a mayor:', ['0.25', '0.5', '0.75'], '0.25 < 0.5 < 0.75'),
+      qMatch('Relaciona fracción con decimal:', [
+        ['1/4', '0.25'],
+        ['1/2', '0.5'],
+        ['3/4', '0.75'],
+      ], 'Equivalencias básicas.'),
+      qTF(`${sum} es un número par.`, sum % 2 === 0, 'Los pares terminan en 0,2,4,6,8.'),
+    ];
+  }
+
+  if (subjectKey === 'esp') {
+    const wt = pick(WORD_TYPES, m, 3);
+    const pairs = wt.map(([w, t]) => [w, t]);
+    const noun = wt.find((x) => x[1] === 'Sustantivo')?.[0] || 'mesa';
+    return [
+      qMC('¿Cuál de estas palabras es un sustantivo?', ['correr', noun, 'rápido', 'azul'], 1, 'Sustantivo nombra cosas/personas/lugares.'),
+      qTF('Los verbos expresan acciones.', true, 'Ej.: correr, jugar, comer.'),
+      qMC('¿Cuál es un verbo?', ['mesa', 'correr', 'azul', 'rápido'], 1, 'Correr es un verbo.'),
+      qOrder('Ordena para formar una oración:', ['El', 'niño', 'juega'], 'El niño juega.'),
+      qMatch('Relaciona la palabra con su tipo:', pairs, 'Sustantivo nombra, verbo acción, adjetivo describe.'),
+      qTF('Los adjetivos describen a los sustantivos.', true, 'Ej.: casa bonita.'),
+    ];
+  }
+
+  if (subjectKey === 'geo') {
+    const cap = pick(CAPITALS, m, 3);
+    return [
+      qMC('¿En qué continente está México?', ['Europa', 'América', 'Asia', 'África'], 1, 'México está en América.'),
+      qTF('México tiene costas en el Océano Pacífico y en el Atlántico.', true, 'Pacífico y Golfo/Caribe (Atlántico).'),
+      qOrder('Ordena de norte a sur (aprox.):', ['Sonora', 'Jalisco', 'Chiapas'], 'Sonora → Jalisco → Chiapas.'),
+      qMatch('Relaciona el estado con su capital:', cap, 'Capitales comunes en primaria.'),
+      qMC('¿Cuál es la capital de México?', ['Guadalajara', 'CDMX', 'Monterrey', 'Mérida'], 1, 'CDMX.'),
+      qTF('Un mapa sirve para ubicar lugares.', true, 'Un mapa muestra ubicación.'),
+    ];
+  }
+
+  if (subjectKey === 'cien') {
+    const org = pick(ORGANS, m, 3);
+    return [
+      qMC('¿Cuál es un estado de la materia?', ['Sólido', 'Rápido', 'Fuerte', 'Alto'], 0, 'Sólido es un estado de la materia.'),
+      qTF('El agua hierve aproximadamente a 100°C al nivel del mar.', true, 'En condiciones normales.'),
+      qOrder('Ordena el ciclo del agua:', ['Evaporación', 'Condensación', 'Precipitación'], 'Evaporación → Condensación → Precipitación.'),
+      qMatch('Relaciona el órgano con su función:', org, 'Funciones básicas del cuerpo humano.'),
+      qMC('¿Qué necesitamos para respirar?', ['Aire', 'Arena', 'Hielo', 'Papel'], 0, 'Necesitamos aire.'),
+      qTF('Las plantas producen oxígeno.', true, 'En fotosíntesis producen oxígeno.'),
+    ];
+  }
+
+  if (subjectKey === 'hist') {
+    return [
+      qMC('¿Qué es una línea del tiempo?', ['Un mapa', 'Un orden de eventos', 'Un cuento', 'Una canción'], 1, 'Ordena eventos.'),
+      qTF('La historia estudia hechos del pasado.', true, 'Se enfoca en el pasado.'),
+      qMC('¿Cuántos años tiene un siglo?', ['10', '50', '100', '1000'], 2, 'Un siglo = 100 años.'),
+      qOrder('Ordena de más antiguo a más reciente:', ['Abuelos', 'Papás', 'Hijos'], 'Abuelos → Papás → Hijos.'),
+      qMatch('Relaciona concepto con ejemplo:', [
+        ['Fuente histórica', 'Fotografía'],
+        ['Lugar', 'Ciudad'],
+        ['Fecha', '15 de septiembre'],
+      ], 'Ejemplos sencillos.'),
+      qTF('Una fotografía puede ser una fuente histórica.', true, 'Sí, puede serlo.'),
+    ];
+  }
+
+  if (subjectKey === 'civ') {
+    const vals = pick(VALUES, m, 3);
+    return [
+      qMC('¿Qué es respetar?', ['Empujar', 'Escuchar y cuidar', 'Gritar', 'Ignorar'], 1, 'Respetar es tratar bien.'),
+      qTF('Decir la verdad ayuda a la confianza.', true, 'Honestidad fortalece confianza.'),
+      qOrder('Ordena para resolver un conflicto:', ['Calmarme', 'Escuchar', 'Hablar con respeto'], 'Calmarme → Escuchar → Hablar con respeto.'),
+      qMatch('Relaciona valor con acción:', vals, 'Valores en acciones.'),
+      qMC('¿Qué es cooperar?', ['Ayudar en equipo', 'Burlar', 'Ignorar', 'Romper'], 0, 'Cooperar es ayudar en equipo.'),
+      qTF('Compartir puede mejorar la convivencia.', true, 'Compartir ayuda a convivir.'),
+    ];
+  }
+
+  // fallback
+  return [
+    qTF('Pregunta de prueba', true, 'OK'),
+    qTF('Pregunta de prueba', true, 'OK'),
+    qTF('Pregunta de prueba', true, 'OK'),
+    qTF('Pregunta de prueba', true, 'OK'),
+    qTF('Pregunta de prueba', true, 'OK'),
+    qTF('Pregunta de prueba', true, 'OK'),
+  ];
 }
 
 async function upsertUser(u) {
@@ -209,8 +254,31 @@ async function upsertLesson(lesson) {
   if (!args.dry) await ref.set(lesson, { merge: true });
 }
 
+async function clearQuestions(lessonId) {
+  const col = db.collection('lessons').doc(lessonId).collection('questions');
+  const snap = await col.get();
+  if (snap.empty) return;
+  let batch = db.batch();
+  let n = 0;
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    n++;
+    if (n >= 400) {
+      if (!args.dry) await batch.commit();
+      batch = db.batch();
+      n = 0;
+    }
+  }
+  if (n) {
+    if (!args.dry) await batch.commit();
+  }
+}
+
 async function upsertQuestions(lessonId, questions) {
   const col = db.collection('lessons').doc(lessonId).collection('questions');
+
+  await clearQuestions(lessonId);
+
   // write in batches of 400 (Firestore limit 500)
   let batch = db.batch();
   let n = 0;
@@ -242,33 +310,38 @@ async function main() {
     await upsertUser(u);
   }
 
-  // Seed lessons + questions (starter pack)
-  let order = 1;
+  // Seed lessons + questions (50 missions per subject)
+  const MISSIONS_PER_SUBJECT = 50;
+
   let totalQ = 0;
-  for (const s of SUBJECTS) {
-    const lessonId = `${s.key}-1`;
-    const lesson = {
-      id: lessonId,
-      title: `${s.title} · Unidad 1`,
-      subject: s.key,
-      grade: '5-6',
-      order,
-      updatedAt: nowIso(),
-    };
-    await upsertLesson(lesson);
+  for (let si = 0; si < SUBJECTS.length; si++) {
+    const s = SUBJECTS[si];
+    for (let m = 1; m <= MISSIONS_PER_SUBJECT; m++) {
+      const lessonId = `${s.key}-${m}`;
+      const lesson = {
+        id: lessonId,
+        title: `${s.title} · Misión ${m}`,
+        subject: s.key,
+        grade: '5-6',
+        order: si * 1000 + m,
+        updatedAt: nowIso(),
+      };
+      await upsertLesson(lesson);
 
-    const pack = lessonPack(s.key).map((q, idx) => ({
-      id: `q${idx + 1}`,
-      order: idx + 1,
-      ...q,
-      // legacy fields used by current UI (until we migrate renderer)
-      answersAccepted: q.answersAccepted || (q.answer ? [String(q.answer)] : []),
-    }));
+      const pack = lessonPack(s.key, m).map((q, idx) => ({
+        id: `q${idx + 1}`,
+        order: idx + 1,
+        ...q,
+        // legacy fields used by current UI (kept empty; we removed open answers)
+        answersAccepted: [],
+      }));
 
-    const wrote = await upsertQuestions(lessonId, pack);
-    totalQ += wrote;
-    console.log('seeded lesson', lessonId, 'questions', wrote);
-    order++;
+      const wrote = await upsertQuestions(lessonId, pack);
+      totalQ += wrote;
+      if (m === 1 || m === MISSIONS_PER_SUBJECT || m % 10 === 0) {
+        console.log('seeded lesson', lessonId, 'questions', wrote);
+      }
+    }
   }
 
   console.log('DONE. Total questions:', totalQ);
