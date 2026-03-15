@@ -97,6 +97,8 @@ function subjectGradient(key: string): string {
 }
 
 export default function App() {
+  const baseUrl = (import.meta as any).env?.BASE_URL || '/'
+
   const [user, setUser] = useState<User | null>(null)
   const [nickname, setNickname] = useState('')
   const [pin, setPin] = useState('')
@@ -470,7 +472,7 @@ export default function App() {
       <div className="mx-auto max-w-md p-4">
         <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
-            <img src="/pwa-192x192.png" className="h-8 w-8 rounded-xl ring-1 ring-white/20" alt="Triviverso" />
+            <img src={`${baseUrl}pwa-192x192.png`} className="h-8 w-8 rounded-xl ring-1 ring-white/20" alt="Triviverso" />
             <div className="text-lg font-extrabold tracking-tight">Triviverso</div>
           </div>
           {user ? (
@@ -598,7 +600,7 @@ export default function App() {
           <div className="rounded-3xl bg-black/25 p-6 ring-1 ring-white/10">
             <div className="flex flex-col items-center">
               <img
-                src="/pwa-512x512.png"
+                src={`${baseUrl}pwa-512x512.png`}
                 alt="Triviverso"
                 className="h-28 w-28 rounded-[28px] shadow-2xl ring-1 ring-white/20"
               />
