@@ -162,7 +162,7 @@ export function subscribeOpenBattleRooms(
   const dbi = ensureDb()
   const ref = collection(dbi, 'battleRooms')
   // Keep query index-free for now (avoid composite index requirements)
-  const q = query(ref, where('status', '==', 'open'), limit(25))
+  const q = query(ref, where('status', '==', 'open'), where('visibility', '==', 'open'), limit(25))
   return onSnapshot(q, (qs) => {
     const rooms = qs.docs.map((d) => {
       const data = d.data() as any
@@ -484,11 +484,19 @@ function stableMissionId(subject: string, roomId: string): string {
   return `${base}-${n}`
 }
 
-export async function createBattleRoom(params: { userId: string; teamId: string; subject?: string; maxPerTeam?: number }) {
+export async function createBattleRoom(params: {
+  userId: string
+  teamId: string
+  subject?: string
+  maxPerTeam?: number
+  visibility?: 'open' | 'private'
+}) {
   const dbi = ensureDb()
   const ref = doc(collection(dbi, 'battleRooms'))
   const subject = params.subject || 'esp'
   const maxPerTeam = Math.min(4, Math.max(1, params.maxPerTeam || 4))
+
+  const visibility = params.visibility || 'open'
 
   const data: BattleRoom = {
     id: ref.id,
@@ -505,7 +513,8 @@ export async function createBattleRoom(params: { userId: string; teamId: string;
     hostUserId: params.userId,
     hostTeamId: params.teamId,
   }
-  await setDoc(ref, { ...data, createdAt: serverTimestamp() }, { merge: true })
+
+  await setDoc(ref, { ...data, visibility, createdAt: serverTimestamp() }, { merge: true })
   return data
 }
 

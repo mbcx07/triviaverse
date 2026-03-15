@@ -929,21 +929,43 @@ export default function App() {
                 </div>
               </div>
 
-              <button
-                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                onClick={async () => {
-                  if (!user) return
-                  const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: world || 'esp' })
-                  setBattleRoomId(r.id)
-                  ;(window as any).__tv_unsubBattle?.()
-                  ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                  ;(window as any).__tv_unsubBattleMsgs?.()
-                  ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                }}
-              >
-                Crear batalla
-                <div className="mt-1 text-xs opacity-90">Genera un código para invitar</div>
-              </button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  className="rounded-3xl border-b-4 border-[#1899D6] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                  onClick={async () => {
+                    if (!user) return
+                    const maxPerTeam = Number((window as any).__tv_battleSize || 4)
+                    const subject = String((window as any).__tv_battleSubject || world || 'esp')
+                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'open' })
+                    setBattleRoomId(r.id)
+                    ;(window as any).__tv_unsubBattle?.()
+                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                    ;(window as any).__tv_unsubBattleMsgs?.()
+                    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                  }}
+                >
+                  Crear batalla abierta
+                  <div className="mt-1 text-xs opacity-90">Aparece en Lobby</div>
+                </button>
+
+                <button
+                  className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                  onClick={async () => {
+                    if (!user) return
+                    const maxPerTeam = Number((window as any).__tv_battleSize || 4)
+                    const subject = String((window as any).__tv_battleSubject || world || 'esp')
+                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'private' })
+                    setBattleRoomId(r.id)
+                    ;(window as any).__tv_unsubBattle?.()
+                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                    ;(window as any).__tv_unsubBattleMsgs?.()
+                    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                  }}
+                >
+                  Crear batalla privada
+                  <div className="mt-1 text-xs opacity-90">Solo con código</div>
+                </button>
+              </div>
 
               <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                 <div className="text-sm font-extrabold">Unirme a una batalla</div>
