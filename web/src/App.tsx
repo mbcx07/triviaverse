@@ -58,6 +58,44 @@ function subjectTitle(key: string): string {
   }
 }
 
+function subjectIcon(key: string): string {
+  switch (key) {
+    case 'esp':
+      return '📘'
+    case 'mat':
+      return '🧮'
+    case 'cien':
+      return '🧪'
+    case 'hist':
+      return '🏛️'
+    case 'geo':
+      return '🧭'
+    case 'civ':
+      return '🤝'
+    default:
+      return '⭐'
+  }
+}
+
+function subjectGradient(key: string): string {
+  switch (key) {
+    case 'esp':
+      return 'from-[#35C6FF] to-[#1CB0F6]'
+    case 'mat':
+      return 'from-[#7C4DFF] to-[#1CB0F6]'
+    case 'cien':
+      return 'from-[#58CC02] to-[#1CB0F6]'
+    case 'hist':
+      return 'from-[#FF9600] to-[#FFC800]'
+    case 'geo':
+      return 'from-[#1CB0F6] to-[#FFC800]'
+    case 'civ':
+      return 'from-[#7C4DFF] to-[#FF9600]'
+    default:
+      return 'from-[#1CB0F6] to-[#7C4DFF]'
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [nickname, setNickname] = useState('')
@@ -325,7 +363,9 @@ export default function App() {
           correctCount: Object.values(nextResults).filter(Boolean).length,
         },
       }))
-      if (Object.keys(nextResults).length === 6) setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+      if (Object.keys(nextResults).length === 6) {
+        setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+      }
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el intento (Firestore).')
     }
@@ -358,7 +398,9 @@ export default function App() {
           correctCount: Object.values(nextResults).filter(Boolean).length,
         },
       }))
-      if (Object.keys(nextResults).length === 6) setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+      if (Object.keys(nextResults).length === 6) {
+        setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+      }
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el intento (Firestore).')
     }
@@ -714,8 +756,13 @@ export default function App() {
                       setLessonId(g.lessons[0]?.id || '')
                     }}
                   >
-                    <div className="text-xs text-slate-300/80">Mundo</div>
-                    <div className="mt-1 text-base font-extrabold">{subjectTitle(g.subject)}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-slate-300/80">Mundo</div>
+                      <div className={`rounded-2xl bg-gradient-to-br ${subjectGradient(g.subject)} px-2 py-1 text-xs font-black text-white ring-1 ring-white/10`}>
+                        {subjectIcon(g.subject)}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-base font-extrabold">{subjectTitle(g.subject)}</div>
                     <div className="mt-2 text-xs text-slate-300/70">{g.lessons.length} lecciones</div>
                   </button>
                 )
