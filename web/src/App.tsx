@@ -893,7 +893,7 @@ export default function App() {
                         ;(window as any).__tv_unsubBattle?.()
                         ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
                         ;(window as any).__tv_unsubBattleMsgs?.()
-                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, (m) => setBattleMsgs(m))
+                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
                       }}
                     >
                       Sala {r.id} • {r.subject || 'esp'} • Host {r.hostTeamId || '-'}
@@ -912,7 +912,7 @@ export default function App() {
                   ;(window as any).__tv_unsubBattle?.()
                   ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
                   ;(window as any).__tv_unsubBattleMsgs?.()
-                  ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, (m) => setBattleMsgs(m))
+                  ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
                 }}
               >
                 Crear batalla
@@ -937,7 +937,7 @@ export default function App() {
                       ;(window as any).__tv_unsubBattle?.()
                       ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
                       ;(window as any).__tv_unsubBattleMsgs?.()
-                      ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, (m) => setBattleMsgs(m))
+                      ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
                     }}
                   >
                     Unirme
@@ -979,7 +979,8 @@ export default function App() {
                         onClick={async () => {
                           if (!user) return
                           if (!battleRoomId) return
-                          await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: battleMsgText })
+                          const scope = battleRoom?.chatPhase === 'match' && user.teamId ? `team:${user.teamId}` : 'global'
+                          await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: battleMsgText, scope })
                           setBattleMsgText('')
                         }}
                       >

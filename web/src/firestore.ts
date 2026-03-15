@@ -456,23 +456,54 @@ export type BattleRoom = {
   id: string
   createdAt?: any
   status?: 'open' | 'started' | 'finished'
+  // v2 team-based
+  maxPerTeam?: number
+  subject?: string // esp|mat|cien|hist|geo|civ|mixed
+  missionId?: string
+  teams?: {
+    A?: { teamId: string; members: string[] }
+    B?: { teamId: string; members: string[] }
+  }
+  // legacy fields kept for compatibility
   hostUserId?: string
   hostTeamId?: string
   guestUserId?: string
   guestTeamId?: string
-  subject?: string
-  missionId?: string
+  // Chat scope control
+  chatPhase?: 'lobby' | 'match' | 'post'
 }
 
-export async function createBattleRoom(params: { userId: string; teamId: string; subject?: string }) {
+function stableMissionId(subject: string, roomId: string): string {
+  const subj = subject || 'esp'
+  // 1..50
+  let h = 0
+  for (let i = 0; i < roomId.length; i++) h = (h * 31 + roomId.charCodeAt(i)) >>> 0
+  const n = (h % 50) + 1
+  // mixed uses esp as base for now
+  const base = subj === 'mixed' ? 'esp' : subj
+  return `${base}-${n}`
+}
+
+export async function createBattleRoom(params: { userId: string; teamId: string; subject?: string; maxPerTeam?: number }) {
   const dbi = ensureDb()
   const ref = doc(collection(dbi, 'battleRooms'))
+  const subject = params.subject || 'esp'
+  const maxPerTeam = Math.min(4, Math.max(1, params.maxPerTeam || 4))
+
   const data: BattleRoom = {
     id: ref.id,
     status: 'open',
+    subject,
+    maxPerTeam,
+    missionId: stableMissionId(subject, ref.id),
+    teams: {
+      A: { teamId: params.teamId, members: [params.userId] },
+      B: undefined,
+    },
+    chatPhase: 'lobby',
+    // legacy
     hostUserId: params.userId,
     hostTeamId: params.teamId,
-    subject: params.subject || 'esp',
   }
   await setDoc(ref, { ...data, createdAt: serverTimestamp() }, { merge: true })
   return data
@@ -485,18 +516,43 @@ export async function joinBattleRoom(params: { roomId: string; userId: string; t
     const snap = await tx.get(ref)
     if (!snap.exists()) throw new Error('Sala no existe.')
     const r = snap.data() as any
-    if (String(r.status || 'open') !== 'open') throw new Error('Sala no está abierta.')
-    if (r.guestUserId) throw new Error('Sala llena.')
-    tx.set(
-      ref,
-      {
-        guestUserId: params.userId,
-        guestTeamId: params.teamId,
-        status: 'started',
-        startedAt: serverTimestamp(),
-      },
-      { merge: true }
-    )
+
+    const status = String(r.status || 'open')
+    if (status !== 'open') throw new Error('Sala no está abierta.')
+
+    const maxPerTeam = Math.min(4, Math.max(1, Number(r.maxPerTeam || 4)))
+    const teams = (r.teams || {}) as any
+    const A = teams.A as any
+    const B = teams.B as any
+
+    function addMember(teamKey: 'A' | 'B') {
+      const cur = (teamKey === 'A' ? A : B) || { teamId: params.teamId, members: [] }
+      const members = Array.isArray(cur.members) ? cur.members.map(String) : []
+      if (members.includes(params.userId)) return
+      if (members.length >= maxPerTeam) throw new Error('Equipo lleno.')
+      members.push(params.userId)
+      tx.set(ref, { teams: { [teamKey]: { teamId: cur.teamId || params.teamId, members } } }, { merge: true })
+    }
+
+    // If joining same team as A
+    if (A?.teamId && String(A.teamId) === params.teamId) {
+      addMember('A')
+      return
+    }
+    // If B exists and matches
+    if (B?.teamId && String(B.teamId) === params.teamId) {
+      addMember('B')
+      return
+    }
+    // Else, if B empty, create B with this team
+    if (!B?.teamId) {
+      tx.set(ref, { teams: { B: { teamId: params.teamId, members: [params.userId] } } }, { merge: true })
+      // Start match as soon as there are two teams
+      tx.set(ref, { status: 'started', startedAt: serverTimestamp(), chatPhase: 'match' }, { merge: true })
+      return
+    }
+
+    throw new Error('Sala llena o equipo no coincide.')
   })
 }
 
@@ -512,26 +568,34 @@ export function subscribeBattleRoom(roomId: string, cb: (r: BattleRoom | null) =
 
 export function subscribeBattleMessages(
   roomId: string,
-  cb: (msgs: Array<{ id: string; userId: string; text: string; createdAt?: any }>) => void
+  scope: { kind: 'global' } | { kind: 'team'; teamId: string },
+  cb: (msgs: Array<{ id: string; userId: string; text: string; createdAt?: any; scope?: string }>) => void
 ): Unsubscribe {
   const dbi = ensureDb()
   const ref = collection(dbi, 'battleRooms', roomId, 'messages')
-  const q = query(ref, orderBy('createdAt', 'asc'), limit(100))
+  const scopeKey = scope.kind === 'global' ? 'global' : `team:${scope.teamId}`
+  const q = query(ref, where('scope', '==', scopeKey), orderBy('createdAt', 'asc'), limit(100))
   return onSnapshot(q, (qs) => {
     const out = qs.docs.map((d) => {
       const data = d.data() as any
-      return { id: d.id, userId: String(data.userId || ''), text: String(data.text || ''), createdAt: data.createdAt }
+      return {
+        id: d.id,
+        userId: String(data.userId || ''),
+        text: String(data.text || ''),
+        createdAt: data.createdAt,
+        scope: String(data.scope || 'global'),
+      }
     })
     cb(out)
   })
 }
 
-export async function sendBattleMessage(params: { roomId: string; userId: string; text: string }) {
+export async function sendBattleMessage(params: { roomId: string; userId: string; text: string; scope: string }) {
   const dbi = ensureDb()
   const text = params.text.trim().slice(0, 200)
   if (!text) return
   const ref = doc(collection(dbi, 'battleRooms', params.roomId, 'messages'))
-  await setDoc(ref, { userId: params.userId, text, createdAt: serverTimestamp() }, { merge: true })
+  await setDoc(ref, { userId: params.userId, text, scope: params.scope, createdAt: serverTimestamp() }, { merge: true })
 }
 
 export async function submitBattleScore(params: { roomId: string; userId: string; correct: number; answered: number }) {
