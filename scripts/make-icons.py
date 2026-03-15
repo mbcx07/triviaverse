@@ -1,7 +1,7 @@
 from PIL import Image, ImageOps
 from pathlib import Path
 
-SRC = Path(r"C:\Users\Administrator\.openclaw\media\inbound\file_30---e9e265f6-b2ae-4420-9c79-53fe628d6bec.jpg")
+SRC = Path(r"C:\Users\Administrator\.openclaw\media\inbound\file_31---925d45b2-fa74-4267-b423-fafe933d026e.jpg")
 OUT_DIR = Path(r"C:\Users\Administrator\.openclaw\workspace\triviaverse\web\public")
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
