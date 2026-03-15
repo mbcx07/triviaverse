@@ -472,7 +472,7 @@ export default function App() {
       <div className="mx-auto max-w-md p-4">
         <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
-            <img src={`${baseUrl}pwa-192x192.png`} className="h-8 w-8 rounded-xl ring-1 ring-white/20" alt="Triviverso" />
+            <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-8" alt="Triviverso" />
             <div className="text-lg font-extrabold tracking-tight">Triviverso</div>
           </div>
           {user ? (
@@ -600,9 +600,9 @@ export default function App() {
           <div className="rounded-3xl bg-black/25 p-6 ring-1 ring-white/10">
             <div className="flex flex-col items-center">
               <img
-                src={`${baseUrl}pwa-512x512.png`}
+                src={`${baseUrl}logo-transparent.png`}
                 alt="Triviverso"
-                className="h-40 w-40 rounded-[36px] shadow-2xl ring-1 ring-white/20"
+                className="h-44 w-44 drop-shadow-[0_10px_35px_rgba(0,0,0,0.55)]"
               />
               <p className="mt-4 text-center text-sm text-slate-300/90">
                 Elige tu mundo, completa lecciones y sube en la liga.
