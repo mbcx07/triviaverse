@@ -74,6 +74,8 @@ export default function App() {
   const [newPin, setNewPin] = useState('')
 
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
+  const [portalOpen, setPortalOpen] = useState(false)
+  const [celebration, setCelebration] = useState<{ title: string; xpDelta: number } | null>(null)
 
   const [tab, setTab] = useState<'home' | 'play' | 'league'>('home')
 
@@ -280,6 +282,16 @@ export default function App() {
         xpTotal: r.xpTotal,
         streakCount: r.streakCount,
       })
+
+      // update progressMap for route locks
+      setProgressMap((pm) => {
+        const next = { ...pm, [lessonId]: { answeredCount: Object.keys(nextResults).length, correctCount: Object.values(nextResults).filter(Boolean).length } }
+        return next
+      })
+
+      if (Object.keys(nextResults).length === 6) {
+        setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+      }
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el intento (Firestore).')
     }
@@ -305,6 +317,14 @@ export default function App() {
         correctCount: Object.values(nextResults).filter(Boolean).length,
       })
       setUser({ ...user, xpTotal: r.xpTotal, streakCount: r.streakCount })
+      setProgressMap((pm) => ({
+        ...pm,
+        [lessonId]: {
+          answeredCount: Object.keys(nextResults).length,
+          correctCount: Object.values(nextResults).filter(Boolean).length,
+        },
+      }))
+      if (Object.keys(nextResults).length === 6) setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el intento (Firestore).')
     }
@@ -330,6 +350,14 @@ export default function App() {
         correctCount: Object.values(nextResults).filter(Boolean).length,
       })
       setUser({ ...user, xpTotal: r.xpTotal, streakCount: r.streakCount })
+      setProgressMap((pm) => ({
+        ...pm,
+        [lessonId]: {
+          answeredCount: Object.keys(nextResults).length,
+          correctCount: Object.values(nextResults).filter(Boolean).length,
+        },
+      }))
+      if (Object.keys(nextResults).length === 6) setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el intento (Firestore).')
     }
@@ -350,8 +378,8 @@ export default function App() {
 
   const qType = (q as any)?.type || 'write'
 
-  function pickRandomWorldLesson() {
-    if (!lessons.length) return
+  function pickRandomUnlockedLesson(): Lesson | null {
+    if (!lessons.length) return null
 
     // Only pick from unlocked lessons (per-progress lock model)
     const unlocked: Lesson[] = []
@@ -367,17 +395,27 @@ export default function App() {
     }
 
     const pool = unlocked.length ? unlocked : lessons
-
-    // avoid picking same lesson currently selected when possible
     const filtered = pool.filter((l) => l.id !== lessonId)
     const pickFrom = filtered.length ? filtered : pool
+
     const picked = pickFrom[Math.floor((crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32) * pickFrom.length)]
-    setWorld(String(picked.subject || 'general'))
-    setLessonId(picked.id)
-    setTab('play')
-    setFeedback(null)
-    setError(null)
-    setStatus(null)
+    return picked || null
+  }
+
+  function openRandomPortal() {
+    const picked = pickRandomUnlockedLesson()
+    if (!picked) return
+
+    setPortalOpen(true)
+    setTimeout(() => {
+      setPortalOpen(false)
+      setWorld(String(picked.subject || 'general'))
+      setLessonId(picked.id)
+      setTab('play')
+      setFeedback(null)
+      setError(null)
+      setStatus(null)
+    }, 650)
   }
 
   function isLessonCompleted(lessonId: string): boolean {
@@ -562,7 +600,7 @@ export default function App() {
               </div>
               <button
                 className="rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] px-3 py-2 text-xs font-black text-slate-900 shadow-lg active:border-b-0 active:translate-y-1"
-                onClick={pickRandomWorldLesson}
+                onClick={openRandomPortal}
               >
                 Mundo Sorpresa
               </button>
@@ -754,6 +792,41 @@ export default function App() {
         )}
 
         <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto</footer>
+
+        {/* Portal (random world) */}
+        {portalOpen ? (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur">
+            <div className="relative h-44 w-44 rounded-full bg-gradient-to-br from-[#1CB0F6] via-[#7C4DFF] to-[#FFC800] p-2 shadow-2xl">
+              <div className="h-full w-full animate-spin rounded-full bg-gradient-to-br from-[#070B2A] via-[#1CB0F6] to-[#7C4DFF]" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="rounded-2xl bg-black/30 px-4 py-2 text-sm font-black text-white ring-1 ring-white/20">
+                  Abriendo portal…
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Celebration */}
+        {celebration ? (
+          <div className="fixed inset-0 z-[105] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
+              <div className="bg-gradient-to-br from-[#58CC02] to-[#FFC800] p-7 text-center text-slate-900">
+                <div className="text-sm font-extrabold uppercase tracking-widest opacity-80">¡Completada!</div>
+                <div className="mt-1 text-2xl font-black">{celebration.title}</div>
+                <div className="mt-2 text-sm font-bold">+{celebration.xpDelta} XP</div>
+              </div>
+              <div className="space-y-3 p-6">
+                <button
+                  onClick={() => setCelebration(null)}
+                  className="w-full rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] py-4 text-lg font-black uppercase tracking-widest text-slate-900 transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Start lesson modal */}
         {startModalLesson ? (
