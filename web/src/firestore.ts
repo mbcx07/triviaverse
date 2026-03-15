@@ -40,6 +40,9 @@ export type User = {
   streakCount?: number
   lastPlayDate?: string
   teamId?: string
+  avatar?: string
+  displayName?: string
+  lastActiveAt?: any
 }
 
 export type Lesson = {
@@ -153,6 +156,9 @@ export async function loginWithNicknamePin(
     streakCount: Number(data2.streakCount || 0),
     lastPlayDate: data2.lastPlayDate ? String(data2.lastPlayDate) : undefined,
     teamId: data2.teamId ? String(data2.teamId) : undefined,
+    avatar: data2.avatar ? String(data2.avatar) : undefined,
+    displayName: data2.displayName ? String(data2.displayName) : undefined,
+    lastActiveAt: data2.lastActiveAt,
   }
 }
 
@@ -450,6 +456,35 @@ export async function updateTeamTitle(params: { teamId: string; title: string })
   if (!title) throw new Error('Nombre de equipo inválido.')
   const ref = doc(dbi, 'teams', params.teamId)
   await setDoc(ref, { title, updatedAt: serverTimestamp() }, { merge: true })
+}
+
+export async function pingActive(userId: string) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', userId)
+  await setDoc(ref, { lastActiveAt: serverTimestamp() }, { merge: true })
+}
+
+export async function updateProfile(params: { userId: string; displayName?: string; avatar?: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', params.userId)
+  const patch: any = { updatedAt: serverTimestamp() }
+  if (params.displayName != null) patch.displayName = String(params.displayName).trim().slice(0, 24)
+  if (params.avatar != null) patch.avatar = String(params.avatar).trim().slice(0, 4)
+  await setDoc(ref, patch, { merge: true })
+}
+
+export async function getUserPublic(userId: string): Promise<Partial<User> | null> {
+  const dbi = ensureDb()
+  const snap = await getDoc(doc(dbi, 'users', userId))
+  if (!snap.exists()) return null
+  const data = snap.data() as any
+  return {
+    id: snap.id,
+    nickname: String(data.nickname || snap.id),
+    avatar: data.avatar ? String(data.avatar) : undefined,
+    displayName: data.displayName ? String(data.displayName) : undefined,
+    lastActiveAt: data.lastActiveAt,
+  }
 }
 
 export type BattleRoom = {
@@ -781,6 +816,9 @@ export function subscribeUser(userId: string, cb: (u: User) => void): Unsubscrib
       streakCount: Number(data.streakCount || 0),
       lastPlayDate: data.lastPlayDate ? String(data.lastPlayDate) : undefined,
       teamId: data.teamId ? String(data.teamId) : undefined,
+      avatar: data.avatar ? String(data.avatar) : undefined,
+      displayName: data.displayName ? String(data.displayName) : undefined,
+      lastActiveAt: data.lastActiveAt,
     })
   })
 }

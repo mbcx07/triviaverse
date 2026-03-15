@@ -34,6 +34,9 @@ import {
   subscribeFriendRequestsOut,
   sendBattleInvite,
   subscribeBattleInvites,
+  pingActive,
+  updateProfile,
+  getUserPublic,
   type Lesson,
   type Question,
   type User,
@@ -139,6 +142,8 @@ export default function App() {
 
   // team config
   const [teamName, setTeamName] = useState('')
+  const [avatar, setAvatar] = useState('🪐')
+  const [displayName, setDisplayName] = useState('')
 
   // battles
   const [battleRoomId, setBattleRoomId] = useState<string>('')
@@ -151,6 +156,7 @@ export default function App() {
   // friends
   const [friendQuery, setFriendQuery] = useState('')
   const [friends, setFriends] = useState<Array<{ id: string; nickname?: string }>>([])
+  const [friendInfo, setFriendInfo] = useState<Record<string, { avatar?: string; displayName?: string; lastActiveAt?: any }>>({})
   const [reqIn, setReqIn] = useState<Array<{ id: string; fromUserId: string }>>([])
   const [reqOut, setReqOut] = useState<Array<{ id: string; toUserId: string }>>([])
   const [invites, setInvites] = useState<Array<{ id: string; fromUserId: string; roomId: string }>>([])
@@ -238,12 +244,17 @@ export default function App() {
         'La conexión a Firestore está tardando demasiado. Revisa tu Internet o vuelve a intentar en modo incógnito.'
       )
       setUser(u)
+      setAvatar(u.avatar || '🪐')
+      setDisplayName(u.displayName || '')
       setAnswerText('')
       setResults({})
       setIdx(0)
       setStatus('Cargando lecciones...')
 
       await ensureTeam()
+
+      // mark active now
+      await pingActive(u.id)
 
       const ls = await withTimeout(
         listLessons(),
@@ -352,6 +363,36 @@ export default function App() {
       ;(window as any).__tv_unsubInvites?.()
     }
   }, [user])
+
+  // Presence ping
+  useEffect(() => {
+    if (!user) return
+    const id = user.id
+    const t = setInterval(() => {
+      pingActive(id).catch(() => {})
+    }, 30000)
+    return () => clearInterval(t)
+  }, [user?.id])
+
+  // Friend public info (presence)
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    ;(async () => {
+      const ids = friends.map((f) => f.id)
+      const entries = await Promise.all(ids.slice(0, 100).map((id) => getUserPublic(id)))
+      if (cancelled) return
+      const map: Record<string, { avatar?: string; displayName?: string; lastActiveAt?: any }> = {}
+      for (const e of entries) {
+        if (!e?.id) continue
+        map[e.id] = { avatar: e.avatar, displayName: e.displayName, lastActiveAt: e.lastActiveAt }
+      }
+      setFriendInfo(map)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [friends, user])
 
   // Live weekly league when requested
   useEffect(() => {
@@ -666,7 +707,7 @@ export default function App() {
             <div className="flex items-center gap-2 text-sm text-slate-300">
               {/* Desktop nav */}
               <div className="hidden sm:flex items-center gap-2">
-                <div className="hidden md:block">Hola, {user.nickname}</div>
+                <div className="hidden md:block">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
 
                 <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Nivel {level}</div>
                 <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">XP {xpTotal}</div>
@@ -748,6 +789,42 @@ export default function App() {
               <div className="text-lg font-bold">Configuración</div>
               <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={() => setSettingsOpen(false)}>
                 Cerrar
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+              <div className="text-sm font-extrabold text-slate-200">Perfil</div>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {['🪐', '🚀', '👽', '⭐', '🌙', '🛰️'].map((a) => (
+                  <button
+                    key={a}
+                    className={`rounded-2xl px-3 py-3 text-xl ring-1 ring-white/10 ${avatar === a ? 'bg-[#1CB0F6]/40' : 'bg-white/5 hover:bg-white/10'}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setAvatar(a)
+                    }}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+              <label className="mt-3 block">
+                <div className="mb-1 text-xs text-slate-300">Nombre visible (opcional)</div>
+                <input
+                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder={user.nickname}
+                />
+              </label>
+              <button
+                className="mt-3 w-full rounded-xl bg-[#1CB0F6] px-3 py-2 font-black text-white hover:bg-[#35C6FF]"
+                onClick={async (e) => {
+                  e.preventDefault()
+                  await updateProfile({ userId: user.id, avatar, displayName })
+                }}
+              >
+                Guardar perfil
               </button>
             </div>
 
@@ -956,27 +1033,42 @@ export default function App() {
               <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                 <div className="text-sm font-extrabold">Mis amigos</div>
                 <div className="mt-3 space-y-2">
-                  {friends.map((f) => (
-                    <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 ring-1 ring-white/10">
-                      <div>
-                        <div className="text-sm font-black">{f.nickname || f.id}</div>
-                        <div className="text-xs text-slate-300/70">@{f.id}</div>
+                  {friends.map((f) => {
+                    const info = friendInfo[f.id] || {}
+                    const ts: any = info.lastActiveAt
+                    const ms = ts?.toDate ? ts.toDate().getTime() : ts?.seconds ? ts.seconds * 1000 : 0
+                    const ageSec = ms ? (Date.now() - ms) / 1000 : 999999
+                    const online = ageSec < 90
+                    const mins = Math.max(1, Math.round(ageSec / 60))
+
+                    return (
+                      <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 ring-1 ring-white/10">
+                        <div>
+                          <div className="text-sm font-black">
+                            {(info.avatar || '🪐') + ' '}
+                            {info.displayName || f.nickname || f.id}
+                            {online ? <span className="ml-2 rounded-full bg-[#58CC02] px-2 py-1 text-[10px] font-black text-white">EN LÍNEA</span> : null}
+                          </div>
+                          <div className="text-xs text-slate-300/70">
+                            @{f.id} {online ? '' : `• hace ${mins} min`}
+                          </div>
+                        </div>
+                        <button
+                          className="rounded-2xl bg-[#7C4DFF]/60 px-3 py-2 text-xs font-black text-white"
+                          onClick={async () => {
+                            if (!user) return
+                            const maxPerTeam = 1
+                            const subject = 'esp'
+                            const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'private' })
+                            await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
+                            setTab('battle')
+                          }}
+                        >
+                          Invitar
+                        </button>
                       </div>
-                      <button
-                        className="rounded-2xl bg-[#7C4DFF]/60 px-3 py-2 text-xs font-black text-white"
-                        onClick={async () => {
-                          if (!user) return
-                          const maxPerTeam = 1
-                          const subject = 'esp'
-                          const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'private' })
-                          await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
-                          setTab('battle')
-                        }}
-                      >
-                        Invitar
-                      </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                   {!friends.length ? <div className="text-xs text-slate-300/70">Aún no tienes amigos.</div> : null}
                 </div>
               </div>
