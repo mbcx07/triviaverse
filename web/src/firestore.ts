@@ -7,6 +7,7 @@ import {
   increment,
   limit,
   orderBy,
+  writeBatch,
   query,
   serverTimestamp,
   setDoc,
@@ -180,16 +181,20 @@ export async function loadAttemptsForLesson(userId: string, lessonId: string): P
   return out
 }
 
-export async function loadProgressMap(userId: string): Promise<Record<string, { answeredCount: number; correctCount: number }>> {
+export async function loadProgressMap(
+  userId: string
+): Promise<Record<string, { answeredCount: number; correctCount: number; starsBest?: number; starsLast?: number }>> {
   const dbi = ensureDb()
   const ref = collection(dbi, 'users', userId, 'progress')
   const qs = await getDocs(query(ref, limit(500)))
-  const out: Record<string, { answeredCount: number; correctCount: number }> = {}
+  const out: Record<string, { answeredCount: number; correctCount: number; starsBest?: number; starsLast?: number }> = {}
   for (const d of qs.docs) {
     const data = d.data() as any
     out[d.id] = {
       answeredCount: Number(data.answeredCount || 0),
       correctCount: Number(data.correctCount || 0),
+      starsBest: data.starsBest == null ? undefined : Number(data.starsBest || 0),
+      starsLast: data.starsLast == null ? undefined : Number(data.starsLast || 0),
     }
   }
   return out
@@ -220,6 +225,15 @@ export async function getWeeklyLeaderboard(params: {
   })
 }
 
+function calcStars(answeredCount: number, correctCount: number): number {
+  if (answeredCount < 6) return 0
+  if (correctCount >= answeredCount) return 3
+  const ratio = answeredCount ? correctCount / answeredCount : 0
+  if (ratio >= 0.8) return 2
+  if (ratio >= 0.5) return 1
+  return 0
+}
+
 export async function recordAttempt(params: {
   userId: string
   lessonId: string
@@ -228,7 +242,7 @@ export async function recordAttempt(params: {
   wasCorrect: boolean
   answeredCount: number
   correctCount: number
-}): Promise<{ xpDelta: number; weekKey: string; streakCount: number; xpTotal: number }>
+}): Promise<{ xpDelta: number; weekKey: string; streakCount: number; xpTotal: number; starsLast?: number; starsBest?: number }>
 {
   const { userId, lessonId, questionId, answerRaw, wasCorrect, answeredCount, correctCount } = params
   const attemptId = `${lessonId}__${questionId}`
@@ -286,6 +300,11 @@ export async function recordAttempt(params: {
     )
 
     // progress per lesson
+    const starsNow = calcStars(answeredCount, correctCount)
+    const progressSnap = await tx.get(progressRef)
+    const prevBest = progressSnap.exists() ? Number((progressSnap.data() as any).starsBest || 0) : 0
+    const nextBest = answeredCount >= 6 ? Math.max(prevBest, starsNow) : prevBest
+
     tx.set(
       progressRef,
       {
@@ -293,6 +312,13 @@ export async function recordAttempt(params: {
         answeredCount,
         correctCount,
         updatedAt: serverTimestamp(),
+        ...(answeredCount >= 6
+          ? {
+              completedAt: serverTimestamp(),
+              starsLast: starsNow,
+              starsBest: nextBest,
+            }
+          : {}),
       },
       { merge: true }
     )
@@ -333,8 +359,35 @@ export async function recordAttempt(params: {
       { merge: true }
     )
 
-    return { xpDelta, weekKey: wk, streakCount: nextStreak, xpTotal: prevTotal + xpDelta }
+    return {
+      xpDelta,
+      weekKey: wk,
+      streakCount: nextStreak,
+      xpTotal: prevTotal + xpDelta,
+      starsLast: answeredCount >= 6 ? starsNow : undefined,
+      starsBest: answeredCount >= 6 ? nextBest : undefined,
+    }
   })
+}
+
+export async function resetLessonProgress(params: { userId: string; lessonId: string }) {
+  const { userId, lessonId } = params
+  const dbi = ensureDb()
+
+  // Delete attempts for this lesson
+  const ref = collection(dbi, 'users', userId, 'attempts')
+  const qs = await getDocs(query(ref, where('lessonId', '==', lessonId), limit(500)))
+
+  const batch = writeBatch(dbi)
+  for (const d of qs.docs) {
+    batch.delete(d.ref)
+  }
+
+  // Delete progress doc for lesson
+  const progRef = doc(dbi, 'users', userId, 'progress', lessonId)
+  batch.delete(progRef)
+
+  await batch.commit()
 }
 
 // Legacy (total XP) leaderboard kept for debugging/back-compat

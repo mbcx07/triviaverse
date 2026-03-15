@@ -11,6 +11,7 @@ import {
   changePin,
   getWeeklyLeaderboard,
   ensureTeam,
+  resetLessonProgress,
   type Lesson,
   type Question,
   type User,
@@ -134,7 +135,9 @@ export default function App() {
   const [results, setResults] = useState<Record<string, boolean>>({})
 
   // lessonId -> progress
-  const [progressMap, setProgressMap] = useState<Record<string, { answeredCount: number; correctCount: number }>>({})
+  const [progressMap, setProgressMap] = useState<
+    Record<string, { answeredCount: number; correctCount: number; starsBest?: number; starsLast?: number }>
+  >({})
 
   const [answerText, setAnswerText] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -331,6 +334,8 @@ export default function App() {
         [lessonId]: {
           answeredCount: Object.keys(nextResults).length,
           correctCount: Object.values(nextResults).filter(Boolean).length,
+          starsBest: r.starsBest ?? pm[lessonId]?.starsBest,
+          starsLast: r.starsLast ?? pm[lessonId]?.starsLast,
         },
       }))
 
@@ -807,6 +812,12 @@ export default function App() {
                         >
                           <span className="text-xs font-black text-white">{completed ? '✓' : i + 1}</span>
 
+                          {progressMap[l.id]?.starsBest ? (
+                            <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black text-[#FFC800] drop-shadow">
+                              {'★'.repeat(Math.max(0, Math.min(3, Number(progressMap[l.id]?.starsBest || 0))))}
+                            </div>
+                          ) : null}
+
                           <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-black/70 px-3 py-1 text-xs font-bold text-white opacity-0 ring-1 ring-white/10 transition-opacity group-hover:opacity-100">
                             {l.title || l.id}
                           </div>
@@ -1081,7 +1092,27 @@ export default function App() {
               <div className="bg-gradient-to-br from-[#58CC02] to-[#FFC800] p-7 text-center text-slate-900">
                 <div className="text-sm font-extrabold uppercase tracking-widest opacity-80">¡Completada!</div>
                 <div className="mt-1 text-2xl font-black">{celebration.title}</div>
+
+                {(() => {
+                  const p = progressMap[lessonId]
+                  const stars = Number(p?.starsLast || 0)
+                  const arr = [1, 2, 3]
+                  return (
+                    <div className="mt-3 flex justify-center gap-2">
+                      {arr.map((n) => (
+                        <div
+                          key={n}
+                          className={`text-3xl ${stars >= n ? 'text-[#FF9600]' : 'text-black/20'}`}
+                        >
+                          ★
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+
                 <div className="mt-2 text-sm font-bold">+{celebration.xpDelta} XP</div>
+                <div className="mt-1 text-xs font-black">Score: {correctAnswered}/{totalAnswered}</div>
               </div>
               <div className="space-y-3 p-6">
                 <button
@@ -1089,6 +1120,29 @@ export default function App() {
                   className="w-full rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] py-4 text-lg font-black uppercase tracking-widest text-slate-900 transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
                 >
                   Continuar
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (!user) return
+                    await resetLessonProgress({ userId: user.id, lessonId })
+                    // reset UI state to replay
+                    setCelebration(null)
+                    setResults({})
+                    setIdx(0)
+                    setFeedback(null)
+                    setAnswerText('')
+                    setOrderSelected([])
+                    setMatchLeft(null)
+                    setMatchMap({})
+                    // reload attempts/progress quickly
+                    const pm = await loadProgressMap(user.id)
+                    setProgressMap(pm)
+                    setTab('play')
+                  }}
+                  className="w-full rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-800"
+                >
+                  Reintentar
                 </button>
               </div>
             </div>

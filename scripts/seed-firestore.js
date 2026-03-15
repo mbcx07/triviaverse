@@ -162,6 +162,19 @@ function lessonPack(subjectKey) {
         ], 'Valores en acciones.'),
         qWrite('Escribe una norma que ayude en tu salón:', ['no gritar', 'levantar la mano', 'respetar turnos', 'no empujar'], 'Normas mejoran la convivencia.'),
       ];
+    case 'esp':
+      return [
+        qMC('¿Cuál de estas palabras es un sustantivo?', ['Correr', 'Mesa', 'Rápido', 'Azul'], 1, 'Mesa es un sustantivo (nombra un objeto).'),
+        qTF('Los sustantivos nombran personas, animales, cosas o lugares.', true, 'Eso es un sustantivo.'),
+        qFill('La palabra "niño" es un ________.', 'sustantivo', 'Niño nombra a una persona.'),
+        qOrder('Ordena para formar una oración:', ['El', 'niño', 'juega'], 'El niño juega.'),
+        qMatch('Relaciona la palabra con su tipo:', [
+          ['rápido', 'Adjetivo'],
+          ['correr', 'Verbo'],
+          ['escuela', 'Sustantivo'],
+        ], 'Adjetivo describe, verbo acción, sustantivo nombra.'),
+        qWrite('Escribe un sustantivo propio (nombre de persona o lugar):', ['maria', 'juan', 'mexico', 'la paz'], 'Ejemplos: María, Juan, México, La Paz.'),
+      ];
     default:
       return [
         qWrite(`Pregunta demo de ${subjectKey}: escribe "ok"`, ['ok'], 'Demo.'),
