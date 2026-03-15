@@ -520,13 +520,24 @@ export default function App() {
         ) : null}
 
         {!user ? (
-          <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-            <h1 className="text-xl font-bold">Entrar</h1>
-            <p className="mt-1 text-sm text-slate-300">
-              Acceso simple por <b>nickname</b> + <b>PIN de 4 dígitos</b>.
-            </p>
+          <div className="rounded-3xl bg-black/25 p-6 ring-1 ring-white/10">
+            <div className="flex flex-col items-center">
+              <img
+                src="/pwa-512x512.png"
+                alt="Triviverso"
+                className="h-28 w-28 rounded-[28px] shadow-2xl ring-1 ring-white/20"
+              />
+              <h1 className="mt-4 text-2xl font-black tracking-tight">TRIVIVERSO</h1>
+              <p className="mt-1 text-center text-sm text-slate-300/90">
+                Elige tu mundo, completa lecciones y sube en la liga.
+              </p>
+            </div>
 
-            <form className="mt-4 space-y-3" onSubmit={onLogin}>
+            <div className="mt-6 rounded-2xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+              <div className="text-sm font-bold">Entrar</div>
+              <div className="mt-1 text-xs text-slate-300/80">Nickname + PIN (4 dígitos)</div>
+
+              <form className="mt-4 space-y-3" onSubmit={onLogin}>
               <label className="block">
                 <div className="mb-1 text-xs text-slate-300">Nickname</div>
                 <input
@@ -554,6 +565,7 @@ export default function App() {
 
               <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano (permitido para este prototipo).</div>
             </form>
+            </div>
           </div>
         ) : tab === 'league' ? (
           <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
