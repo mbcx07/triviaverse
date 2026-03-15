@@ -26,6 +26,14 @@ import {
   subscribeVoiceCandidates,
   publishVoiceSignal,
   publishVoiceCandidate,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  subscribeFriends,
+  subscribeFriendRequestsIn,
+  subscribeFriendRequestsOut,
+  sendBattleInvite,
+  subscribeBattleInvites,
   type Lesson,
   type Question,
   type User,
@@ -140,6 +148,13 @@ export default function App() {
   const [openRooms, setOpenRooms] = useState<Array<{ id: string; hostTeamId?: string; status?: string; subject?: string }>>([])
   const [openLobbyOn, setOpenLobbyOn] = useState(false)
 
+  // friends
+  const [friendQuery, setFriendQuery] = useState('')
+  const [friends, setFriends] = useState<Array<{ id: string; nickname?: string }>>([])
+  const [reqIn, setReqIn] = useState<Array<{ id: string; fromUserId: string }>>([])
+  const [reqOut, setReqOut] = useState<Array<{ id: string; toUserId: string }>>([])
+  const [invites, setInvites] = useState<Array<{ id: string; fromUserId: string; roomId: string }>>([])
+
   // voice (beta) - v1 supports only 1v1 reliably
   const [voiceOn, setVoiceOn] = useState(false)
   const [voiceErr, setVoiceErr] = useState<string | null>(null)
@@ -155,7 +170,7 @@ export default function App() {
   // route pagination (10 missions per page)
   const [routePage, setRoutePage] = useState(0)
 
-  const [tab, setTab] = useState<'mode' | 'home' | 'play' | 'league' | 'trophies' | 'battle'>('mode')
+  const [tab, setTab] = useState<'mode' | 'home' | 'play' | 'league' | 'trophies' | 'battle' | 'friends'>('mode')
   const [menuOpen, setMenuOpen] = useState(false)
 
   // Worlds (subjects). When null, user is on the world picker.
@@ -316,6 +331,27 @@ export default function App() {
       if (el) el.scrollTop = el.scrollHeight
     })
   }, [tab, battleMsgs.length])
+
+  // Friends subscriptions
+  useEffect(() => {
+    if (!user) return
+    ;(window as any).__tv_unsubFriends?.()
+    ;(window as any).__tv_unsubReqIn?.()
+    ;(window as any).__tv_unsubReqOut?.()
+    ;(window as any).__tv_unsubInvites?.()
+
+    ;(window as any).__tv_unsubFriends = subscribeFriends(user.id, (l) => setFriends(l))
+    ;(window as any).__tv_unsubReqIn = subscribeFriendRequestsIn(user.id, (l) => setReqIn(l))
+    ;(window as any).__tv_unsubReqOut = subscribeFriendRequestsOut(user.id, (l) => setReqOut(l))
+    ;(window as any).__tv_unsubInvites = subscribeBattleInvites(user.id, (l) => setInvites(l))
+
+    return () => {
+      ;(window as any).__tv_unsubFriends?.()
+      ;(window as any).__tv_unsubReqIn?.()
+      ;(window as any).__tv_unsubReqOut?.()
+      ;(window as any).__tv_unsubInvites?.()
+    }
+  }, [user])
 
   // Live weekly league when requested
   useEffect(() => {
@@ -850,6 +886,123 @@ export default function App() {
               ))}
             </div>
           </div>
+        ) : tab === 'friends' ? (
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-extrabold">Amigos</div>
+                <div className="mt-1 text-xs text-slate-300/80">Estilo Roblox (v1): solicitudes, lista e invitación a batalla.</div>
+              </div>
+              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
+                Volver
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+              <div className="text-sm font-extrabold">Agregar amigo</div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
+                  value={friendQuery}
+                  onChange={(e) => setFriendQuery(e.target.value)}
+                  placeholder="nickname"
+                />
+                <button
+                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
+                  onClick={async () => {
+                    if (!user) return
+                    await sendFriendRequest({ fromUserId: user.id, toNickname: friendQuery })
+                    setFriendQuery('')
+                  }}
+                >
+                  Enviar
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Solicitudes recibidas</div>
+                <div className="mt-3 space-y-2">
+                  {reqIn.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 ring-1 ring-white/10">
+                      <div className="text-sm font-black">{r.fromUserId}</div>
+                      <div className="flex gap-2">
+                        <button className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs font-black text-white" onClick={() => user && acceptFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
+                          Aceptar
+                        </button>
+                        <button className="rounded-xl bg-rose-500/80 px-3 py-2 text-xs font-black text-white" onClick={() => user && rejectFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
+                          Rechazar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!reqIn.length ? <div className="text-xs text-slate-300/70">Sin solicitudes.</div> : null}
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Solicitudes enviadas</div>
+                <div className="mt-3 space-y-2">
+                  {reqOut.map((r) => (
+                    <div key={r.id} className="rounded-2xl bg-white/5 px-3 py-3 text-sm font-black ring-1 ring-white/10">
+                      {r.toUserId}
+                    </div>
+                  ))}
+                  {!reqOut.length ? <div className="text-xs text-slate-300/70">Sin solicitudes.</div> : null}
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Mis amigos</div>
+                <div className="mt-3 space-y-2">
+                  {friends.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 ring-1 ring-white/10">
+                      <div>
+                        <div className="text-sm font-black">{f.nickname || f.id}</div>
+                        <div className="text-xs text-slate-300/70">@{f.id}</div>
+                      </div>
+                      <button
+                        className="rounded-2xl bg-[#7C4DFF]/60 px-3 py-2 text-xs font-black text-white"
+                        onClick={async () => {
+                          if (!user) return
+                          const maxPerTeam = 1
+                          const subject = 'esp'
+                          const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'private' })
+                          await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
+                          setTab('battle')
+                        }}
+                      >
+                        Invitar
+                      </button>
+                    </div>
+                  ))}
+                  {!friends.length ? <div className="text-xs text-slate-300/70">Aún no tienes amigos.</div> : null}
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Invitaciones a batalla</div>
+                <div className="mt-3 space-y-2">
+                  {invites.map((iv) => (
+                    <button
+                      key={iv.id}
+                      className="w-full rounded-2xl bg-white/5 px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 hover:bg-white/10"
+                      onClick={async () => {
+                        if (!user) return
+                        setBattleRoomId(iv.roomId)
+                        await joinBattleRoom({ roomId: iv.roomId, userId: user.id, teamId: user.teamId || 'belas' })
+                        setTab('battle')
+                      }}
+                    >
+                      Invitación de {iv.fromUserId} → sala {iv.roomId}
+                    </button>
+                  ))}
+                  {!invites.length ? <div className="text-xs text-slate-300/70">Sin invitaciones.</div> : null}
+                </div>
+              </div>
+            </div>
+          </div>
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             <div className="flex items-center justify-between gap-2">
@@ -1028,10 +1181,14 @@ export default function App() {
                             ;(window as any).__tv_unsubVoiceCandOut = null
                             try {
                               ;(window as any).__tv_voicePC?.close?.()
-                            } catch {}
+                            } catch {
+                              // ignore
+                            }
                             try {
                               ;(window as any).__tv_voiceStream?.getTracks?.().forEach((t: any) => t.stop())
-                            } catch {}
+                            } catch {
+                              // ignore
+                            }
                             ;(window as any).__tv_voicePC = null
                             ;(window as any).__tv_voiceTrack = null
                             return
@@ -1088,7 +1245,9 @@ export default function App() {
                               cb: async (c) => {
                                 try {
                                   await pc.addIceCandidate(c)
-                                } catch {}
+                                } catch {
+                                  // ignore
+                                }
                               },
                             })
 
@@ -1123,7 +1282,7 @@ export default function App() {
                                 },
                               })
                             }
-                          } catch (e: any) {
+                          } catch { 
                             setVoiceErr('No pude activar micrófono/voz (permiso o navegador).')
                             setVoiceOn(false)
                           }
@@ -1591,6 +1750,7 @@ export default function App() {
 
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('battle'); setMenuOpen(false) }}>Batalla</button>
+                <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setTab('friends'); setMenuOpen(false) }}>Amigos</button>
                 <button className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black" onClick={() => { setSettingsOpen(true); setMenuOpen(false) }}>Config</button>
               </div>
               <div className="mt-2">

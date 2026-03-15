@@ -614,6 +614,110 @@ export async function submitBattleScore(params: { roomId: string; userId: string
   await setDoc(ref, { [field]: { correct: params.correct, answered: params.answered, updatedAt: serverTimestamp() } }, { merge: true })
 }
 
+// --- Friends / Social (v1) ---
+export type Friend = { id: string; nickname?: string; createdAt?: any }
+
+export async function sendFriendRequest(params: { fromUserId: string; toNickname: string }) {
+  const dbi = ensureDb()
+  const toId = normalize(params.toNickname)
+  if (!toId) throw new Error('Nickname inválido.')
+  if (toId === params.fromUserId) throw new Error('No puedes agregarte a ti mismo.')
+
+  const toUserRef = doc(dbi, 'users', toId)
+  const toUserSnap = await getDoc(toUserRef)
+  if (!toUserSnap.exists()) throw new Error('Usuario no existe.')
+
+  const inRef = doc(dbi, 'users', toId, 'friendRequestsIn', params.fromUserId)
+  const outRef = doc(dbi, 'users', params.fromUserId, 'friendRequestsOut', toId)
+
+  await setDoc(inRef, { fromUserId: params.fromUserId, createdAt: serverTimestamp() }, { merge: true })
+  await setDoc(outRef, { toUserId: toId, createdAt: serverTimestamp() }, { merge: true })
+}
+
+export async function acceptFriendRequest(params: { userId: string; fromUserId: string }) {
+  const dbi = ensureDb()
+  const a = params.userId
+  const b = params.fromUserId
+
+  const aRef = doc(dbi, 'users', a)
+  const bRef = doc(dbi, 'users', b)
+  const [aSnap, bSnap] = await Promise.all([getDoc(aRef), getDoc(bRef)])
+  if (!aSnap.exists() || !bSnap.exists()) throw new Error('Usuario no existe.')
+
+  const aNick = String((aSnap.data() as any).nickname || a)
+  const bNick = String((bSnap.data() as any).nickname || b)
+
+  const batch = writeBatch(dbi)
+  batch.set(doc(dbi, 'users', a, 'friends', b), { nickname: bNick, createdAt: serverTimestamp() }, { merge: true })
+  batch.set(doc(dbi, 'users', b, 'friends', a), { nickname: aNick, createdAt: serverTimestamp() }, { merge: true })
+  batch.delete(doc(dbi, 'users', a, 'friendRequestsIn', b))
+  batch.delete(doc(dbi, 'users', b, 'friendRequestsOut', a))
+  await batch.commit()
+}
+
+export async function rejectFriendRequest(params: { userId: string; fromUserId: string }) {
+  const dbi = ensureDb()
+  const batch = writeBatch(dbi)
+  batch.delete(doc(dbi, 'users', params.userId, 'friendRequestsIn', params.fromUserId))
+  batch.delete(doc(dbi, 'users', params.fromUserId, 'friendRequestsOut', params.userId))
+  await batch.commit()
+}
+
+export function subscribeFriends(userId: string, cb: (list: Friend[]) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'friends')
+  const q = query(ref, orderBy('createdAt', 'desc'), limit(200))
+  return onSnapshot(q, (qs) => {
+    cb(
+      qs.docs.map((d) => {
+        const data = d.data() as any
+        return { id: d.id, nickname: data.nickname, createdAt: data.createdAt }
+      })
+    )
+  })
+}
+
+export function subscribeFriendRequestsIn(userId: string, cb: (list: Array<{ id: string; fromUserId: string }>) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'friendRequestsIn')
+  const q = query(ref, limit(200))
+  return onSnapshot(q, (qs) => {
+    cb(qs.docs.map((d) => ({ id: d.id, fromUserId: d.id })))
+  })
+}
+
+export function subscribeFriendRequestsOut(userId: string, cb: (list: Array<{ id: string; toUserId: string }>) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'friendRequestsOut')
+  const q = query(ref, limit(200))
+  return onSnapshot(q, (qs) => {
+    cb(qs.docs.map((d) => ({ id: d.id, toUserId: d.id })))
+  })
+}
+
+export async function sendBattleInvite(params: { fromUserId: string; toUserId: string; roomId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(collection(dbi, 'users', params.toUserId, 'battleInvites'))
+  await setDoc(ref, { fromUserId: params.fromUserId, roomId: params.roomId, createdAt: serverTimestamp() }, { merge: true })
+}
+
+export function subscribeBattleInvites(
+  userId: string,
+  cb: (list: Array<{ id: string; fromUserId: string; roomId: string }>) => void
+): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'battleInvites')
+  const q = query(ref, orderBy('createdAt', 'desc'), limit(50))
+  return onSnapshot(q, (qs) => {
+    cb(
+      qs.docs.map((d) => {
+        const data = d.data() as any
+        return { id: d.id, fromUserId: String(data.fromUserId || ''), roomId: String(data.roomId || '') }
+      })
+    )
+  })
+}
+
 // --- Voice (WebRTC signaling via Firestore) ---
 export function subscribeVoiceSignal(
   params: {
