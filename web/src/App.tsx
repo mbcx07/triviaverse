@@ -120,6 +120,12 @@ export default function App() {
   const [portalOpen, setPortalOpen] = useState(false)
   const [celebration, setCelebration] = useState<{ title: string; xpDelta: number } | null>(null)
 
+  // trophies
+  const [trophyToast, setTrophyToast] = useState<{ title: string; desc: string } | null>(null)
+
+  // route pagination (10 missions per page)
+  const [routePage, setRoutePage] = useState(0)
+
   const [tab, setTab] = useState<'home' | 'play' | 'league' | 'trophies'>('home')
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -440,6 +446,77 @@ export default function App() {
   const levelXp = xpTotal % 100
   const levelProgressPct = Math.min(100, Math.max(0, (levelXp / 100) * 100))
 
+  const completedLessons = useMemo(
+    () => Object.values(progressMap).filter((p) => Number(p?.starsBest || 0) >= 1).length,
+    [progressMap]
+  )
+
+  const trophies = useMemo(() => {
+    const streak = user?.streakCount ?? 0
+
+    const out: Array<{ id: string; title: string; desc: string; ok: boolean }> = []
+
+    // XP trophies (50)
+    for (let i = 1; i <= 50; i++) {
+      const target = i * 100
+      out.push({
+        id: `xp-${target}`,
+        title: i <= 5 ? 'Explorador' : i <= 15 ? 'Aventurero' : i <= 30 ? 'Capitán' : 'Leyenda',
+        desc: `Alcanza ${target} XP`,
+        ok: xpTotal >= target,
+      })
+    }
+
+    // Streak trophies (25)
+    const streakTargets = [1, 2, 3, 4, 5, 7, 10, 14, 21, 30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365, 500, 750, 1000]
+    for (const t of streakTargets.slice(0, 25)) {
+      out.push({
+        id: `streak-${t}`,
+        title: t < 7 ? 'Inicio' : t < 30 ? 'Constancia' : t < 120 ? 'Fuego' : 'Imparable',
+        desc: `Racha de ${t} día${t === 1 ? '' : 's'}`,
+        ok: streak >= t,
+      })
+    }
+
+    // Lessons completed trophies (25)
+    const lessonTargets = [1, 2, 3, 5, 7, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 60, 75, 90, 100, 120, 150, 200, 250, 300]
+    for (const t of lessonTargets.slice(0, 25)) {
+      out.push({
+        id: `lessons-${t}`,
+        title: t < 10 ? 'Coleccionista' : t < 50 ? 'Campeón' : t < 150 ? 'Maestro' : 'Gran Maestro',
+        desc: `Completa ${t} misiones (≥1★)`,
+        ok: completedLessons >= t,
+      })
+    }
+
+    // exactly 100
+    return out.slice(0, 100)
+  }, [user?.streakCount, xpTotal, completedLessons])
+
+  // Trophy unlock notifications
+  useEffect(() => {
+    if (!user) return
+    const key = `tv_trophies_unlocked_${user.id}`
+    const prevRaw = localStorage.getItem(key)
+    const prev = new Set<string>(prevRaw ? JSON.parse(prevRaw) : [])
+
+    const unlockedNow = trophies.filter((t) => t.ok).map((t) => t.id)
+    const newly = unlockedNow.find((id) => !prev.has(id))
+
+    if (newly) {
+      const t = trophies.find((x) => x.id === newly)
+      if (t) {
+        // avoid setState directly in effect body for lint rule
+        queueMicrotask(() => {
+          setTrophyToast({ title: t.title, desc: t.desc })
+          setTimeout(() => setTrophyToast(null), 4000)
+        })
+      }
+    }
+
+    localStorage.setItem(key, JSON.stringify(unlockedNow))
+  }, [user, trophies])
+
   function pickRandomUnlockedLesson(): Lesson | null {
     if (!lessons.length) return null
 
@@ -665,39 +742,25 @@ export default function App() {
           </div>
         ) : tab === 'trophies' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-            <div className="text-lg font-extrabold">Trofeos</div>
-            <div className="mt-1 text-xs text-slate-300/80">Se desbloquean con XP, racha y lecciones completadas.</div>
+            <div className="text-lg font-extrabold">Trofeos (100)</div>
+            <div className="mt-1 text-xs text-slate-300/80">Se desbloquean con XP, racha y misiones completadas (≥1★).</div>
 
-            {(() => {
-              const completedLessons = Object.values(progressMap).filter((p) => (p?.answeredCount || 0) >= 6).length
-              const streak = user?.streakCount ?? 0
-              const trophies = [
-                { id: 'xp-100', title: 'Explorador', desc: 'Llega a 100 XP', ok: xpTotal >= 100 },
-                { id: 'xp-500', title: 'Aventurero', desc: 'Llega a 500 XP', ok: xpTotal >= 500 },
-                { id: 'streak-3', title: 'Constancia', desc: 'Racha de 3 días', ok: streak >= 3 },
-                { id: 'streak-7', title: 'Fuego', desc: 'Racha de 7 días', ok: streak >= 7 },
-                { id: 'lessons-1', title: 'Primera victoria', desc: 'Completa 1 lección', ok: completedLessons >= 1 },
-                { id: 'lessons-5', title: 'Coleccionista', desc: 'Completa 5 lecciones', ok: completedLessons >= 5 },
-              ]
-              return (
-                <div className="mt-4 grid grid-cols-1 gap-3">
-                  {trophies.map((t) => (
-                    <div
-                      key={t.id}
-                      className={`rounded-3xl p-4 ring-1 ring-white/10 ${t.ok ? 'bg-gradient-to-br from-[#FFC800]/20 via-[#1CB0F6]/10 to-[#7C4DFF]/10' : 'bg-slate-950/30'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="text-base font-extrabold">{t.title}</div>
-                        <div className={`rounded-xl px-2 py-1 text-xs font-black ${t.ok ? 'bg-[#58CC02] text-white' : 'bg-white/10 text-slate-200'}`}>
-                          {t.ok ? 'DESBLOQUEADO' : 'BLOQUEADO'}
-                        </div>
-                      </div>
-                      <div className="mt-1 text-sm text-slate-200/90">{t.desc}</div>
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              {trophies.map((t) => (
+                <div
+                  key={t.id}
+                  className={`rounded-3xl p-4 ring-1 ring-white/10 ${t.ok ? 'bg-gradient-to-br from-[#FFC800]/20 via-[#1CB0F6]/10 to-[#7C4DFF]/10' : 'bg-slate-950/30'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-base font-extrabold">{t.title}</div>
+                    <div className={`rounded-xl px-2 py-1 text-xs font-black ${t.ok ? 'bg-[#58CC02] text-white' : 'bg-white/10 text-slate-200'}`}>
+                      {t.ok ? 'DESBLOQUEADO' : 'BLOQUEADO'}
                     </div>
-                  ))}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-200/90">{t.desc}</div>
                 </div>
-              )
-            })()}
+              ))}
+            </div>
           </div>
         ) : tab === 'league' ? (
           <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
@@ -766,6 +829,7 @@ export default function App() {
                     className={`rounded-3xl bg-slate-950/40 p-4 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
                     onClick={() => {
                       setWorld(g.subject)
+                      setRoutePage(0)
                       setLessonId(g.lessons[0]?.id || '')
                     }}
                   >
@@ -785,7 +849,7 @@ export default function App() {
             {/* Route map */}
             {world ? (
               <div className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="text-sm font-bold">Ruta · {subjectTitle(world)}</div>
                   <button
                     className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold hover:bg-slate-700"
@@ -795,10 +859,23 @@ export default function App() {
                   </button>
                 </div>
 
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[0, 1, 2, 3, 4].map((p) => (
+                    <button
+                      key={p}
+                      className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${routePage === p ? 'bg-[#1CB0F6]/70' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}
+                      onClick={() => setRoutePage(p)}
+                    >
+                      {p * 10 + 1}-{p * 10 + 10}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="relative mt-6 flex flex-col items-center gap-10 pb-4">
                   <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-white/10" />
 
-                  {worldGroups[0]?.lessons?.map((l, i) => {
+                  {worldGroups[0]?.lessons?.slice(routePage * 10, routePage * 10 + 10).map((l, i0) => {
+                    const i = routePage * 10 + i0
                     const completed = isLessonCompleted(l.id)
                     const prev = worldGroups[0]?.lessons?.[i - 1]
                     const prevCompleted = prev ? isLessonCompleted(prev.id) : true
@@ -1059,6 +1136,15 @@ export default function App() {
         )}
 
         <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto</footer>
+
+        {/* Trophy toast */}
+        {trophyToast ? (
+          <div className="fixed left-1/2 top-4 z-[130] w-[92vw] max-w-md -translate-x-1/2 rounded-3xl bg-slate-950/90 p-4 text-white shadow-2xl ring-1 ring-white/10">
+            <div className="text-xs font-extrabold uppercase tracking-widest text-[#FFC800]">Trofeo desbloqueado</div>
+            <div className="mt-1 text-lg font-black">{trophyToast.title}</div>
+            <div className="mt-1 text-sm text-slate-200/90">{trophyToast.desc}</div>
+          </div>
+        ) : null}
 
         {/* Mobile menu */}
         {menuOpen && user ? (
