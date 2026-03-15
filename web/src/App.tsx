@@ -737,7 +737,7 @@ export default function App() {
               <img
                 src={`${baseUrl}logo-transparent.png`}
                 alt="Triviverso"
-                className="h-48 w-full max-w-[320px] object-contain bg-black drop-shadow-[0_10px_35px_rgba(0,0,0,0.55)]"
+                className="h-48 w-full max-w-[320px] object-contain drop-shadow-[0_10px_35px_rgba(0,0,0,0.55)]"
               />
               <p className="mt-4 text-center text-sm text-slate-300/90">
                 Elige tu mundo, completa lecciones y sube en la liga.

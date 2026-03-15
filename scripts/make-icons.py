@@ -11,7 +11,7 @@ img = Image.open(SRC).convert('RGBA')
 # Create square icons (contain) with padding for maskable safety
 
 def make(size: int, name: str, pad_ratio: float = 0.12):
-    canvas = Image.new('RGBA', (size, size), (11, 18, 32, 255))  # match app bg-ish
+    canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))  # transparent
     inner = int(size * (1 - 2 * pad_ratio))
     contained = ImageOps.contain(img, (inner, inner), method=Image.Resampling.LANCZOS)
     x = (size - contained.width) // 2
