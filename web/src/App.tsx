@@ -7,6 +7,7 @@ import {
   loginWithNicknamePin,
   recordAttempt,
   changePin,
+  getLeaderboard,
   type Lesson,
   type Question,
   type User,
@@ -35,6 +36,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [oldPin, setOldPin] = useState('')
   const [newPin, setNewPin] = useState('')
+
+  const [tab, setTab] = useState<'play' | 'leaderboard'>('play')
+  const [leaders, setLeaders] = useState<Array<{ id: string; nickname: string; xpTotal: number }>>([])
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [idx, setIdx] = useState(0)
@@ -139,6 +143,23 @@ export default function App() {
     setNewPin('')
   }
 
+  // Load leaderboard when requested
+  useEffect(() => {
+    if (!user || tab !== 'leaderboard') return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await getLeaderboard(25)
+        if (!cancelled) setLeaders(list)
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'No se pudo cargar el leaderboard.')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user, tab])
+
   // Load questions + attempts whenever lesson changes
   useEffect(() => {
     if (!user || !lessonId) return
@@ -222,8 +243,25 @@ export default function App() {
         <header className="flex items-center justify-between py-4">
           <div className="text-lg font-semibold">Triviverso</div>
           {user ? (
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <div>Hola, {user.nickname}</div>
+            <div className="flex items-center gap-2 text-sm text-slate-300">
+              <div className="hidden sm:block">Hola, {user.nickname}</div>
+              <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">
+                XP: {user.xpTotal ?? 0}
+              </div>
+
+              <button
+                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'play' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                onClick={() => setTab('play')}
+              >
+                Jugar
+              </button>
+              <button
+                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'leaderboard' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                onClick={() => setTab('leaderboard')}
+              >
+                Liga
+              </button>
+
               <button
                 className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                 onClick={() => setSettingsOpen(true)}
@@ -341,6 +379,30 @@ export default function App() {
                 Nota: el PIN se guarda en Firestore en texto plano (permitido para este prototipo).
               </div>
             </form>
+          </div>
+        ) : tab === 'leaderboard' ? (
+          <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
+            <div className="text-lg font-bold">Liga (XP total)</div>
+            <div className="mt-1 text-xs text-slate-400">
+              Primera versión: ordena por XP total (luego agregamos XP semanal + Team Belas + global).
+            </div>
+
+            <ol className="mt-4 space-y-2">
+              {leaders.map((u, i) => (
+                <li
+                  key={u.id}
+                  className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2 ring-1 ring-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 text-center font-bold text-slate-300">{i + 1}</div>
+                    <div className="font-semibold">{u.nickname}</div>
+                  </div>
+                  <div className="text-sm text-slate-300">{u.xpTotal} XP</div>
+                </li>
+              ))}
+            </ol>
+
+            {!leaders.length ? <div className="mt-4 text-sm text-slate-400">Sin datos todavía.</div> : null}
           </div>
         ) : (
           <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">

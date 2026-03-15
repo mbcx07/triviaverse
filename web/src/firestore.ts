@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   limit,
   orderBy,
   query,
@@ -27,6 +28,7 @@ export type User = {
   id: string
   nickname: string
   nicknameNorm: string
+  xpTotal?: number
 }
 
 export type Lesson = {
@@ -79,7 +81,18 @@ export async function loginWithNicknamePin(nicknameRaw: string, pinRaw: string):
     await updateDoc(userRef, { lastLoginAt: serverTimestamp(), nickname })
   }
 
-  return { id: nicknameNorm, nickname, nicknameNorm }
+  const xpTotal = Number((snap.data() as any)?.xpTotal ?? 0)
+  return { id: nicknameNorm, nickname, nicknameNorm, xpTotal }
+}
+
+export async function getLeaderboard(limitN: number = 20): Promise<Array<{ id: string; nickname: string; xpTotal: number }>> {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users')
+  const qs = await getDocs(query(ref, orderBy('xpTotal', 'desc'), limit(limitN)))
+  return qs.docs.map((d) => {
+    const data = d.data() as any
+    return { id: d.id, nickname: String(data.nickname || d.id), xpTotal: Number(data.xpTotal || 0) }
+  })
 }
 
 export async function changePin(params: { userId: string; oldPin: string; newPin: string }) {
@@ -139,6 +152,11 @@ export async function recordAttempt(params: {
 
   const attemptRef = doc(dbi, 'users', userId, 'attempts', attemptId)
   const progressRef = doc(dbi, 'users', userId, 'progress', lessonId)
+  const userRef = doc(dbi, 'users', userId)
+
+  // XP model (initial): correct first try = 10, incorrect = 0.
+  // (We can later add partial credit, streak bonuses, hearts, etc.)
+  const xpDelta = wasCorrect ? 10 : 0
 
   const batch = writeBatch(dbi)
   batch.set(
@@ -150,6 +168,7 @@ export async function recordAttempt(params: {
       answerNorm: normalize(answerRaw),
       wasCorrect,
       createdAt: serverTimestamp(),
+      xpDelta,
     },
     { merge: false }
   )
@@ -160,6 +179,15 @@ export async function recordAttempt(params: {
       answeredCount,
       correctCount,
       updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  )
+  batch.set(
+    userRef,
+    {
+      xpTotal: increment(xpDelta),
+      lastActiveAt: serverTimestamp(),
+      nicknameLastSeenAt: serverTimestamp(),
     },
     { merge: true }
   )
