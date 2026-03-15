@@ -350,8 +350,22 @@ export default function App() {
 
   function pickRandomWorldLesson() {
     if (!lessons.length) return
-    const pool = lessons.filter((l) => l.id)
-    if (!pool.length) return
+
+    // Only pick from unlocked lessons (per-progress lock model)
+    const unlocked: Lesson[] = []
+    for (const g of subjectGroups) {
+      const ls = g.lessons
+      for (let i = 0; i < ls.length; i++) {
+        const l = ls[i]
+        const prev = ls[i - 1]
+        const prevCompleted = prev ? isLessonCompleted(prev.id) : true
+        const isUnlocked = i === 0 ? true : prevCompleted
+        if (isUnlocked) unlocked.push(l)
+      }
+    }
+
+    const pool = unlocked.length ? unlocked : lessons
+
     // avoid picking same lesson currently selected when possible
     const filtered = pool.filter((l) => l.id !== lessonId)
     const pickFrom = filtered.length ? filtered : pool
