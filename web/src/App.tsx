@@ -9,9 +9,11 @@ import {
   loginWithNicknamePin,
   recordAttempt,
   changePin,
-  getWeeklyLeaderboard,
   ensureTeam,
   resetLessonProgress,
+  subscribeUser,
+  subscribeProgressMap,
+  subscribeWeeklyLeaderboard,
   type Lesson,
   type Question,
   type User,
@@ -205,6 +207,13 @@ export default function App() {
       const pm = await withTimeout(loadProgressMap(u.id), 12000, 'No pude cargar progreso (Firestore).')
       setProgressMap(pm)
 
+      // live subscriptions (user + progress)
+      // (keep unsub fns in module scope via closures)
+      ;(window as any).__tv_unsubUser?.()
+      ;(window as any).__tv_unsubProgress?.()
+      ;(window as any).__tv_unsubUser = subscribeUser(u.id, (uu) => setUser(uu))
+      ;(window as any).__tv_unsubProgress = subscribeProgressMap(u.id, (m) => setProgressMap(m))
+
       setTab('home')
       setStatus(null)
     } catch (err: any) {
@@ -232,12 +241,18 @@ export default function App() {
   }
 
   function logout() {
+    ;(window as any).__tv_unsubUser?.()
+    ;(window as any).__tv_unsubProgress?.()
+    ;(window as any).__tv_unsubUser = null
+    ;(window as any).__tv_unsubProgress = null
+
     setUser(null)
     setLessons([])
     setLessonId('')
     setQuestions([])
     setIdx(0)
     setResults({})
+    setProgressMap({})
     setAnswerText('')
     setFeedback(null)
     setError(null)
@@ -250,24 +265,19 @@ export default function App() {
     setTab('home')
   }
 
-  // Load weekly league when requested
+  // Live weekly league when requested
   useEffect(() => {
     if (!user || tab !== 'league') return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const list = await getWeeklyLeaderboard({
-          scope: leagueScope,
-          teamId: user.teamId,
-          limitN: 25,
-        })
-        if (!cancelled) setLeaders(list)
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'No se pudo cargar la liga semanal.')
-      }
-    })()
+
+    const unsub = subscribeWeeklyLeaderboard({
+      scope: leagueScope,
+      teamId: user.teamId,
+      limitN: 25,
+      cb: (list) => setLeaders(list),
+    })
+
     return () => {
-      cancelled = true
+      unsub()
     }
   }, [user, tab, leagueScope])
 

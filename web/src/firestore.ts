@@ -14,6 +14,8 @@ import {
   updateDoc,
   where,
   runTransaction,
+  onSnapshot,
+  type Unsubscribe,
   type DocumentData,
 } from 'firebase/firestore'
 
@@ -409,4 +411,75 @@ export async function ensureTeam(teamId: string = TEAM_BELAS_ID) {
   if (!snap.exists()) {
     await setDoc(ref, { title: 'Team Belas', createdAt: serverTimestamp() })
   }
+}
+
+// --- Live subscriptions ---
+export function subscribeUser(userId: string, cb: (u: User) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', userId)
+  return onSnapshot(ref, (snap) => {
+    if (!snap.exists()) return
+    const data = snap.data() as any
+    cb({
+      id: snap.id,
+      nickname: String(data.nickname || snap.id),
+      nicknameNorm: String(data.nicknameNorm || snap.id),
+      xpTotal: Number(data.xpTotal || 0),
+      streakCount: Number(data.streakCount || 0),
+      lastPlayDate: data.lastPlayDate ? String(data.lastPlayDate) : undefined,
+      teamId: data.teamId ? String(data.teamId) : undefined,
+    })
+  })
+}
+
+export function subscribeProgressMap(
+  userId: string,
+  cb: (m: Record<string, { answeredCount: number; correctCount: number; starsBest?: number; starsLast?: number }>) => void
+): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'progress')
+  return onSnapshot(ref, (qs) => {
+    const out: Record<string, { answeredCount: number; correctCount: number; starsBest?: number; starsLast?: number }> = {}
+    for (const d of qs.docs) {
+      const data = d.data() as any
+      out[d.id] = {
+        answeredCount: Number(data.answeredCount || 0),
+        correctCount: Number(data.correctCount || 0),
+        starsBest: data.starsBest == null ? undefined : Number(data.starsBest || 0),
+        starsLast: data.starsLast == null ? undefined : Number(data.starsLast || 0),
+      }
+    }
+    cb(out)
+  })
+}
+
+export function subscribeWeeklyLeaderboard(params: {
+  weekKey?: string
+  scope: 'global' | 'team'
+  teamId?: string
+  limitN?: number
+  cb: (list: Array<{ id: string; nickname: string; xpWeek: number }>) => void
+}): Unsubscribe {
+  const dbi = ensureDb()
+  const wk = params.weekKey || isoWeekKey(new Date())
+  const limitN = params.limitN ?? 25
+
+  const ref =
+    params.scope === 'global'
+      ? collection(dbi, 'leaderboards_global', wk, 'entries')
+      : collection(dbi, 'teams', String(params.teamId || TEAM_BELAS_ID), 'weeks', wk, 'entries')
+
+  const q = query(ref, orderBy('xpWeek', 'desc'), limit(limitN))
+
+  return onSnapshot(q, (qs) => {
+    const list = qs.docs.map((d) => {
+      const data = d.data() as any
+      return {
+        id: d.id,
+        nickname: String(data.nickname || d.id),
+        xpWeek: Number(data.xpWeek || 0),
+      }
+    })
+    params.cb(list)
+  })
 }
