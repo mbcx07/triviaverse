@@ -73,6 +73,8 @@ export default function App() {
   const [oldPin, setOldPin] = useState('')
   const [newPin, setNewPin] = useState('')
 
+  const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
+
   const [tab, setTab] = useState<'home' | 'play' | 'league'>('home')
 
   // Worlds (subjects). When null, user is on the world picker.
@@ -369,7 +371,7 @@ export default function App() {
     // avoid picking same lesson currently selected when possible
     const filtered = pool.filter((l) => l.id !== lessonId)
     const pickFrom = filtered.length ? filtered : pool
-    const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)]
+    const picked = pickFrom[Math.floor((crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32) * pickFrom.length)]
     setWorld(String(picked.subject || 'general'))
     setLessonId(picked.id)
     setTab('play')
@@ -628,12 +630,11 @@ export default function App() {
                               : locked
                                 ? 'bg-slate-700/50 border-slate-700'
                                 : current
-                                  ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20'
+                                  ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20 animate-bounce'
                                   : 'bg-slate-900/70 border-slate-700 hover:bg-slate-900'}
                           `}
                           onClick={() => {
-                            setLessonId(l.id)
-                            setTab('play')
+                            setStartModalLesson(l)
                           }}
                           title={l.title || l.id}
                         >
@@ -753,6 +754,41 @@ export default function App() {
         )}
 
         <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto</footer>
+
+        {/* Start lesson modal */}
+        {startModalLesson ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
+              <div className="bg-gradient-to-br from-[#1CB0F6] to-[#7C4DFF] p-7 text-center text-white">
+                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 ring-1 ring-white/30">
+                  <span className="text-2xl font-black">▶</span>
+                </div>
+                <div className="text-sm font-extrabold uppercase tracking-widest opacity-90">Mundo</div>
+                <div className="mt-1 text-2xl font-black">{startModalLesson.title || startModalLesson.id}</div>
+                <div className="mt-2 text-sm font-bold opacity-90">¿Listo para jugar?</div>
+              </div>
+
+              <div className="space-y-3 p-6">
+                <button
+                  onClick={() => {
+                    setLessonId(startModalLesson.id)
+                    setTab('play')
+                    setStartModalLesson(null)
+                  }}
+                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-lg font-black uppercase tracking-widest text-white transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
+                >
+                  ¡EMPEZAR!
+                </button>
+                <button
+                  onClick={() => setStartModalLesson(null)}
+                  className="w-full rounded-2xl py-3 font-bold text-slate-500 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   )
