@@ -74,6 +74,9 @@ export default function App() {
 
   const [tab, setTab] = useState<'home' | 'play' | 'league'>('home')
 
+  // Worlds (subjects). When null, user is on the world picker.
+  const [world, setWorld] = useState<string | null>(null)
+
   const [leagueScope, setLeagueScope] = useState<'team' | 'global'>('team')
   const [leaders, setLeaders] = useState<Array<{ id: string; nickname: string; xpWeek: number }>>([])
 
@@ -330,14 +333,37 @@ export default function App() {
 
   const lesson = useMemo(() => lessons.find((l) => l.id === lessonId) || null, [lessons, lessonId])
   const subjectGroups = useMemo(() => groupLessonsBySubject(lessons), [lessons])
+  const worldGroups = useMemo(() => {
+    if (!world) return subjectGroups
+    return subjectGroups.filter((g) => g.subject === world)
+  }, [subjectGroups, world])
 
   const qType = (q as any)?.type || 'write'
 
+  function pickRandomWorldLesson() {
+    if (!lessons.length) return
+    const pool = lessons.filter((l) => l.id)
+    if (!pool.length) return
+    // avoid picking same lesson currently selected when possible
+    const filtered = pool.filter((l) => l.id !== lessonId)
+    const pickFrom = filtered.length ? filtered : pool
+    const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)]
+    setWorld(String(picked.subject || 'general'))
+    setLessonId(picked.id)
+    setTab('play')
+    setFeedback(null)
+    setError(null)
+    setStatus(null)
+  }
+
   return (
-    <div className="min-h-screen text-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-[#070B2A] via-[#0A1240] to-[#06081d] text-slate-100">
       <div className="mx-auto max-w-md p-4">
-        <header className="flex items-center justify-between py-4">
-          <div className="text-lg font-semibold">Triviverso</div>
+        <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
+          <div className="flex items-center gap-2">
+            <img src="/pwa-192x192.png" className="h-8 w-8 rounded-xl ring-1 ring-white/20" alt="Triviverso" />
+            <div className="text-lg font-extrabold tracking-tight">Triviverso</div>
+          </div>
           {user ? (
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <div className="hidden sm:block">Hola, {user.nickname}</div>
@@ -345,19 +371,19 @@ export default function App() {
               <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Racha: {user.streakCount ?? 0}</div>
 
               <button
-                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'home' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                 onClick={() => setTab('home')}
               >
-                Ruta
+                Mundos
               </button>
               <button
-                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'play' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                 onClick={() => setTab('play')}
               >
                 Jugar
               </button>
               <button
-                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'league' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
                 onClick={() => setTab('league')}
               >
                 Liga
@@ -497,44 +523,98 @@ export default function App() {
             {!leaders.length ? <div className="mt-4 text-sm text-slate-400">Sin datos todavía (juega una lección y vuelve).</div> : null}
           </div>
         ) : tab === 'home' ? (
-          <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-            <div className="text-lg font-bold">Ruta</div>
-            <div className="mt-1 text-xs text-slate-400">Elige una lección y entra a jugar.</div>
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-extrabold">Mundos</div>
+                <div className="mt-1 text-xs text-slate-300/80">Elige una materia o entra al mundo sorpresa (ilimitado).</div>
+              </div>
+              <button
+                className="rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] px-3 py-2 text-xs font-black text-slate-900 shadow-lg active:border-b-0 active:translate-y-1"
+                onClick={pickRandomWorldLesson}
+              >
+                Mundo Sorpresa
+              </button>
+            </div>
 
             {!lessons.length ? (
-              <div className="mt-4 text-sm text-amber-300">
+              <div className="mt-4 text-sm text-amber-200">
                 No hay lecciones en Firestore. Corre el seed o crea documentos en la colección <code>lessons</code>.
               </div>
             ) : null}
 
-            <div className="mt-4 space-y-5">
-              {subjectGroups.map((g) => (
-                <div key={g.subject}>
-                  <div className="mb-2 text-sm font-semibold text-slate-200">{subjectTitle(g.subject)}</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {g.lessons.map((l, i) => {
-                      const active = l.id === lessonId
-                      return (
+            {/* World picker */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {subjectGroups.map((g) => {
+                const active = world === g.subject
+                return (
+                  <button
+                    key={g.subject}
+                    className={`rounded-3xl bg-slate-950/40 p-4 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
+                    onClick={() => {
+                      setWorld(g.subject)
+                      setLessonId(g.lessons[0]?.id || '')
+                    }}
+                  >
+                    <div className="text-xs text-slate-300/80">Mundo</div>
+                    <div className="mt-1 text-base font-extrabold">{subjectTitle(g.subject)}</div>
+                    <div className="mt-2 text-xs text-slate-300/70">{g.lessons.length} lecciones</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Route map */}
+            {world ? (
+              <div className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold">Ruta · {subjectTitle(world)}</div>
+                  <button
+                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold hover:bg-slate-700"
+                    onClick={() => setWorld(null)}
+                  >
+                    Cambiar mundo
+                  </button>
+                </div>
+
+                <div className="relative mt-6 flex flex-col items-center gap-10 pb-4">
+                  <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-white/10" />
+
+                  {worldGroups[0]?.lessons?.map((l, i) => {
+                    const active = l.id === lessonId
+                    // very light status (v1): current = active, completed/locked TBD
+                    const status: 'current' | 'unlocked' = active ? 'current' : 'unlocked'
+
+                    const x = Math.sin(i * 1.2) * 60
+                    return (
+                      <div key={l.id} className="relative z-10" style={{ marginLeft: `${x}px` }}>
                         <button
-                          key={l.id}
-                          className={`rounded-2xl px-2 py-3 text-xs ring-1 ring-white/10 ${active ? 'bg-emerald-700/80' : 'bg-slate-950/40 hover:bg-slate-950/60'}`}
+                          className={`group relative flex h-20 w-20 items-center justify-center rounded-full border-b-8 text-center transition-all active:border-b-0 active:translate-y-2
+                            ${status === 'current'
+                              ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20'
+                              : 'bg-slate-900/70 border-slate-700 hover:bg-slate-900'}
+                          `}
                           onClick={() => {
                             setLessonId(l.id)
                             setTab('play')
                           }}
+                          title={l.title || l.id}
                         >
-                          <div className="text-[10px] text-slate-300">#{i + 1}</div>
-                          <div className="mt-1 font-semibold">{l.title || l.id}</div>
+                          <span className="text-xs font-black text-white">{i + 1}</span>
+
+                          <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-black/70 px-3 py-1 text-xs font-bold text-white opacity-0 ring-1 ring-white/10 transition-opacity group-hover:opacity-100">
+                            {l.title || l.id}
+                          </div>
                         </button>
-                      )
-                    })}
-                  </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : null}
           </div>
         ) : (
-          <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             <div className="flex items-center justify-between gap-3 text-xs text-slate-300">
               <div className="flex items-center gap-2">
                 <span>Lección</span>
