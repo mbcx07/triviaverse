@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { initializeApp } from 'firebase/app'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 
