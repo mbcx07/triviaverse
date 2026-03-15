@@ -20,7 +20,7 @@ export default defineConfig({
         short_name: 'Triviverso',
         description: 'Trivias estilo Duolingo para 5º y 6º de primaria',
         theme_color: '#10b981',
-        background_color: '#0b1220',
+        background_color: '#070B2A',
         display: 'standalone',
         scope: BASE,
         start_url: BASE,

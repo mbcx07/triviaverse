@@ -602,10 +602,9 @@ export default function App() {
               <img
                 src={`${baseUrl}pwa-512x512.png`}
                 alt="Triviverso"
-                className="h-28 w-28 rounded-[28px] shadow-2xl ring-1 ring-white/20"
+                className="h-40 w-40 rounded-[36px] shadow-2xl ring-1 ring-white/20"
               />
-              <h1 className="mt-4 text-2xl font-black tracking-tight">TRIVIVERSO</h1>
-              <p className="mt-1 text-center text-sm text-slate-300/90">
+              <p className="mt-4 text-center text-sm text-slate-300/90">
                 Elige tu mundo, completa lecciones y sube en la liga.
               </p>
             </div>
@@ -621,7 +620,7 @@ export default function App() {
                   className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  placeholder="valentina"
+                  placeholder="usuario"
                   autoComplete="username"
                 />
               </label>
@@ -825,11 +824,11 @@ export default function App() {
           </div>
         ) : (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-            <div className="flex items-center justify-between gap-3 text-xs text-slate-300">
+            <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="flex items-center gap-2">
-                <span>Lección</span>
+                <span className="shrink-0">Lección</span>
                 <select
-                  className="rounded-lg bg-slate-950/60 px-2 py-1 ring-1 ring-white/10"
+                  className="w-full rounded-lg bg-slate-950/60 px-2 py-2 ring-1 ring-white/10 sm:w-auto"
                   value={lessonId}
                   onChange={(e) => setLessonId(e.target.value)}
                 >

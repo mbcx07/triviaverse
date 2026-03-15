@@ -123,6 +123,45 @@ function lessonPack(subjectKey) {
           ['3/4', '0.75'],
         ], 'Equivalencias básicas.'),
       ];
+    case 'cien':
+      return [
+        qMC('¿Cuál es un estado de la materia?', ['Sólido', 'Rápido', 'Fuerte', 'Alto'], 0, 'Sólido es un estado de la materia.'),
+        qTF('El agua hierve aproximadamente a 100°C al nivel del mar.', true, 'En condiciones normales, hierve cerca de 100°C.'),
+        qFill('La energía del Sol que llega a la Tierra se llama energía ________.', 'solar', 'Es energía solar.'),
+        qOrder('Ordena el ciclo del agua:', ['Evaporación', 'Condensación', 'Precipitación'], 'Evaporación → Condensación → Precipitación.'),
+        qMatch('Relaciona el órgano con su función:', [
+          ['Pulmones', 'Respirar'],
+          ['Corazón', 'Bombear sangre'],
+          ['Estómago', 'Digestionar'],
+        ], 'Funciones básicas del cuerpo humano.'),
+        qWrite('Escribe un ejemplo de animal ovíparo:', ['gallina', 'tortuga', 'pez', 'rana'], 'Los ovíparos nacen de huevos.'),
+      ];
+    case 'hist':
+      return [
+        qMC('¿Qué es una línea del tiempo?', ['Un mapa', 'Un orden de eventos', 'Un cuento', 'Una canción'], 1, 'Sirve para ordenar eventos en el tiempo.'),
+        qTF('La historia estudia hechos del pasado.', true, 'Sí, se enfoca en el pasado.'),
+        qFill('Un siglo tiene ________ años.', '100', 'Un siglo = 100 años.'),
+        qOrder('Ordena de más antiguo a más reciente:', ['Abuelos', 'Papás', 'Hijos'], 'Abuelos → Papás → Hijos.'),
+        qMatch('Relaciona concepto con ejemplo:', [
+          ['Fuente histórica', 'Fotografía'],
+          ['Lugar', 'Ciudad'],
+          ['Fecha', '15 de septiembre'],
+        ], 'Ejemplos sencillos.'),
+        qWrite('Escribe una fuente histórica que puedas encontrar en casa:', ['foto', 'fotografia', 'carta', 'acta'], 'Ejemplos: fotos, cartas, documentos.'),
+      ];
+    case 'civ':
+      return [
+        qMC('¿Qué es respetar?', ['Empujar', 'Escuchar y cuidar', 'Gritar', 'Ignorar'], 1, 'Respetar es tratar bien y considerar a otros.'),
+        qTF('Decir la verdad ayuda a la confianza.', true, 'La honestidad fortalece la confianza.'),
+        qFill('Cuando compartimos, practicamos la ________.', 'solidaridad', 'Compartir y ayudar es solidaridad.'),
+        qOrder('Ordena para resolver un conflicto:', ['Calmarme', 'Escuchar', 'Hablar con respeto'], 'Primero calmarse, luego escuchar y hablar con respeto.'),
+        qMatch('Relaciona valor con acción:', [
+          ['Responsabilidad', 'Hacer la tarea'],
+          ['Respeto', 'No interrumpir'],
+          ['Honestidad', 'Decir la verdad'],
+        ], 'Valores en acciones.'),
+        qWrite('Escribe una norma que ayude en tu salón:', ['no gritar', 'levantar la mano', 'respetar turnos', 'no empujar'], 'Normas mejoran la convivencia.'),
+      ];
     default:
       return [
         qWrite(`Pregunta demo de ${subjectKey}: escribe "ok"`, ['ok'], 'Demo.'),
