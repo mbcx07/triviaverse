@@ -214,6 +214,7 @@ export default function App() {
   // match_pairs UI state
   const [matchLeft, setMatchLeft] = useState<string | null>(null)
   const [matchMap, setMatchMap] = useState<Record<string, string>>({})
+  const [matchRightsUsed, setMatchRightsUsed] = useState<Set<number>>(new Set())
 
   const totalAnswered = useMemo(() => Object.keys(results).length, [results])
   const correctAnswered = useMemo(() => Object.values(results).filter(Boolean).length, [results])
@@ -519,6 +520,7 @@ export default function App() {
         setQuestions(qs)
         setResults(at)
         setIdx(firstUnansweredIndex(qs, at))
+        setMatchRightsUsed(new Set())
         setStatus(null)
       } catch (err: any) {
         if (cancelled) return
@@ -2080,7 +2082,7 @@ export default function App() {
                   </div>
                   <div className="space-y-2">
                     {matchRights.map((r, i) => {
-                      const used = Object.values(matchMap).includes(r)
+                      const used = matchRightsUsed.has(i)
                       return (
                         <button
                           key={i}
@@ -2092,6 +2094,7 @@ export default function App() {
                             if (alreadyAnswered) return
                             if (!matchLeft) return
                             setMatchMap((m) => ({ ...m, [matchLeft]: r }))
+                            setMatchRightsUsed((s) => new Set(s).add(i))
                             setMatchLeft(null)
                           }}
                         >
@@ -2305,19 +2308,22 @@ export default function App() {
                 </div>
                 <div className="text-sm font-extrabold uppercase tracking-widest opacity-90">Mundo</div>
                 <div className="mt-1 text-2xl font-black">{startModalLesson.title || startModalLesson.id}</div>
-                <div className="mt-2 text-sm font-bold opacity-90">¿Listo para jugar?</div>
+                <div className="mt-2 text-sm font-bold opacity-90">{isLessonCompleted(startModalLesson.id) ? '¿Volver a jugar?' : '¿Listo para jugar?'}</div>
               </div>
 
               <div className="space-y-3 p-6">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setLessonId(startModalLesson.id)
                     setTab('play')
                     setStartModalLesson(null)
+                    if (isLessonCompleted(startModalLesson.id)) {
+                      await resetLessonProgress({ userId: user!.id, lessonId: startModalLesson.id })
+                    }
                   }}
                   className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-lg font-black uppercase tracking-widest text-white transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
                 >
-                  ¡EMPEZAR!
+                  {isLessonCompleted(startModalLesson.id) ? '¡REINTENTAR!' : '¡EMPEZAR!'}
                 </button>
                 <button
                   onClick={() => setStartModalLesson(null)}
