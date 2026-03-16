@@ -1637,9 +1637,10 @@ export default function App() {
                 {((q as any).options || []).map((opt: string, i: number) => (
                   <button
                     key={i}
+                    type="button"
                     disabled={alreadyAnswered}
                     className="rounded-2xl bg-slate-950/40 px-3 py-3 text-left text-sm font-bold ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                    onClick={() => answerChoice(i)}
+                    onPointerUp={() => answerChoice(i)}
                   >
                     {opt}
                   </button>
@@ -1648,16 +1649,18 @@ export default function App() {
             ) : qType === 'true_false' ? (
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
+                  type="button"
                   disabled={alreadyAnswered}
                   className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                  onClick={() => answerTF(true)}
+                  onPointerUp={() => answerTF(true)}
                 >
                   Verdadero
                 </button>
                 <button
+                  type="button"
                   disabled={alreadyAnswered}
                   className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                  onClick={() => answerTF(false)}
+                  onPointerUp={() => answerTF(false)}
                 >
                   Falso
                 </button>
