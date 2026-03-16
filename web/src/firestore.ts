@@ -506,6 +506,16 @@ export type BattleRoom = {
   guestTeamId?: string
   // Chat scope control
   chatPhase?: 'lobby' | 'match' | 'post'
+  // Ready system (v2)
+  readyUsers?: { [userId: string]: boolean }
+  countdownStarted?: boolean
+  countdownFrom?: number
+  startedAt?: any
+  finishedAt?: any
+  // Scores (v2)
+  scores?: { [userId: string]: { correct: number; answered: number; updatedAt?: any } }
+  // Result
+  winnerTeamId?: string | null
 }
 
 function stableMissionId(subject: string, roomId: string): string {
@@ -647,6 +657,30 @@ export async function submitBattleScore(params: { roomId: string; userId: string
   const ref = doc(dbi, 'battleRooms', params.roomId)
   const field = `scores.${params.userId}`
   await setDoc(ref, { [field]: { correct: params.correct, answered: params.answered, updatedAt: serverTimestamp() } }, { merge: true })
+}
+
+export async function toggleBattleReady(params: { roomId: string; userId: string; ready: boolean }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  const field = `readyUsers.${params.userId}`
+  await setDoc(ref, { [field]: params.ready }, { merge: true })
+}
+
+export async function startBattleCountdown(params: { roomId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  await setDoc(ref, { countdownStarted: true, countdownFrom: 3, chatPhase: 'lobby' }, { merge: true })
+}
+
+export async function finishBattle(params: { roomId: string, winnerTeamId?: string | null }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  await setDoc(ref, {
+    status: 'finished',
+    finishedAt: serverTimestamp(),
+    chatPhase: 'post',
+    winnerTeamId: params.winnerTeamId || null
+  }, { merge: true })
 }
 
 // --- Friends / Social (v1) ---

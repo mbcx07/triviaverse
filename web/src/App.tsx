@@ -22,6 +22,9 @@ import {
   subscribeBattleMessages,
   sendBattleMessage,
   submitBattleScore,
+  toggleBattleReady,
+  startBattleCountdown,
+  finishBattle,
   subscribeVoiceSignal,
   subscribeVoiceCandidates,
   publishVoiceSignal,
@@ -149,6 +152,8 @@ export default function App() {
   // battles
   const [battleRoomId, setBattleRoomId] = useState<string>('')
   const [battleRoom, setBattleRoom] = useState<any>(null)
+  const [battleCountdown, setBattleCountdown] = useState<number | null>(null)
+  const [battleTimer, setBattleTimer] = useState<number>(0)
   const [battleMsgs, setBattleMsgs] = useState<Array<{ id: string; userId: string; text: string }>>([])
   const [battleMsgText, setBattleMsgText] = useState('')
   const [openRooms, setOpenRooms] = useState<Array<{ id: string; hostTeamId?: string; status?: string; subject?: string }>>([])
@@ -350,6 +355,61 @@ export default function App() {
 
     return () => clearInterval(t)
   }, [timerOn, tab, lessonId, questions.length, celebration])
+
+  // Battle countdown (3, 2, 1...) when started
+  useEffect(() => {
+    if (!battleRoom) return
+    const started = battleRoom.countdownStarted
+    if (!started) {
+      setBattleCountdown(null)
+      return
+    }
+    const from = Number(battleRoom.countdownFrom || 3)
+    let current = from
+    setBattleCountdown(current)
+    const t = setInterval(() => {
+      current--
+      if (current <= 0) {
+        clearInterval(t)
+        setBattleCountdown(0)
+        setTimeout(() => setBattleCountdown(null), 1000)
+      } else {
+        setBattleCountdown(current)
+      }
+    }, 1000)
+    return () => clearInterval(t)
+  }, [battleRoom?.countdownStarted, battleRoom?.countdownFrom])
+
+  // Battle timer (2 min = 120s)
+  useEffect(() => {
+    if (!battleRoom) return
+    const status = battleRoom.status
+    if (status !== 'started') {
+      setBattleTimer(0)
+      return
+    }
+    // startedAt timestamp
+    const startedAt = battleRoom.startedAt
+    if (!startedAt) return
+    const now = Date.now()
+    const elapsed = Math.floor((now - startedAt.toDate().getTime()) / 1000)
+    const remaining = Math.max(0, 120 - elapsed)
+    setBattleTimer(remaining)
+    if (remaining <= 0) {
+      finishBattle({ roomId: battleRoom.id, winnerTeamId: null }).catch(() => {})
+    }
+    const t = setInterval(() => {
+      const now2 = Date.now()
+      const elapsed2 = Math.floor((now2 - startedAt.toDate().getTime()) / 1000)
+      const remaining2 = Math.max(0, 120 - elapsed2)
+      setBattleTimer(remaining2)
+      if (remaining2 <= 0) {
+        clearInterval(t)
+        finishBattle({ roomId: battleRoom.id, winnerTeamId: null }).catch(() => {})
+      }
+    }, 1000)
+    return () => clearInterval(t)
+  }, [battleRoom?.status, battleRoom?.startedAt])
 
   // Voice PTT: enable/disable mic track
   useEffect(() => {
@@ -1478,6 +1538,220 @@ export default function App() {
             <div className="mt-4 text-xs text-slate-300/70">
               Siguiente: reglas completas de batalla (mismo set de misión, puntaje y ganador). Audio/llamada va en fase WebRTC.
             </div>
+
+            {/* Battle ready system (v2) */}
+            {battleRoom && battleRoom.status === 'open' && battleRoom.teams?.A && battleRoom.teams?.B ? (
+              <div className="mt-4 rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-extrabold">Listos para empezar</div>
+                <div className="mt-3 grid grid-cols-2 gap-4">
+                  {/* Team A */}
+                  <div>
+                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams.A?.teamId || 'A'}</div>
+                    <div className="mt-2 space-y-1">
+                      {(battleRoom.teams.A?.members || []).map((uid: string) => {
+                        const isMe = user?.id === uid
+                        const isReady = battleRoom.readyUsers?.[uid]
+                        return (
+                          <div key={uid} className="flex items-center justify-between rounded-xl bg-black/20 px-2 py-1 text-xs">
+                            <span className={isMe ? 'font-bold text-white' : ''}>
+                              {isMe ? 'Tú' : `User-${uid.slice(0, 6)}`}
+                            </span>
+                            {isMe ? (
+                              <button
+                                className={`rounded-lg px-2 py-1 text-[10px] font-black ${isReady ? 'bg-[#58CC02]/80 text-white' : 'bg-white/10 hover:bg-white/20 text-slate-300'}`}
+                                onClick={async () => {
+                                  if (!user || !battleRoomId) return
+                                  const next = !isReady
+                                  await toggleBattleReady({ roomId: battleRoomId, userId: user.id, ready: next })
+                                }}
+                              >
+                                {isReady ? 'LISTO' : 'LISTO'}
+                              </button>
+                            ) : (
+                              <span className={`rounded-lg px-2 py-1 text-[10px] font-black ${isReady ? 'bg-[#58CC02]/80 text-white' : 'bg-slate-800 text-slate-500'}`}>
+                                {isReady ? '✓' : '…'}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  {/* Team B */}
+                  <div>
+                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams.B?.teamId || 'B'}</div>
+                    <div className="mt-2 space-y-1">
+                      {(battleRoom.teams.B?.members || []).map((uid: string) => {
+                        const isMe = user?.id === uid
+                        const isReady = battleRoom.readyUsers?.[uid]
+                        return (
+                          <div key={uid} className="flex items-center justify-between rounded-xl bg-black/20 px-2 py-1 text-xs">
+                            <span className={isMe ? 'font-bold text-white' : ''}>
+                              {isMe ? 'Tú' : `User-${uid.slice(0, 6)}`}
+                            </span>
+                            {isMe ? (
+                              <button
+                                className={`rounded-lg px-2 py-1 text-[10px] font-black ${isReady ? 'bg-[#58CC02]/80 text-white' : 'bg-white/10 hover:bg-white/20 text-slate-300'}`}
+                                onClick={async () => {
+                                  if (!user || !battleRoomId) return
+                                  const next = !isReady
+                                  await toggleBattleReady({ roomId: battleRoomId, userId: user.id, ready: next })
+                                }}
+                              >
+                                {isReady ? 'LISTO' : 'LISTO'}
+                              </button>
+                            ) : (
+                              <span className={`rounded-lg px-2 py-1 text-[10px] font-black ${isReady ? 'bg-[#58CC02]/80 text-white' : 'bg-slate-800 text-slate-500'}`}>
+                                {isReady ? '✓' : '…'}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+                {/* Start countdown button (host only) */}
+                {user?.id === battleRoom.hostUserId ? (
+                  <div className="mt-4 flex items-center justify-between rounded-2xl bg-black/20 px-3 py-2">
+                    <div className="text-xs font-bold text-slate-300/80">Todos listos para iniciar</div>
+                    <button
+                      className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs font-black text-white hover:bg-[#4AA000]"
+                      onClick={async () => {
+                        if (!battleRoomId) return
+                        await startBattleCountdown({ roomId: battleRoomId })
+                      }}
+                    >
+                      ¡EMPEZAR!
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Countdown overlay */}
+            {battleRoom && battleRoom.status === 'open' && battleRoom.countdownStarted && battleCountdown !== null ? (
+              <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                <div className="text-9xl font-black text-white animate-pulse">{battleCountdown || '¡YA!'}</div>
+              </div>
+            ) : null}
+
+            {/* Battle in progress: timer + scores */}
+            {battleRoom && battleRoom.status === 'started' ? (
+              <div className="mt-4 rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-xs font-bold text-slate-300/80">⏱️</div>
+                    <div className={`text-2xl font-black ${battleTimer <= 30 ? 'text-rose-400' : 'text-white'}`}>
+                      {Math.floor(battleTimer / 60)}:{(battleTimer % 60).toString().padStart(2, '0')}
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-slate-300/80">
+                    Misión: <span className="font-black text-white">{battleRoom.missionId || 'cargando...'}</span>
+                  </div>
+                </div>
+                {/* Team scores */}
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl bg-black/20 px-3 py-2">
+                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams.A?.teamId || 'A'}</div>
+                    <div className="mt-1 text-2xl font-black text-white">
+                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
+                        const inTeamA = battleRoom.teams.A?.members?.includes(uid)
+                        return acc + (inTeamA ? (s.correct || 0) : 0)
+                      }, 0)}{' '}
+                      <span className="text-sm text-slate-400">pts</span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-black/20 px-3 py-2">
+                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams.B?.teamId || 'B'}</div>
+                    <div className="mt-1 text-2xl font-black text-white">
+                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
+                        const inTeamB = battleRoom.teams.B?.members?.includes(uid)
+                        return acc + (inTeamB ? (s.correct || 0) : 0)
+                      }, 0)}{' '}
+                      <span className="text-sm text-slate-400">pts</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Post-match results */}
+            {battleRoom && battleRoom.status === 'finished' ? (
+              <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
+                  <div className="bg-gradient-to-br from-[#FF9600] to-[#FFC800] p-6 text-center">
+                    <div className="text-lg font-black">¡Batalla terminada!</div>
+                    <div className="mt-2 text-sm font-bold">
+                      Ganador: <b>{battleRoom.winnerTeamId ? `Equipo ${battleRoom.winnerTeamId}` : 'Empate'}</b>
+                    </div>
+                  </div>
+                  <div className="space-y-3 p-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-2xl bg-slate-100 px-3 py-3 text-center">
+                        <div className="text-xs font-bold text-slate-500">Equipo {battleRoom.teams.A?.teamId || 'A'}</div>
+                        <div className="mt-2 text-3xl font-black">
+                          {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
+                            const inTeamA = battleRoom.teams.A?.members?.includes(uid)
+                            return acc + (inTeamA ? (s.correct || 0) : 0)
+                          }, 0)}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl bg-slate-100 px-3 py-3 text-center">
+                        <div className="text-xs font-bold text-slate-500">Equipo {battleRoom.teams.B?.teamId || 'B'}</div>
+                        <div className="mt-2 text-3xl font-black">
+                          {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
+                            const inTeamB = battleRoom.teams.B?.members?.includes(uid)
+                            return acc + (inTeamB ? (s.correct || 0) : 0)
+                          }, 0)}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1"
+                      onClick={async () => {
+                        if (!user || !battleRoomId) return
+                        const maxPerTeam = Number(battleRoom?.maxPerTeam || 4)
+                        const subject = battleRoom?.subject || 'esp'
+                        // create new room with same settings
+                        const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: battleRoom.visibility || 'open' })
+                        setBattleRoomId(r.id)
+                        setBattleRoom(null)
+                        ;(window as any).__tv_unsubBattle?.()
+                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                        ;(window as any).__tv_unsubBattleMsgs?.()
+                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                      }}
+                    >
+                      Revancha
+                    </button>
+                    <button
+                      className="w-full rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white"
+                      onClick={() => {
+                        setBattleRoomId('')
+                        setBattleRoom(null)
+                        ;(window as any).__tv_unsubBattle?.()
+                        ;(window as any).__tv_unsubBattleMsgs?.()
+                      }}
+                    >
+                      Salir al menú
+                    </button>
+                    <button
+                      className="w-full rounded-2xl bg-white/5 px-3 py-3 text-sm font-bold text-slate-700 ring-1 ring-white/10 hover:bg-white/10"
+                      onClick={() => {
+                        setBattleRoomId('')
+                        setBattleRoom(null)
+                        ;(window as any).__tv_unsubBattle?.()
+                        ;(window as any).__tv_unsubBattleMsgs?.()
+                        setTab('home')
+                      }}
+                    >
+                      Cambiar mundo / Variado
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : tab === 'league' ? (
           <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
