@@ -135,6 +135,7 @@ export default function App() {
 
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [lessonId, setLessonId] = useState<string>('')
+  const [timerOn, setTimerOn] = useState<boolean>(() => localStorage.getItem('tv_timerOn') === '1')
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [oldPin, setOldPin] = useState('')
@@ -169,6 +170,8 @@ export default function App() {
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
   const [celebration, setCelebration] = useState<{ title: string; xpDelta: number } | null>(null)
+  const [exitConfirm, setExitConfirm] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<number>(60)
 
   // trophies
   const [trophyToast, setTrophyToast] = useState<{ title: string; desc: string } | null>(null)
@@ -326,6 +329,28 @@ export default function App() {
     setTab('mode')
   }
 
+  // Individual mission timer (optional)
+  useEffect(() => {
+    if (!timerOn) return
+    if (tab !== 'play') return
+    if (!lessonId) return
+    if (!questions.length) return
+    if (celebration) return
+
+    const t = setInterval(() => {
+      setTimeLeft((v) => {
+        if (v <= 1) {
+          clearInterval(t)
+          setExitConfirm(true)
+          return 0
+        }
+        return v - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(t)
+  }, [timerOn, tab, lessonId, questions.length, celebration])
+
   // Voice PTT: enable/disable mic track
   useEffect(() => {
     const track = (window as any).__tv_voiceTrack as MediaStreamTrack | undefined
@@ -423,6 +448,9 @@ export default function App() {
       setOrderSelected([])
       setMatchLeft(null)
       setMatchMap({})
+
+      // reset timer
+      setTimeLeft(60)
 
       try {
         const [qs, at] = await Promise.all([listQuestions(lessonId), loadAttemptsForLesson(user.id, lessonId)])
@@ -793,7 +821,20 @@ export default function App() {
             </div>
 
             <div className="mt-4 rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
-              <div className="text-sm font-extrabold text-slate-200">Perfil</div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-extrabold text-slate-200">Perfil</div>
+                <button
+                  className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${timerOn ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    const next = !timerOn
+                    setTimerOn(next)
+                    localStorage.setItem('tv_timerOn', next ? '1' : '0')
+                  }}
+                >
+                  Timer: {timerOn ? 'ON' : 'OFF'}
+                </button>
+              </div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {['🪐', '🚀', '👽', '⭐', '🌙', '🛰️'].map((a) => (
                   <button
@@ -1610,6 +1651,8 @@ export default function App() {
                   className="w-full rounded-lg bg-slate-950/60 px-2 py-2 ring-1 ring-white/10 sm:w-auto"
                   value={lessonId}
                   onChange={(e) => setLessonId(e.target.value)}
+                  disabled
+                  title="Para avanzar, completa la misión en la Ruta."
                 >
                   {lessons.map((l) => (
                     <option key={l.id} value={l.id}>
@@ -1618,9 +1661,18 @@ export default function App() {
                   ))}
                 </select>
               </div>
-              <div className="text-slate-400">
-                {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
-                Pregunta {questions.length ? idx + 1 : 0}/{questions.length} • Aciertos {correctAnswered}/{totalAnswered}
+              <div className="flex flex-col items-start gap-2 text-slate-400 sm:flex-row sm:items-center sm:gap-3">
+                <div>
+                  {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
+                  Pregunta {questions.length ? idx + 1 : 0}/{questions.length} • Aciertos {correctAnswered}/{totalAnswered}
+                </div>
+                <button
+                  type="button"
+                  className="rounded-xl bg-rose-500/70 px-3 py-2 text-xs font-black text-white hover:bg-rose-500"
+                  onClick={() => setExitConfirm(true)}
+                >
+                  Salir
+                </button>
               </div>
             </div>
 
@@ -1631,6 +1683,13 @@ export default function App() {
             ) : null}
 
             <div className="mt-2 text-lg font-semibold">{q?.prompt || '—'}</div>
+
+            {timerOn ? (
+              <div className="mt-2 flex items-center justify-between rounded-2xl bg-slate-950/30 px-3 py-2 text-xs font-black text-slate-200 ring-1 ring-white/10">
+                <div>⏱️ Tiempo</div>
+                <div>{timeLeft}s</div>
+              </div>
+            ) : null}
 
             {qType === 'multiple_choice' ? (
               <div className="mt-4 grid grid-cols-1 gap-2">
@@ -1927,6 +1986,35 @@ export default function App() {
                   className="w-full rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-800"
                 >
                   Reintentar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Exit confirm */}
+        {exitConfirm ? (
+          <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
+              <div className="bg-gradient-to-br from-[#FF9600] to-[#FFC800] p-6 text-center">
+                <div className="text-lg font-black">¿Salir de la misión?</div>
+                <div className="mt-2 text-sm font-bold">
+                  Si te sales, <b>no podrás continuar</b> desde donde ibas. Podrás volver a empezar la misión cuando quieras.
+                </div>
+              </div>
+              <div className="space-y-3 p-6">
+                <button
+                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1"
+                  onClick={() => {
+                    setExitConfirm(false)
+                    setTab('home')
+                    setWorld(null)
+                  }}
+                >
+                  Salir
+                </button>
+                <button className="w-full rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white" onClick={() => setExitConfirm(false)}>
+                  Seguir jugando
                 </button>
               </div>
             </div>
