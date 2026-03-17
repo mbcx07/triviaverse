@@ -898,7 +898,9 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-slate-400">PWA piloto</div>
+            <div className="text-sm text-slate-400">
+              <div className="mb-1 text-xs text-slate-500">Versión de pruebas</div>
+            </div>
           )}
         </header>
 
@@ -1007,7 +1009,7 @@ export default function App() {
 
               <button className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500">Guardar PIN</button>
 
-              <div className="text-xs text-slate-400">Nota: por ahora el PIN se guarda en Firestore en texto plano (piloto).</div>
+              <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano.</div>
             </form>
           </div>
         ) : null}
