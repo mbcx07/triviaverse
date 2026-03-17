@@ -154,8 +154,57 @@ export default function App() {
   const [battleRoom, setBattleRoom] = useState<any>(null)
   const [battleCountdown, setBattleCountdown] = useState<number | null>(null)
   const [battleTimer, setBattleTimer] = useState<number>(0)
-  const [battleMsgs, setBattleMsgs] = useState<Array<{ id: string; userId: string; text: string }>>([])
+  const [battleMsgs, setBattleMsgs] = useState<Array<{ id: string; userId: string; text: string; isEmoji?: boolean; isSticker?: boolean }>>([])
   const [battleMsgText, setBattleMsgText] = useState('')
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showStickers, setShowStickers] = useState(false)
+
+  // Emojis básicos (frecuentes)
+  const EMOJIS = ['😀', '😂', '🤣', '😍', '😎', '🔥', '🎉', '💪', '👍', '👎', '🏆', '⭐', '💯', '❤️', '😎', '🎯', '🚀', '🌟', '✨', '🎊', '🎪', '🎁', '🎸', '🎮', '🏆', '🥇', '🥈', '🥉', '👏', '🙌', '💪', '🤝', '✌️']
+
+  // Stickers (colección variada tipo WhatsApp)
+  const STICKERS = [
+    { emoji: '🎯', label: 'Diana' },
+    { emoji: '🔥', label: 'Fuego' },
+    { emoji: '💯', label: 'Perfecto' },
+    { emoji: '🏆', label: 'Trofeo' },
+    { emoji: '🥇', label: 'Primer lugar' },
+    { emoji: '🎉', label: 'Celebración' },
+    { emoji: '💪', label: 'Fuerza' },
+    { emoji: '👍', label: 'Pulgar arriba' },
+    { emoji: '🤣', label: 'Risa fuerte' },
+    { emoji: '😍', label: 'Amor' },
+    { emoji: '😎', label: 'Cool' },
+    { emoji: '⭐', label: 'Estrella' },
+    { emoji: '✨', label: 'Brilla' },
+    { emoji: '🎊', label: 'Fiesta' },
+    { emoji: '🎁', label: 'Regalo' },
+    { emoji: '🎸', label: 'Guitarra' },
+    { emoji: '🎮', label: 'Videojuego' },
+    { emoji: '🏀', label: 'Baloncesto' },
+    { emoji: '⚽', label: 'Fútbol' },
+    { emoji: '🚀', label: 'Cohete' },
+    { emoji: '🌟', label: 'Brilla más' },
+    { emoji: '💯', label: 'Cien por cien' },
+    { emoji: '🤝', label: 'Acuerdo' },
+    { emoji: '✌️', label: 'Paz' },
+  ]
+
+  // Enviar emoji
+  async function sendEmoji(emoji: string) {
+    if (!user || !battleRoomId) return
+    const scope = battleRoom?.chatPhase === 'match' && user.teamId ? `team:${user.teamId}` : 'global'
+    await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: emoji, scope })
+    setShowEmojiPicker(false)
+  }
+
+  // Enviar sticker
+  async function sendSticker(sticker: string) {
+    if (!user || !battleRoomId) return
+    const scope = battleRoom?.chatPhase === 'match' && user.teamId ? `team:${user.teamId}` : 'global'
+    await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: sticker, scope })
+    setShowStickers(false)
+  }
   const [openRooms, setOpenRooms] = useState<Array<{ id: string; hostTeamId?: string; status?: string; subject?: string }>>([])
   const [openLobbyOn, setOpenLobbyOn] = useState(false)
 
@@ -1506,7 +1555,12 @@ export default function App() {
                       {battleMsgs.map((m) => (
                         <div key={m.id} className={`rounded-2xl px-3 py-2 text-sm ring-1 ring-white/10 ${m.userId === user?.id ? 'bg-[#1CB0F6]/20' : 'bg-white/5'}`}>
                           <div className="text-[10px] font-black text-slate-200/70">{m.userId === user?.id ? 'Tú' : m.userId}</div>
-                          <div className="font-bold text-white">{m.text}</div>
+                          {/* Detectar emoji/sticker por longitud y contenido */}
+                          {m.text.length <= 4 && /\p{Emoji}/u.test(m.text) ? (
+                            <div className="text-4xl">{m.text}</div>
+                          ) : (
+                            <div className="font-bold text-white">{m.text}</div>
+                          )}
                         </div>
                       ))}
                       {!battleMsgs.length ? <div className="text-xs text-slate-300/70">Sin mensajes aún.</div> : null}
@@ -1520,6 +1574,24 @@ export default function App() {
                         placeholder="Escribe..."
                       />
                       <button
+                        className={`shrink-0 rounded-2xl px-3 py-3 text-2xl ring-1 ring-white/10 ${showEmojiPicker ? 'bg-[#FFC800] ring-[#FF9600]' : 'bg-white/10 hover:bg-white/20'}`}
+                        onClick={() => {
+                          setShowEmojiPicker((v) => !v)
+                          setShowStickers(false)
+                        }}
+                      >
+                        😊
+                      </button>
+                      <button
+                        className={`shrink-0 rounded-2xl px-3 py-3 text-2xl ring-1 ring-white/10 ${showStickers ? 'bg-[#7C4DFF] ring-[#5A35C7]' : 'bg-white/10 hover:bg-white/20'}`}
+                        onClick={() => {
+                          setShowStickers((v) => !v)
+                          setShowEmojiPicker(false)
+                        }}
+                      >
+                        🎨
+                      </button>
+                      <button
                         className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
                         onClick={async () => {
                           if (!user) return
@@ -1532,6 +1604,42 @@ export default function App() {
                         Enviar
                       </button>
                     </div>
+
+                    {/* Emoji picker */}
+                    {showEmojiPicker ? (
+                      <div className="mt-2 rounded-2xl bg-slate-950/90 p-3 ring-1 ring-white/20">
+                        <div className="mb-2 text-xs font-bold text-white">Emojis</div>
+                        <div className="grid grid-cols-8 gap-2">
+                          {EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              className="rounded-xl bg-white/5 p-2 text-2xl hover:bg-white/10"
+                              onClick={() => sendEmoji(emoji)}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Sticker picker */}
+                    {showStickers ? (
+                      <div className="mt-2 rounded-2xl bg-slate-950/90 p-3 ring-1 ring-white/20">
+                        <div className="mb-2 text-xs font-bold text-white">Stickers</div>
+                        <div className="grid grid-cols-4 gap-2">
+                          {STICKERS.map((s) => (
+                            <button
+                              key={s.emoji}
+                              className="rounded-xl bg-white/5 p-3 text-4xl hover:bg-white/10"
+                              onClick={() => sendSticker(s.emoji)}
+                            >
+                              {s.emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
