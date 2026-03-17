@@ -1089,7 +1089,7 @@ export default function App() {
                 onClick={() => setTab('battle')}
               >
                 <div className="text-sm opacity-90">Batallas</div>
-                <div className="mt-1 text-xl">1 vs 1 (beta)</div>
+                <div className="mt-1 text-xl">Hasta 8 vs 8</div>
               </button>
             </div>
           </div>
@@ -1251,7 +1251,7 @@ export default function App() {
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-lg font-extrabold">Batallas (beta)</div>
+                <div className="text-lg font-extrabold">Batallas</div>
                 <div className="mt-1 text-xs text-slate-300/80">Crear sala, lobby abierto o unirte con código.</div>
               </div>
               <div className="flex items-center gap-2">
@@ -2030,34 +2030,18 @@ export default function App() {
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="flex items-center gap-2">
-                <span className="shrink-0">Lección</span>
-                <select
-                  className="w-full rounded-lg bg-slate-950/60 px-2 py-2 ring-1 ring-white/10 sm:w-auto"
-                  value={lessonId}
-                  onChange={(e) => setLessonId(e.target.value)}
-                  disabled
-                  title="Para avanzar, completa la misión en la Ruta."
-                >
-                  {lessons.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.title || l.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col items-start gap-2 text-slate-400 sm:flex-row sm:items-center sm:gap-3">
                 <div>
                   {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
                   Pregunta {questions.length ? idx + 1 : 0}/{questions.length} • Aciertos {correctAnswered}/{totalAnswered}
                 </div>
-                <button
-                  type="button"
-                  className="rounded-xl bg-rose-500/70 px-3 py-2 text-xs font-black text-white hover:bg-rose-500"
-                  onClick={() => setExitConfirm(true)}
-                >
-                  Salir
-                </button>
               </div>
+              <button
+                type="button"
+                className="rounded-xl bg-rose-500/70 px-3 py-2 text-xs font-black text-white hover:bg-rose-500"
+                onClick={() => setExitConfirm(true)}
+              >
+                Salir
+              </button>
             </div>
 
             {!lessonId ? (
@@ -2344,7 +2328,34 @@ export default function App() {
               </div>
               <div className="space-y-3 p-6">
                 <button
-                  onClick={() => setCelebration(null)}
+                  onClick={() => {
+                    if (!lesson) return
+                    const currentLesson = lesson
+                    const currentWorld = currentLesson.subject || 'esp'
+                    const currentOrder = currentLesson.order || 0
+
+                    // Find next lesson in same world
+                    const nextLesson = lessons
+                      .filter((l) => l.subject === currentWorld)
+                      .find((l) => (l.order || 0) > currentOrder)
+
+                    if (nextLesson) {
+                      setLessonId(nextLesson.id)
+                      setCelebration(null)
+                      // Reset question state for new lesson
+                      setResults({})
+                      setIdx(0)
+                      setFeedback(null)
+                      setAnswerText('')
+                      setOrderSelected([])
+                      setMatchLeft(null)
+                      setMatchMap({})
+                      setMatchRightsUsed(new Set())
+                    } else {
+                      // No more lessons in this world
+                      setCelebration(null)
+                    }
+                  }}
                   className="w-full rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] py-4 text-lg font-black uppercase tracking-widest text-slate-900 transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
                 >
                   Continuar
