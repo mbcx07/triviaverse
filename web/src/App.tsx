@@ -84,6 +84,8 @@ function subjectTitle(key: string): string {
       return 'Geografía'
     case 'civ':
       return 'Cívica y Ética'
+    case 'gen':
+      return 'Mundo Sorpresa'
     default:
       return 'Lecciones'
   }
@@ -168,6 +170,8 @@ export default function App() {
   const [battleFeedback, setBattleFeedback] = useState<any>(null)
   const [battleAnswered, setBattleAnswered] = useState(false)
   const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'ended' | 'results'>('countdown')
+  const [battleSubject, setBattleSubject] = useState('esp')
+  const [battleSize, setBattleSize] = useState(4)
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
@@ -1335,8 +1339,8 @@ export default function App() {
                     ].map(({ key, label, emoji }) => (
                       <button
                         key={key}
-                        className={`flex flex-col items-center rounded-2xl p-2 text-xs font-black ring-1 transition-colors ${(window as any).__tv_battleSubject === key ? 'bg-[#1CB0F6]/30 ring-[#1CB0F6] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
-                        onClick={() => { (window as any).__tv_battleSubject = key }}
+                        className={`flex flex-col items-center rounded-2xl p-2 text-xs font-black ring-1 transition-colors ${battleSubject === key ? 'bg-[#1CB0F6]/30 ring-[#1CB0F6] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => setBattleSubject(key)}
                       >
                         <span className="text-lg">{emoji}</span>
                         <span className="mt-0.5 text-center leading-tight">{label}</span>
@@ -1351,8 +1355,8 @@ export default function App() {
                     {[1, 2, 3, 4].map((size) => (
                       <button
                         key={size}
-                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${(window as any).__tv_battleSize === size ? 'bg-[#58CC02]/30 ring-[#58CC02] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
-                        onClick={() => { (window as any).__tv_battleSize = size }}
+                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleSize === size ? 'bg-[#58CC02]/30 ring-[#58CC02] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => setBattleSize(size)}
                       >
                         {size}v{size}
                       </button>
@@ -1365,8 +1369,8 @@ export default function App() {
                   onClick={async () => {
                     if (!user) return
                     setShowBattleConfig(false)
-                    const maxPerTeam = Number((window as any).__tv_battleSize || 4)
-                    const subject = String((window as any).__tv_battleSubject || world || 'esp')
+                    const subject = battleSubject || 'esp'
+                    const maxPerTeam = battleSize || 4
                     const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: pendingBattleVisibility })
                     setBattleRoomId(r.id)
                     ;(window as any).__tv_unsubBattle?.()
@@ -2137,13 +2141,13 @@ export default function App() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {[0, 1, 2, 3, 4].map((p) => (
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((p) => (
                     <button
                       key={p}
                       className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${routePage === p ? 'bg-[#1CB0F6]/70' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}
                       onClick={() => setRoutePage(p)}
                     >
-                      {p * 10 + 1}-{p * 10 + 10}
+                      {p * 10 + 1}-{Math.min(p * 10 + 10, 100)}
                     </button>
                   ))}
                 </div>
