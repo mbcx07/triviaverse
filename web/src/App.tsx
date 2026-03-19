@@ -174,6 +174,12 @@ export default function App() {
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
+  // Daily Challenge state
+  const [dailyChallenge, setDailyChallenge] = useState<{ questions: any[]; idx: number; lives: number; completed: boolean; rewardClaimed: boolean } | null>(null)
+  const [dcAnswered, setDcAnswered] = useState(false)
+  const [dcFeedback, setDcFeedback] = useState<{ correct: boolean; correctIndex: number } | null>(null)
+  const [dcSelected, setDcSelected] = useState<number | null>(null)
+
   // Battle quiz: submit answer and show feedback
   async function submitBattleAnswerGeneric(answerRaw: any) {
     if (!user || !battleRoom || !bq) return
@@ -2086,6 +2092,127 @@ export default function App() {
                 No hay lecciones en Firestore. Corre el seed o crea documentos en la colección <code>lessons</code>.
               </div>
             ) : null}
+            {/* Reto Diario */}
+            {!dailyChallenge ? (
+              <button
+                className="w-full rounded-3xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] p-4 text-left shadow-lg active:border-b-0 active:translate-y-1"
+                onClick={async () => {
+                  if (!user) return
+                  const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
+                  const qs: any[] = []
+                  for (const s of subjects) {
+                    try {
+                      const lessonId = `${s}-${Math.floor(Math.random() * 100) + 1}`
+                      const lessonsQs = await listQuestions(lessonId)
+                      if (lessonsQs.length) qs.push(lessonsQs[Math.floor(Math.random() * lessonsQs.length)])
+                    } catch { /* skip */ }
+                  }
+                  setDailyChallenge({ questions: qs.slice(0, 5), idx: 0, lives: 3, completed: false, rewardClaimed: false })
+                  setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-black text-slate-900">🏆 RETO DIARIO</div>
+                    <div className="mt-1 text-xs font-bold text-slate-800">5 preguntas · 3 vidas · Bonus XP</div>
+                  </div>
+                  <div className="text-3xl">🔥</div>
+                </div>
+              </button>
+            ) : dailyChallenge.completed && !dailyChallenge.rewardClaimed ? (
+              <div className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7DFE00] to-[#58CC02] p-4 text-center">
+                <div className="text-base font-black text-slate-900">🎉 ¡Completado!</div>
+                <div className="mt-1 text-xs font-bold text-slate-800">Bonus: +50 XP</div>
+                <button
+                  className="mt-2 w-full rounded-2xl bg-[#4AA000] py-2 text-sm font-black text-white"
+                  onClick={async () => {
+                    if (!user) return
+                    await recordAttempt({
+                      userId: user.id, lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
+                      questionId: 'daily-challenge', answerRaw: 'completed', wasCorrect: true,
+                      answeredCount: 5, correctCount: 5,
+                    })
+                    setDailyChallenge((d: any) => d ? { ...d, rewardClaimed: true } : d)
+                  }}
+                >
+                  Reclamar Bonus
+                </button>
+              </div>
+            ) : dailyChallenge.completed && dailyChallenge.rewardClaimed ? (
+              <div className="rounded-3xl bg-[#58CC02]/20 p-4 text-center ring-1 ring-[#58CC02]">
+                <div className="text-sm font-black text-[#58CC02]">✅ Reto Diario Completado</div>
+                <div className="mt-1 text-xs text-slate-300">Mañana habrá uno nuevo</div>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-black text-white">🏆 Reto Diario</div>
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="text-lg">{i < dailyChallenge.lives ? '❤️' : '🖤'}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-1 text-xs text-slate-300">Pregunta {dailyChallenge.idx + 1}/5</div>
+                {dailyChallenge.questions[dailyChallenge.idx] ? (
+                  <div className="mt-3">
+                    <div className="text-sm font-bold text-white">{dailyChallenge.questions[dailyChallenge.idx].question}</div>
+                    {dailyChallenge.questions[dailyChallenge.idx].options ? (
+                      <div className="mt-2 grid grid-cols-1 gap-2">
+                        {dailyChallenge.questions[dailyChallenge.idx].options.map((opt: string, oi: number) => {
+                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+                          if (dcAnswered) {
+                            if (oi === dcFeedback?.correctIndex) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
+                            else if (oi === dcSelected && !dcFeedback?.correct) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
+                          }
+                          return (
+                            <button
+                              key={oi}
+                              className={`rounded-2xl border-b-4 px-4 py-3 text-left text-sm font-black transition-colors ${cls}`}
+                              style={{ borderColor: dcAnswered && oi === dcFeedback?.correctIndex ? '#46A302' : dcAnswered && oi === dcSelected ? '#be123c' : '#374151' }}
+                              onClick={() => {
+                                if (dcAnswered) return
+                                const correct = dailyChallenge.questions[dailyChallenge.idx].correctIndex
+                                const correctIndex = typeof correct === 'number' ? correct : 0
+                                setDcSelected(oi)
+                                setDcFeedback({ correct: oi === correctIndex, correctIndex })
+                                setDcAnswered(true)
+                                if (oi !== correctIndex) {
+                                  setDailyChallenge((d: any) => ({ ...d, lives: d.lives - 1 }))
+                                }
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                    {dcAnswered ? (
+                      <button
+                        className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
+                        onClick={() => {
+                          const next = dailyChallenge.idx + 1
+                          if (next >= 5 || dailyChallenge.lives <= 0) {
+                            setDailyChallenge((d: any) => ({ ...d, completed: true }))
+                          } else {
+                            setDailyChallenge((d: any) => ({ ...d, idx: next }))
+                            setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
+                          }
+                        }}
+                      >
+                        Siguiente →
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-slate-400">Cargando pregunta…</div>
+                )}
+                <button className="mt-2 text-xs text-slate-500 underline" onClick={() => { setDailyChallenge(null); setDcAnswered(false); setDcFeedback(null); setDcSelected(null) }}>
+                  Salir del reto
+                </button>
+              </div>
+            )}
 
             {/* World picker */}
             <div className="mt-4 grid grid-cols-2 gap-3">
