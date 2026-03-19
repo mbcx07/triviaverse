@@ -163,7 +163,6 @@ export default function App() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
   // Battle quiz state
-  const [battleLessonId, setBattleLessonId] = useState('')
   const [battleQuestions, setBattleQuestions] = useState<any[]>([])
   const [battleIdx, setBattleIdx] = useState(0)
   const [battleResults, setBattleResults] = useState<Record<string, boolean>>({})
@@ -510,7 +509,6 @@ export default function App() {
     if (battleRoom?.status !== 'started') return
     if (battleQuestions.length > 0) return // already loaded
     const lessonId = battleRoom.missionId || battleRoom.lessonId || 'mat-1'
-    setBattleLessonId(lessonId)
     const unsub = subscribeLessonQuestions(lessonId, (qs) => {
       setBattleQuestions(qs)
       setBattleIdx(0)
