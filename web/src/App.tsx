@@ -158,6 +158,37 @@ export default function App() {
   const [battleMsgText, setBattleMsgText] = useState('')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
+  // Battle quiz state
+  const [battleLessonId, setBattleLessonId] = useState('')
+  const [battleQuestions, setBattleQuestions] = useState<any[]>([])
+  const [battleIdx, setBattleIdx] = useState(0)
+  const [battleResults, setBattleResults] = useState<Record<string, boolean>>({})
+  const [battleFeedback, setBattleFeedback] = useState<any>(null)
+  const [battleAnswered, setBattleAnswered] = useState(false)
+  const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'ended' | 'results'>('countdown')
+
+  function submitBattleAnswer(answerRaw: any) {
+    submitBattleAnswerGeneric(answerRaw)
+  }
+
+  // Battle quiz: submit answer and show feedback
+  async function submitBattleAnswerGeneric(answerRaw: any) {
+    if (!user || !battleRoom || !bq) return
+    const questionId = bq.id || String(battleIdx)
+    const wasCorrect = String(answerRaw) === String(bq.correctIndex ?? bq.answer ?? '')
+    setBattleResults((prev) => ({ ...prev, [questionId]: wasCorrect }))
+    setBattleFeedback(wasCorrect ? { ok: 1 } : { ok: 0, correct: bq.correctIndex ?? bq.answer })
+    setBattleAnswered(true)
+    if (user) await submitAttempt(user.uid, battleLessonId, questionId, wasCorrect)
+  }
+
+  function nextBattleQuestion() {
+    setBattleFeedback(null)
+    setBattleAnswered(false)
+    setBattleIdx((i) => (i + 1) % Math.max(battleQuestions.length, 1))
+  }
+
+  const bq = battleQuestions[battleIdx] || null
 
   // Emojis básicos (frecuentes)
   const EMOJIS = ['😀', '😂', '🤣', '😍', '😎', '🔥', '🎉', '💪', '👍', '👎', '🏆', '⭐', '💯', '❤️', '😎', '🎯', '🚀', '🌟', '✨', '🎊', '🎪', '🎁', '🎸', '🎮', '🏆', '🥇', '🥈', '🥉', '👏', '🙌', '💪', '🤝', '✌️']
@@ -299,7 +330,7 @@ export default function App() {
       const u = await withTimeout(
         loginWithNicknamePin(nickname, pin, teamCode),
         12000,
-        'La conexión a Firestore está tardando demasiado. Revisa tu Internet o vuelve a intentar en modo incógnito.'
+        'La conexión está tardando demasiado. Revisa tu Internet o vuelve a intentar.'
       )
       setUser(u)
       setAvatar(u.avatar || '🪐')
@@ -317,7 +348,7 @@ export default function App() {
       const ls = await withTimeout(
         listLessons(),
         12000,
-        'No pude cargar lecciones (Firestore). Reintenta; si persiste, falta inicializar la base o hay un bloqueo de red.'
+        'No pude cargar lecciones. Reintenta; si persiste, verifica tu conexión.'
       )
       setLessons(ls)
       setLessonId((prev) => prev || ls[0]?.id || '')
@@ -460,6 +491,20 @@ export default function App() {
     }, 1000)
     return () => clearInterval(t)
   }, [battleRoom?.status, battleRoom?.startedAt])
+
+  // Load battle questions once countdown ends (status changes to 'match')
+  useEffect(() => {
+    if (battleStatus !== 'match' || !battleRoom) return
+    if (battleQuestions.length > 0) return // already loaded
+    const lessonId = battleRoom.missionId || battleRoom.lessonId || 'mat-1'
+    setBattleLessonId(lessonId)
+    const unsub = subscribeLessonQuestions(lessonId, (qs) => {
+      setBattleQuestions(qs)
+      setBattleIdx(0)
+    })
+    return unsub
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battleStatus, battleRoom?.id])
 
   // Voice PTT: enable/disable mic track
   useEffect(() => {
