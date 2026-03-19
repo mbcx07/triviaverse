@@ -191,7 +191,6 @@ export default function App() {
     if (battleRoomId) {
       await submitBattleScore({ roomId: battleRoomId, userId: user.id, correct: newCorrect, answered: newAnswered }).catch(() => {})
     }
-    await recordAttempt({ userId: user.id, lessonId: battleLessonId, questionId, wasCorrect })
   }
 
   const bq = battleQuestions[battleIdx] || null
