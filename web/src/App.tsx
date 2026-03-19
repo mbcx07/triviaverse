@@ -175,10 +175,6 @@ export default function App() {
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
-  function submitBattleAnswer(answerRaw: any) {
-    submitBattleAnswerGeneric(answerRaw)
-  }
-
   // Battle quiz: submit answer and show feedback
   async function submitBattleAnswerGeneric(answerRaw: any) {
     if (!user || !battleRoom || !bq) return
@@ -195,13 +191,7 @@ export default function App() {
     if (battleRoomId) {
       await submitBattleScore({ roomId: battleRoomId, userId: user.id, correct: newCorrect, answered: newAnswered }).catch(() => {})
     }
-    await recordAttempt(user.id, battleLessonId, questionId, wasCorrect)
-  }
-
-  function nextBattleQuestion() {
-    setBattleFeedback(null)
-    setBattleAnswered(false)
-    setBattleIdx((i) => (i + 1) % Math.max(battleQuestions.length, 1))
+    await recordAttempt({ userId: user.id, lessonId: battleLessonId, questionId, wasCorrect })
   }
 
   const bq = battleQuestions[battleIdx] || null
