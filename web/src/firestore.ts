@@ -208,6 +208,14 @@ export async function listQuestions(lessonId: string): Promise<Question[]> {
   return qs.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as any
 }
 
+export function subscribeLessonQuestions(lessonId: string, cb: (qs: any[]) => void): () => void {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'lessons', lessonId, 'questions')
+  return onSnapshot(query(ref, orderBy('order', 'asc')), (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })))
+  })
+}
+
 export async function loadAttemptsForLesson(userId: string, lessonId: string): Promise<Record<string, boolean>> {
   const dbi = ensureDb()
   const ref = collection(dbi, 'users', userId, 'attempts')

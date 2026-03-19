@@ -22,6 +22,7 @@ import {
   subscribeBattleMessages,
   sendBattleMessage,
   submitBattleScore,
+  subscribeLessonQuestions,
   toggleBattleReady,
   startBattleCountdown,
   startBattleMatch,
@@ -190,7 +191,7 @@ export default function App() {
     if (battleRoomId) {
       await submitBattleScore({ roomId: battleRoomId, userId: user.id, correct: newCorrect, answered: newAnswered }).catch(() => {})
     }
-    await submitAttempt(user.uid, battleLessonId, questionId, wasCorrect)
+    await recordAttempt(user.id, battleLessonId, questionId, wasCorrect)
   }
 
   function nextBattleQuestion() {
@@ -1916,9 +1917,7 @@ export default function App() {
                     {bq.type === 'multiple_choice' && Array.isArray(bq.options) ? (
                       <div className="grid grid-cols-1 gap-2">
                         {bq.options.map((opt: string, idx: number) => {
-                          const isSelected = battleAnswered && battleFeedback?.correct === idx
-                          const isWrong = battleAnswered && battleFeedback?.ok === 0 && battleFeedback?.correct === idx
-                          const showCorrect = battleAnswered && battleFeedback?.ok === 0 && idx === battleFeedback?.correct
+                          const isWrong = battleAnswered && battleFeedback?.ok === 0 && idx === battleFeedback?.correct
                           let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
                           if (battleAnswered) {
                             if (idx === battleFeedback?.correct) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
