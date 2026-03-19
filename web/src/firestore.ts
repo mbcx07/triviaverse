@@ -672,6 +672,19 @@ export async function startBattleCountdown(params: { roomId: string }) {
   await setDoc(ref, { countdownStarted: true, countdownFrom: 3, chatPhase: 'lobby' }, { merge: true })
 }
 
+// Transition from countdown/open → started. Idempotent (only first caller wins).
+export async function startBattleMatch(params: { roomId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  await runTransaction(dbi, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) return
+    const r = snap.data() as BattleRoom
+    if (r.status !== 'open') return // already started or finished
+    tx.update(ref, { status: 'started', startedAt: serverTimestamp(), chatPhase: 'match' })
+  })
+}
+
 export async function finishBattle(params: { roomId: string, winnerTeamId?: string | null }) {
   const dbi = ensureDb()
   const ref = doc(dbi, 'battleRooms', params.roomId)

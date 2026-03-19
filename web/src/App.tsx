@@ -24,6 +24,7 @@ import {
   submitBattleScore,
   toggleBattleReady,
   startBattleCountdown,
+  startBattleMatch,
   finishBattle,
   subscribeVoiceSignal,
   subscribeVoiceCandidates,
@@ -166,6 +167,8 @@ export default function App() {
   const [battleFeedback, setBattleFeedback] = useState<any>(null)
   const [battleAnswered, setBattleAnswered] = useState(false)
   const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'ended' | 'results'>('countdown')
+  const [showBattleConfig, setShowBattleConfig] = useState(false)
+  const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
   function submitBattleAnswer(answerRaw: any) {
     submitBattleAnswerGeneric(answerRaw)
@@ -175,11 +178,19 @@ export default function App() {
   async function submitBattleAnswerGeneric(answerRaw: any) {
     if (!user || !battleRoom || !bq) return
     const questionId = bq.id || String(battleIdx)
-    const wasCorrect = String(answerRaw) === String(bq.correctIndex ?? bq.answer ?? '')
+    const correctIndex = bq.correctIndex ?? bq.answer ?? 0
+    const wasCorrect = String(answerRaw) === String(correctIndex)
     setBattleResults((prev) => ({ ...prev, [questionId]: wasCorrect }))
-    setBattleFeedback(wasCorrect ? { ok: 1 } : { ok: 0, correct: bq.correctIndex ?? bq.answer })
+    setBattleFeedback(wasCorrect ? { ok: 1 } : { ok: 0, correct: correctIndex })
     setBattleAnswered(true)
-    if (user) await submitAttempt(user.uid, battleLessonId, questionId, wasCorrect)
+    // Update local score
+    const currentScore = battleRoom.scores?.[user.id]
+    const newCorrect = (currentScore?.correct || 0) + (wasCorrect ? 1 : 0)
+    const newAnswered = (currentScore?.answered || 0) + 1
+    if (battleRoomId) {
+      await submitBattleScore({ roomId: battleRoomId, userId: user.id, correct: newCorrect, answered: newAnswered }).catch(() => {})
+    }
+    await submitAttempt(user.uid, battleLessonId, questionId, wasCorrect)
   }
 
   function nextBattleQuestion() {
@@ -453,7 +464,14 @@ export default function App() {
       if (current <= 0) {
         clearInterval(t)
         setBattleCountdown(0)
-        setTimeout(() => setBattleCountdown(null), 1000)
+        setTimeout(async () => {
+          setBattleCountdown(null)
+          setBattleStatus('match')
+          // Transition battleRoom.status from 'open' → 'started' (idempotent, first caller wins)
+          if (battleRoom?.id) {
+            await startBattleMatch({ roomId: battleRoom.id }).catch(() => {})
+          }
+        }, 1000)
       } else {
         setBattleCountdown(current)
       }
@@ -492,9 +510,10 @@ export default function App() {
     return () => clearInterval(t)
   }, [battleRoom?.status, battleRoom?.startedAt])
 
-  // Load battle questions once countdown ends (status changes to 'match')
+  // Load battle questions once battle is starting (status becomes 'started', battleStatus becomes 'match')
   useEffect(() => {
-    if (battleStatus !== 'match' || !battleRoom) return
+    if (battleStatus !== 'match') return
+    if (battleRoom?.status !== 'started') return
     if (battleQuestions.length > 0) return // already loaded
     const lessonId = battleRoom.missionId || battleRoom.lessonId || 'mat-1'
     setBattleLessonId(lessonId)
@@ -504,7 +523,7 @@ export default function App() {
     })
     return unsub
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleStatus, battleRoom?.id])
+  }, [battleStatus, battleRoom?.id, battleRoom?.status])
 
   // Voice PTT: enable/disable mic track
   useEffect(() => {
@@ -1296,6 +1315,76 @@ export default function App() {
           </div>
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            {/* Battle config modal */}
+            {showBattleConfig ? (
+              <div className="mb-4 rounded-3xl bg-slate-900/80 p-5 ring-1 ring-white/20">
+                <div className="text-center text-base font-black uppercase tracking-widest text-white">Configurar Batalla</div>
+
+                <div className="mt-4">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Materia</div>
+                  <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                    {[
+                      { key: 'esp', label: 'Español', emoji: '📘' },
+                      { key: 'mat', label: 'Matemáticas', emoji: '🧮' },
+                      { key: 'cien', label: 'Ciencias', emoji: '🧪' },
+                      { key: 'hist', label: 'Historia', emoji: '🏛️' },
+                      { key: 'geo', label: 'Geografía', emoji: '🌎' },
+                      { key: 'civ', label: 'Cívica', emoji: '⚖️' },
+                      { key: 'mixed', label: 'Mixto', emoji: '🎲' },
+                    ].map(({ key, label, emoji }) => (
+                      <button
+                        key={key}
+                        className={`flex flex-col items-center rounded-2xl p-2 text-xs font-black ring-1 transition-colors ${(window as any).__tv_battleSubject === key ? 'bg-[#1CB0F6]/30 ring-[#1CB0F6] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => { (window as any).__tv_battleSubject = key }}
+                      >
+                        <span className="text-lg">{emoji}</span>
+                        <span className="mt-0.5 text-center leading-tight">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Tamaño de equipo</div>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {[1, 2, 3, 4].map((size) => (
+                      <button
+                        key={size}
+                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${(window as any).__tv_battleSize === size ? 'bg-[#58CC02]/30 ring-[#58CC02] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => { (window as any).__tv_battleSize = size }}
+                      >
+                        {size}v{size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  className="mt-5 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1"
+                  onClick={async () => {
+                    if (!user) return
+                    setShowBattleConfig(false)
+                    const maxPerTeam = Number((window as any).__tv_battleSize || 4)
+                    const subject = String((window as any).__tv_battleSubject || world || 'esp')
+                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: pendingBattleVisibility })
+                    setBattleRoomId(r.id)
+                    ;(window as any).__tv_unsubBattle?.()
+                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                    ;(window as any).__tv_unsubBattleMsgs?.()
+                    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                  }}
+                >
+                  🚀 Crear Batalla
+                </button>
+                <button
+                  className="mt-2 w-full rounded-2xl bg-slate-800 py-2 text-xs font-bold text-slate-400 ring-1 ring-white/10 hover:bg-slate-700"
+                  onClick={() => setShowBattleConfig(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : null}
+
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-lg font-extrabold">Batallas</div>
@@ -1376,17 +1465,7 @@ export default function App() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   className="rounded-3xl border-b-4 border-[#1899D6] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                  onClick={async () => {
-                    if (!user) return
-                    const maxPerTeam = Number((window as any).__tv_battleSize || 4)
-                    const subject = String((window as any).__tv_battleSubject || world || 'esp')
-                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'open' })
-                    setBattleRoomId(r.id)
-                    ;(window as any).__tv_unsubBattle?.()
-                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                    ;(window as any).__tv_unsubBattleMsgs?.()
-                    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                  }}
+                  onClick={() => { if (!user) return; setPendingBattleVisibility('open'); setShowBattleConfig(true) }}
                 >
                   Crear batalla abierta
                   <div className="mt-1 text-xs opacity-90">Aparece en Lobby</div>
@@ -1394,17 +1473,7 @@ export default function App() {
 
                 <button
                   className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                  onClick={async () => {
-                    if (!user) return
-                    const maxPerTeam = Number((window as any).__tv_battleSize || 4)
-                    const subject = String((window as any).__tv_battleSubject || world || 'esp')
-                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'private' })
-                    setBattleRoomId(r.id)
-                    ;(window as any).__tv_unsubBattle?.()
-                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                    ;(window as any).__tv_unsubBattleMsgs?.()
-                    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                  }}
+                  onClick={() => { if (!user) return; setPendingBattleVisibility('private'); setShowBattleConfig(true) }}
                 >
                   Crear batalla privada
                   <div className="mt-1 text-xs opacity-90">Solo con código</div>
@@ -1830,6 +1899,67 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+
+                {/* Quiz UI — question + options */}
+                {bq && battleStatus === 'match' && battleRoom.status === 'started' ? (
+                  <div className="mt-4">
+                    {/* Progress */}
+                    <div className="mb-3 flex items-center justify-between text-xs font-bold text-slate-300/80">
+                      <span>Pregunta {battleIdx + 1}/{battleQuestions.length}</span>
+                      <span className="text-[10px]">{Object.values(battleResults).filter(Boolean).length} correctas</span>
+                    </div>
+                    {/* Question text */}
+                    <div className="mb-4 rounded-2xl bg-white/5 px-4 py-4 text-center text-sm font-black text-white ring-1 ring-white/10">
+                      {bq.question || bq.prompt || '¿?'}
+                    </div>
+                    {/* Options */}
+                    {bq.type === 'multiple_choice' && Array.isArray(bq.options) ? (
+                      <div className="grid grid-cols-1 gap-2">
+                        {bq.options.map((opt: string, idx: number) => {
+                          const isSelected = battleAnswered && battleFeedback?.correct === idx
+                          const isWrong = battleAnswered && battleFeedback?.ok === 0 && battleFeedback?.correct === idx
+                          const showCorrect = battleAnswered && battleFeedback?.ok === 0 && idx === battleFeedback?.correct
+                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+                          if (battleAnswered) {
+                            if (idx === battleFeedback?.correct) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
+                            else if (isWrong) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
+                          }
+                          return (
+                            <button
+                              key={idx}
+                              className={`rounded-2xl border-b-4 px-4 py-3 text-left text-sm font-black transition-colors ${cls}`}
+                              onClick={() => {
+                                if (battleAnswered) return
+                                submitBattleAnswerGeneric(idx)
+                              }}
+                              disabled={battleAnswered}
+                            >
+                              <span className="mr-2 text-xs opacity-60">{['A', 'B', 'C', 'D'][idx]}</span>
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center text-xs text-slate-400">Tipo de pregunta no soportado en batalla: {bq.type}</div>
+                    )}
+                    {/* Next button after answer */}
+                    {battleAnswered ? (
+                      <button
+                        className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
+                        onClick={() => {
+                          setBattleFeedback(null)
+                          setBattleAnswered(false)
+                          setBattleIdx((i) => (i + 1) % Math.max(battleQuestions.length, 1))
+                        }}
+                      >
+                        Siguiente →
+                      </button>
+                    ) : null}
+                  </div>
+                ) : battleStatus === 'match' && battleRoom.status === 'started' && !bq ? (
+                  <div className="mt-4 rounded-2xl bg-white/5 p-4 text-center text-sm font-bold text-slate-400">Cargando preguntas…</div>
+                ) : null}
               </div>
             ) : null}
 
