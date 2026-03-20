@@ -1326,7 +1326,79 @@ export default function App() {
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             {/* Battle config modal */}
-            {showBattleConfig ? (
+            {/* ===== Si hay batalla en curso, SOLO mostrar el quiz ===== */}
+            {battleRoom && battleRoom.status === 'started' && battleStatus === 'match' ? (
+              <div className="rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-xs font-bold text-slate-300/80">⏱️</div>
+                    <div className={`text-2xl font-black ${battleTimer <= 30 ? 'text-rose-400' : 'text-white'}`}>
+                      {Math.floor(battleTimer / 60)}:{(battleTimer % 60).toString().padStart(2, '0')}
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-slate-300/80">
+                    Misión: <span className="font-black text-white">{battleRoom.missionId || battleRoom.subject || 'cargando...'}</span>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl bg-black/20 px-3 py-2">
+                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams?.A?.teamId || 'A'}</div>
+                    <div className="mt-1 text-2xl font-black text-white">
+                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => acc + ((battleRoom.teams?.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
+                      <span className="text-sm text-slate-400"> pts</span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-black/20 px-3 py-2">
+                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams?.B?.teamId || 'B'}</div>
+                    <div className="mt-1 text-2xl font-black text-white">
+                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => acc + ((battleRoom.teams?.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
+                      <span className="text-sm text-slate-400"> pts</span>
+                    </div>
+                  </div>
+                </div>
+                {bq ? (
+                  <div className="mt-4">
+                    <div className="mb-3 text-xs font-bold text-slate-300/80">Pregunta {battleIdx + 1}/{battleQuestions.length || '?'}</div>
+                    <div className="mb-4 rounded-2xl bg-white/5 px-4 py-4 text-center text-sm font-black text-white ring-1 ring-white/10">
+                      {bq.question || bq.prompt || '¿?'}
+                    </div>
+                    {bq.type === 'multiple_choice' && Array.isArray(bq.options) ? (
+                      <div className="grid grid-cols-1 gap-2">
+                        {bq.options.map((opt: string, idx: number) => {
+                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+                          if (battleAnswered && battleFeedback) {
+                            if (idx === battleFeedback.correct) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-white'
+                            else if (battleFeedback.selected !== undefined && idx === battleFeedback.selected && !battleFeedback.ok) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
+                          }
+                          return (
+                            <button key={idx} className={`rounded-2xl px-4 py-3 text-left text-sm font-black ${cls}`} onClick={() => !battleAnswered && submitBattleAnswerGeneric(idx)} disabled={battleAnswered}>
+                              <span className="mr-2 text-xs opacity-60">{['A', 'B', 'C', 'D'][idx]}</span>{opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : <div className="text-center text-xs text-slate-400">{bq.type || 'cargando...'}</div>}
+                    {battleAnswered && (
+                      <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
+                        if (battleIdx + 1 >= (battleQuestions.length || 0)) {
+                          finishBattle({ roomId: battleRoomId, winnerTeamId: 'A' }).catch(() => {})
+                        } else {
+                          setBattleIdx(battleIdx + 1)
+                          setBattleAnswered(false)
+                          setBattleFeedback(null)
+                        }
+                      }}>
+                        {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Terminar' : 'Siguiente'}
+                      </button>
+                    )}
+                  </div>
+                ) : <div className="mt-4 text-center text-sm text-slate-400">Cargando preguntas...</div>}
+                <button className="mt-4 w-full rounded-2xl bg-rose-500/80 py-2 text-xs font-black text-white" onClick={() => {
+                  setBattleRoomId(''); setBattleRoom(null); setBattleQuestions([]); setBattleStatus('countdown')
+                  ;(window as any).__tv_unsubBattle?.(); (window as any).__tv_unsubBattleMsgs?.()
+                }}>Salir de la batalla</button>
+              </div>
+            ) : showBattleConfig ? (
               <div className="mb-4 rounded-3xl bg-slate-900/80 p-5 ring-1 ring-white/20">
                 <div className="text-center text-base font-black uppercase tracking-widest text-white">Configurar Batalla</div>
 
