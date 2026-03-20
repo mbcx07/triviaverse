@@ -1484,7 +1484,33 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <button
+                  className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7ED321] to-[#58CC02] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                  onClick={async () => {
+                    if (!user) return
+                    try {
+                      const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: 'esp', maxPerTeam: 1, visibility: 'private' })
+                      // Agregar jugador IA automáticamente
+                      await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia' })
+                      setBattleRoomId(r.id)
+                      ;(window as any).__tv_unsubBattle?.()
+                      ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                      // Iniciar automáticamente
+                      setTimeout(async () => {
+                        await startBattleMatch({ roomId: r.id })
+                      }, 500)
+                    } catch (err) {
+                      console.error('Error vs IA:', err)
+                      const msg = err instanceof Error ? err.message : String(err)
+                      setError(`Error: ${msg}`)
+                    }
+                  }}
+                >
+                  🤖 Jugar vs IA
+                  <div className="mt-1 text-xs opacity-90">Practica contra la computadora</div>
+                </button>
+
                 <button
                   className="rounded-3xl border-b-4 border-[#1899D6] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
                   onClick={() => { if (!user) return; setPendingBattleVisibility('open'); setShowBattleConfig(true) }}
