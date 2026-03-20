@@ -1326,8 +1326,12 @@ export default function App() {
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             {/* Battle config modal */}
-            {/* ===== Si hay batalla en curso, SOLO mostrar el quiz ===== */}
-            {battleRoom && battleRoom.status === 'started' && battleStatus === 'match' ? (
+            {/* ===== Estructura de batalla:
+                 - battleRoom && battleRoom.status === 'started' → quiz activo
+                 - battleRoom && battleRoom.status === 'open' → esperando jugadores
+                 - sin battleRoom → menú de crear/unirse
+            ===== */}
+            {battleRoom && battleRoom.status === 'started' ? (
               <div className="rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1572,6 +1576,7 @@ export default function App() {
                   onClick={async () => {
                     if (!user) return
                     setShowBattleConfig(false)
+                    setBattleStatus('match') // Ir directo al quiz
                     try {
                       const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: 'esp', maxPerTeam: 1, visibility: 'private' })
                       // Agregar jugador IA automáticamente
