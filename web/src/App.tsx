@@ -2047,7 +2047,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            ) : null}}
+            ) : null}
             {/* Reto Diario */}
             {!dailyChallenge ? (
               <button
