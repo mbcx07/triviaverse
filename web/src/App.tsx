@@ -1381,12 +1381,17 @@ export default function App() {
                     setShowBattleConfig(false)
                     const subject = battleSubject || 'esp'
                     const maxPerTeam = battleSize || 4
-                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: pendingBattleVisibility })
-                    setBattleRoomId(r.id)
-                    ;(window as any).__tv_unsubBattle?.()
-                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                    ;(window as any).__tv_unsubBattleMsgs?.()
-                    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                    try {
+                      const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: pendingBattleVisibility })
+                      setBattleRoomId(r.id)
+                      ;(window as any).__tv_unsubBattle?.()
+                      ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                      ;(window as any).__tv_unsubBattleMsgs?.()
+                      ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                    } catch (err) {
+                      console.error('Error creando batalla:', err)
+                      setError('Error al crear la batalla. Intenta de nuevo.')
+                    }
                   }}
                 >
                   🚀 Crear Batalla
@@ -1510,11 +1515,16 @@ export default function App() {
                     onClick={async () => {
                       if (!user) return
                       if (!battleRoomId) return
-                      await joinBattleRoom({ roomId: battleRoomId, userId: user.id, teamId: user.teamId || 'belas' })
-                      ;(window as any).__tv_unsubBattle?.()
-                      ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
-                      ;(window as any).__tv_unsubBattleMsgs?.()
-                      ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                      try {
+                        await joinBattleRoom({ roomId: battleRoomId, userId: user.id, teamId: user.teamId || 'belas' })
+                        ;(window as any).__tv_unsubBattle?.()
+                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
+                        ;(window as any).__tv_unsubBattleMsgs?.()
+                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                      } catch (err) {
+                        console.error('Error uniéndose a batalla:', err)
+                        setError('Error al unirse a la batalla. Verifica el código.')
+                      }
                     }}
                   >
                     Unirme
