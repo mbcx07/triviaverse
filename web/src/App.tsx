@@ -1503,10 +1503,10 @@ export default function App() {
               </div>
 
               <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Unirme a una batalla</div>
+                <div className="text-sm font-extrabold">Unirme con código (batalla privada)</div>
                 <div className="mt-2 flex gap-2">
                   <input
-                    className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
+                    className="flex-1 min-w-0 rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
                     value={battleRoomId}
                     onChange={(e) => setBattleRoomId(e.target.value.trim())}
                     placeholder="Código de sala"
@@ -1531,6 +1531,7 @@ export default function App() {
                     Unirme
                   </button>
                 </div>
+                <div className="mt-2 text-xs text-slate-300/70">Las salas abiertas aparecen en el Lobby ↑</div>
               </div>
 
               {battleRoom ? (
@@ -1720,43 +1721,45 @@ export default function App() {
                       {!battleMsgs.length ? <div className="text-xs text-slate-300/70">Sin mensajes aún.</div> : null}
                     </div>
 
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:gap-2">
                       <input
-                        className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black text-white ring-1 ring-white/10"
+                        className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-base font-black text-white ring-1 ring-white/10"
                         value={battleMsgText}
                         onChange={(e) => setBattleMsgText(e.target.value)}
-                        placeholder="Escribe..."
+                        placeholder="Escribe un mensaje..."
                       />
-                      <button
-                        className={`shrink-0 rounded-2xl px-3 py-3 text-2xl ring-1 ring-white/10 ${showEmojiPicker ? 'bg-[#FFC800] ring-[#FF9600]' : 'bg-white/10 hover:bg-white/20'}`}
-                        onClick={() => {
-                          setShowEmojiPicker((v) => !v)
-                          setShowStickers(false)
-                        }}
-                      >
-                        😊
-                      </button>
-                      <button
-                        className={`shrink-0 rounded-2xl px-3 py-3 text-2xl ring-1 ring-white/10 ${showStickers ? 'bg-[#7C4DFF] ring-[#5A35C7]' : 'bg-white/10 hover:bg-white/20'}`}
-                        onClick={() => {
-                          setShowStickers((v) => !v)
-                          setShowEmojiPicker(false)
-                        }}
-                      >
-                        🎨
-                      </button>
-                      <button
-                        className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
-                        onClick={async () => {
-                          if (!user) return
-                          if (!battleRoomId) return
-                          const scope = battleRoom?.chatPhase === 'match' && user.teamId ? `team:${user.teamId}` : 'global'
-                          await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: battleMsgText, scope })
-                          setBattleMsgText('')
-                        }}
-                      >
-                        Enviar
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          className={`shrink-0 rounded-2xl px-3 py-3 text-2xl ring-1 ring-white/10 ${showEmojiPicker ? 'bg-[#FFC800] ring-[#FF9600]' : 'bg-white/10 hover:bg-white/20'}`}
+                          onClick={() => {
+                            setShowEmojiPicker((v) => !v)
+                            setShowStickers(false)
+                          }}
+                        >
+                          😊
+                        </button>
+                        <button
+                          className={`shrink-0 rounded-2xl px-3 py-3 text-2xl ring-1 ring-white/10 ${showStickers ? 'bg-[#7C4DFF] ring-[#5A35C7]' : 'bg-white/10 hover:bg-white/20'}`}
+                          onClick={() => {
+                            setShowStickers((v) => !v)
+                            setShowEmojiPicker(false)
+                          }}
+                        >
+                          🎨
+                        </button>
+                        <button
+                          className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white flex-1 sm:flex-none"
+                          onClick={async () => {
+                            if (!user) return
+                            if (!battleRoomId) return
+                            const scope = battleRoom?.chatPhase === 'match' && user.teamId ? `team:${user.teamId}` : 'global'
+                            await sendBattleMessage({ roomId: battleRoomId, userId: user.id, text: battleMsgText, scope })
+                            setBattleMsgText('')
+                          }}
+                        >
+                          Enviar
+                        </button>
+                      </div>
                     </div>
 
                     {/* Emoji picker */}
