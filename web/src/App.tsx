@@ -1390,7 +1390,8 @@ export default function App() {
                       ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
                     } catch (err) {
                       console.error('Error creando batalla:', err)
-                      setError('Error al crear la batalla. Intenta de nuevo.')
+                      const msg = err instanceof Error ? err.message : String(err)
+                      setError(`Error: ${msg}`)
                     }
                   }}
                 >
