@@ -524,6 +524,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [battleStatus, battleRoom?.id, battleRoom?.status])
 
+  // Auto-start match when status is 'started' but no countdown (e.g., AI mode)
+  useEffect(() => {
+    if (battleRoom?.status !== 'started') return
+    if (battleStatus === 'match') return
+    // If match already started without countdown, jump to match state
+    if (!battleRoom.countdownStarted && battleRoom.startedAt) {
+      setBattleStatus('match')
+    }
+  }, [battleRoom?.status, battleRoom?.countdownStarted, battleRoom?.startedAt, battleStatus])
+
   // Voice PTT: enable/disable mic track
   useEffect(() => {
     const track = (window as any).__tv_voiceTrack as MediaStreamTrack | undefined
@@ -1155,7 +1165,7 @@ export default function App() {
                 onClick={() => setTab('battle')}
               >
                 <div className="text-sm opacity-90">Batallas</div>
-                <div className="mt-1 text-xl">Hasta 8 vs 8</div>
+                <div className="mt-1 text-xl">Compite con otros</div>
               </button>
             </div>
           </div>
@@ -1489,6 +1499,7 @@ export default function App() {
                   className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7ED321] to-[#58CC02] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
                   onClick={async () => {
                     if (!user) return
+                    setShowBattleConfig(false)
                     try {
                       const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: 'esp', maxPerTeam: 1, visibility: 'private' })
                       // Agregar jugador IA automáticamente
@@ -1496,10 +1507,8 @@ export default function App() {
                       setBattleRoomId(r.id)
                       ;(window as any).__tv_unsubBattle?.()
                       ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                      // Iniciar automáticamente
-                      setTimeout(async () => {
-                        await startBattleMatch({ roomId: r.id })
-                      }, 500)
+                      // Iniciar automáticamente sin esperar
+                      await startBattleMatch({ roomId: r.id })
                     } catch (err) {
                       console.error('Error vs IA:', err)
                       const msg = err instanceof Error ? err.message : String(err)
@@ -1560,7 +1569,7 @@ export default function App() {
                 <div className="mt-2 text-xs text-slate-300/70">Las salas abiertas aparecen en el Lobby ↑</div>
               </div>
 
-              {battleRoom ? (
+              {battleRoom && battleRoom.status === 'open' ? (
                 <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                   <div className="text-sm font-extrabold">Tu sala</div>
                   <div className="mt-2 flex items-center gap-2">
