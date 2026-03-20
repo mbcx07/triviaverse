@@ -165,7 +165,7 @@ export default function App() {
   // Battle quiz state
   const [battleQuestions, setBattleQuestions] = useState<any[]>([])
   const [battleIdx, setBattleIdx] = useState(0)
-  const [battleResults, setBattleResults] = useState<Record<string, boolean>>({})
+  const [_battleResults, setBattleResults] = useState<Record<string, boolean>>({})
   const [battleFeedback, setBattleFeedback] = useState<any>(null)
   const [battleAnswered, setBattleAnswered] = useState(false)
   const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'ended' | 'results'>('countdown')
@@ -2010,104 +2010,7 @@ export default function App() {
               </div>
             ) : null}
 
-            {/* Battle in progress: timer + scores */}
-            {battleRoom && battleRoom.status === 'started' ? (
-              <div className="mt-4 rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-xs font-bold text-slate-300/80">⏱️</div>
-                    <div className={`text-2xl font-black ${battleTimer <= 30 ? 'text-rose-400' : 'text-white'}`}>
-                      {Math.floor(battleTimer / 60)}:{(battleTimer % 60).toString().padStart(2, '0')}
-                    </div>
-                  </div>
-                  <div className="text-xs font-bold text-slate-300/80">
-                    Misión: <span className="font-black text-white">{battleRoom.missionId || 'cargando...'}</span>
-                  </div>
-                </div>
-                {/* Team scores */}
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl bg-black/20 px-3 py-2">
-                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams.A?.teamId || 'A'}</div>
-                    <div className="mt-1 text-2xl font-black text-white">
-                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
-                        const inTeamA = battleRoom.teams.A?.members?.includes(uid)
-                        return acc + (inTeamA ? (s.correct || 0) : 0)
-                      }, 0)}{' '}
-                      <span className="text-sm text-slate-400">pts</span>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-black/20 px-3 py-2">
-                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams.B?.teamId || 'B'}</div>
-                    <div className="mt-1 text-2xl font-black text-white">
-                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
-                        const inTeamB = battleRoom.teams.B?.members?.includes(uid)
-                        return acc + (inTeamB ? (s.correct || 0) : 0)
-                      }, 0)}{' '}
-                      <span className="text-sm text-slate-400">pts</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quiz UI — question + options */}
-                {bq && battleStatus === 'match' && battleRoom.status === 'started' ? (
-                  <div className="mt-4">
-                    {/* Progress */}
-                    <div className="mb-3 flex items-center justify-between text-xs font-bold text-slate-300/80">
-                      <span>Pregunta {battleIdx + 1}/{battleQuestions.length}</span>
-                      <span className="text-[10px]">{Object.values(battleResults).filter(Boolean).length} correctas</span>
-                    </div>
-                    {/* Question text */}
-                    <div className="mb-4 rounded-2xl bg-white/5 px-4 py-4 text-center text-sm font-black text-white ring-1 ring-white/10">
-                      {bq.question || bq.prompt || '¿?'}
-                    </div>
-                    {/* Options */}
-                    {bq.type === 'multiple_choice' && Array.isArray(bq.options) ? (
-                      <div className="grid grid-cols-1 gap-2">
-                        {bq.options.map((opt: string, idx: number) => {
-                          const isWrong = battleAnswered && battleFeedback?.ok === 0 && idx === battleFeedback?.correct
-                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
-                          if (battleAnswered) {
-                            if (idx === battleFeedback?.correct) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
-                            else if (isWrong) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
-                          }
-                          return (
-                            <button
-                              key={idx}
-                              className={`rounded-2xl border-b-4 px-4 py-3 text-left text-sm font-black transition-colors ${cls}`}
-                              onClick={() => {
-                                if (battleAnswered) return
-                                submitBattleAnswerGeneric(idx)
-                              }}
-                              disabled={battleAnswered}
-                            >
-                              <span className="mr-2 text-xs opacity-60">{['A', 'B', 'C', 'D'][idx]}</span>
-                              {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center text-xs text-slate-400">Tipo de pregunta no soportado en batalla: {bq.type}</div>
-                    )}
-                    {/* Next button after answer */}
-                    {battleAnswered ? (
-                      <button
-                        className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
-                        onClick={() => {
-                          setBattleFeedback(null)
-                          setBattleAnswered(false)
-                          setBattleIdx((i) => (i + 1) % Math.max(battleQuestions.length, 1))
-                        }}
-                      >
-                        Siguiente →
-                      </button>
-                    ) : null}
-                  </div>
-                ) : battleStatus === 'match' && battleRoom.status === 'started' && !bq ? (
-                  <div className="mt-4 rounded-2xl bg-white/5 p-4 text-center text-sm font-bold text-slate-400">Cargando preguntas…</div>
-                ) : null}
-              </div>
-            ) : null}
+            {/* Battle in progress — ya manejado arriba en el condicional principal */}
 
             {/* Post-match results */}
             {battleRoom && battleRoom.status === 'finished' ? (
