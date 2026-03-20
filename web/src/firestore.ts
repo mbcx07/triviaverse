@@ -559,7 +559,7 @@ export async function createBattleRoom(params: {
     missionId: stableMissionId(subject, ref.id),
     teams: {
       A: { teamId: params.teamId, members: [params.userId] },
-      B: undefined,
+      // B se agrega cuando alguien se une
     },
     chatPhase: 'lobby',
     // legacy
