@@ -874,6 +874,7 @@ export default function App() {
     return picked || null
   }
 
+  // @ts-expect-error Portal feature pending UI hookup
   function _openRandomPortal() {
     const picked = pickRandomUnlockedLesson()
     if (!picked) return
