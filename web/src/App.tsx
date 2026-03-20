@@ -171,6 +171,7 @@ export default function App() {
   const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'ended' | 'results'>('countdown')
   const [battleSubject, setBattleSubject] = useState('esp')
   const [battleSize, setBattleSize] = useState(4)
+  const [battleQuestionCount, setBattleQuestionCount] = useState(10)
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
@@ -1357,6 +1358,21 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="mt-4">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Preguntas</div>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {[5, 10, 15, 20].map((n) => (
+                      <button
+                        key={n}
+                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleQuestionCount === n ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => setBattleQuestionCount(n)}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   className="mt-5 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1"
                   onClick={async () => {
@@ -1403,7 +1419,7 @@ export default function App() {
                     }
                   }}
                 >
-                  Lobby
+                  Salas Abiertas
                 </button>
                 <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
                   Volver
@@ -1435,7 +1451,8 @@ export default function App() {
 
             <div className="mt-4 grid grid-cols-1 gap-3">
               <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Lobby abierto (sin código)</div>
+                <div className="text-sm font-extrabold">Salas abiertas</div>
+                <div className="mt-1 text-xs text-slate-300/80">Únete a una sala o crea una nueva.</div>
                 <div className="mt-1 text-xs text-slate-300/80">Únete a una sala abierta o crea una nueva.</div>
 
                 <div className="mt-3 space-y-2">
@@ -1506,8 +1523,19 @@ export default function App() {
 
               {battleRoom ? (
                 <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                  <div className="text-sm font-extrabold">Sala</div>
-                  <div className="mt-1 text-xs text-slate-300/80">Código: <span className="font-black text-white">{battleRoom.id}</span></div>
+                  <div className="text-sm font-extrabold">Tu sala</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1 rounded-2xl bg-black/30 px-3 py-2 text-xs font-black text-[#FFC800]">{battleRoom.id}</div>
+                    <button
+                      className="shrink-0 rounded-2xl bg-[#FFC800] px-3 py-2 text-xs font-black text-slate-900"
+                      onClick={() => { navigator.clipboard.writeText(battleRoom.id).catch(() => {}) }}
+                    >
+                      📋 Copiar
+                    </button>
+                  </div>
+                  <div className="mt-2 rounded-2xl bg-[#FFC800]/20 p-2 text-xs text-[#FFC800]">
+                      💡 Compartí este código para que otros se unan
+                    </div>
                   <div className="mt-2 text-xs text-slate-300/80">Estado: <span className="font-black text-white">{battleRoom.status || 'open'}</span></div>
                   <div className="mt-2 text-xs text-slate-300/80">
                     Host: <span className="font-black text-white">{battleRoom.hostTeamId || '-'}</span> vs Guest:{' '}
@@ -1964,9 +1992,14 @@ export default function App() {
               <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
                   <div className="bg-gradient-to-br from-[#FF9600] to-[#FFC800] p-6 text-center">
-                    <div className="text-lg font-black">¡Batalla terminada!</div>
-                    <div className="mt-2 text-sm font-bold">
-                      Ganador: <b>{battleRoom.winnerTeamId ? `Equipo ${battleRoom.winnerTeamId}` : 'Empate'}</b>
+                    <div className="text-4xl">🏆</div>
+                    <div className="mt-2 text-lg font-black">¡Batalla terminada!</div>
+                    <div className="mt-1 text-sm font-bold">
+                      {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0) === Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0) ? '¡EMPATE!' : 'Equipo ' + battleRoom.winnerTeamId + ' gana'}
+                      {' — '}
+                      {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
+                      {' a '}
+                      {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
                     </div>
                   </div>
                   <div className="space-y-3 p-6">
@@ -1974,19 +2007,13 @@ export default function App() {
                       <div className="rounded-2xl bg-slate-100 px-3 py-3 text-center">
                         <div className="text-xs font-bold text-slate-500">Equipo {battleRoom.teams.A?.teamId || 'A'}</div>
                         <div className="mt-2 text-3xl font-black">
-                          {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
-                            const inTeamA = battleRoom.teams.A?.members?.includes(uid)
-                            return acc + (inTeamA ? (s.correct || 0) : 0)
-                          }, 0)}
+                          {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
                         </div>
                       </div>
                       <div className="rounded-2xl bg-slate-100 px-3 py-3 text-center">
                         <div className="text-xs font-bold text-slate-500">Equipo {battleRoom.teams.B?.teamId || 'B'}</div>
                         <div className="mt-2 text-3xl font-black">
-                          {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => {
-                            const inTeamB = battleRoom.teams.B?.members?.includes(uid)
-                            return acc + (inTeamB ? (s.correct || 0) : 0)
-                          }, 0)}
+                          {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
                         </div>
                       </div>
                     </div>
@@ -1996,7 +2023,6 @@ export default function App() {
                         if (!user || !battleRoomId) return
                         const maxPerTeam = Number(battleRoom?.maxPerTeam || 4)
                         const subject = battleRoom?.subject || 'esp'
-                        // create new room with same settings
                         const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: battleRoom.visibility || 'open' })
                         setBattleRoomId(r.id)
                         setBattleRoom(null)
@@ -2011,87 +2037,17 @@ export default function App() {
                     <button
                       className="w-full rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white"
                       onClick={() => {
-                        setBattleRoomId('')
-                        setBattleRoom(null)
+                        setBattleRoomId(''); setBattleRoom(null)
                         ;(window as any).__tv_unsubBattle?.()
                         ;(window as any).__tv_unsubBattleMsgs?.()
                       }}
                     >
                       Salir al menú
                     </button>
-                    <button
-                      className="w-full rounded-2xl bg-white/5 px-3 py-3 text-sm font-bold text-slate-700 ring-1 ring-white/10 hover:bg-white/10"
-                      onClick={() => {
-                        setBattleRoomId('')
-                        setBattleRoom(null)
-                        ;(window as any).__tv_unsubBattle?.()
-                        ;(window as any).__tv_unsubBattleMsgs?.()
-                        setTab('home')
-                      }}
-                    >
-                      Cambiar mundo / Variado
-                    </button>
                   </div>
                 </div>
               </div>
-            ) : null}
-          </div>
-        ) : tab === 'league' ? (
-          <div className="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-bold">Liga semanal</div>
-              <div className="flex gap-2">
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${leagueScope === 'team' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                  onClick={() => setLeagueScope('team')}
-                >
-                  Team Belas
-                </button>
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${leagueScope === 'global' ? 'bg-emerald-700/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                  onClick={() => setLeagueScope('global')}
-                >
-                  Global
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-1 text-xs text-slate-400">XP semanal (se reinicia por semana ISO).</div>
-
-            <ol className="mt-4 space-y-2">
-              {leaders.map((u, i) => (
-                <li key={u.id} className="flex items-center justify-between rounded-xl bg-slate-950/40 px-3 py-2 ring-1 ring-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 text-center font-bold text-slate-300">{i + 1}</div>
-                    <div className="font-semibold">{u.nickname}</div>
-                  </div>
-                  <div className="text-sm text-slate-300">{u.xpWeek} XP</div>
-                </li>
-              ))}
-            </ol>
-
-            {!leaders.length ? <div className="mt-4 text-sm text-slate-400">Sin datos todavía (juega una lección y vuelve).</div> : null}
-          </div>
-        ) : tab === 'home' ? (
-          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-extrabold">Mundos</div>
-                <div className="mt-1 text-xs text-slate-300/80">Elige una materia o entra al mundo sorpresa (ilimitado).</div>
-              </div>
-              <button
-                className="rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] px-3 py-2 text-xs font-black text-slate-900 shadow-lg active:border-b-0 active:translate-y-1"
-                onClick={openRandomPortal}
-              >
-                Mundo Sorpresa
-              </button>
-            </div>
-
-            {!lessons.length ? (
-              <div className="mt-4 text-sm text-amber-200">
-                No hay lecciones en Firestore. Corre el seed o crea documentos en la colección <code>lessons</code>.
-              </div>
-            ) : null}
+            ) : null}}
             {/* Reto Diario */}
             {!dailyChallenge ? (
               <button
