@@ -281,8 +281,8 @@ export default function App() {
   // Worlds (subjects). When null, user is on the world picker.
   const [world, setWorld] = useState<string | null>(null)
 
-  const [leagueScope, setLeagueScope] = useState<'team' | 'global'>('team')
-  const [leaders, setLeaders] = useState<Array<{ id: string; nickname: string; xpWeek: number }>>([])
+  const [leagueScope, _setLeagueScope] = useState<'team' | 'global'>('team')
+  const [_leaders, setLeaders] = useState<Array<{ id: string; nickname: string; xpWeek: number }>>([])
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [idx, setIdx] = useState(0)
@@ -874,7 +874,7 @@ export default function App() {
     return picked || null
   }
 
-  function openRandomPortal() {
+  function _openRandomPortal() {
     const picked = pickRandomUnlockedLesson()
     if (!picked) return
 
