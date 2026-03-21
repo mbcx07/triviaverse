@@ -1607,7 +1607,7 @@ export default function App() {
                 <div className="mt-1 text-xs text-slate-300">Pregunta {dailyChallenge.idx + 1}/5</div>
                 {dailyChallenge.questions[dailyChallenge.idx] ? (
                   <div className="mt-3">
-                    <div className="text-sm font-bold text-white">{dailyChallenge.questions[dailyChallenge.idx].question}</div>
+                    <div className="text-sm font-bold text-white">{dailyChallenge.questions[dailyChallenge.idx].prompt || dailyChallenge.questions[dailyChallenge.idx].question}</div>
                     {dailyChallenge.questions[dailyChallenge.idx].options ? (
                       <div className="mt-2 grid grid-cols-1 gap-2">
                         {dailyChallenge.questions[dailyChallenge.idx].options.map((opt: string, oi: number) => {
