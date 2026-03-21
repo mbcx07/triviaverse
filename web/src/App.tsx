@@ -1941,6 +1941,8 @@ export default function App() {
               </div>
             ) : null}
 
+            {/* Menú de Batallas - oculto durante batalla activa */}
+            <div className={battleRoom ? 'hidden' : ''}>
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-lg font-extrabold">Batallas</div>
@@ -2018,6 +2020,7 @@ export default function App() {
                   {!openRooms.length ? <div className="text-xs text-slate-300/70">No hay salas abiertas ahora.</div> : null}
                 </div>
               </div>
+            </div>
 
             {!battleRoom && !showBattleConfig ? (
               /* ===== MENÚ DE BATALLA - Solo cuando NO hay batalla activa ===== */
