@@ -1323,6 +1323,455 @@ export default function App() {
               </div>
             </div>
           </div>
+        ) : tab === 'home' || tab === 'play' ? (
+          /* ===== MODO INDIVIDUAL - Quiz o World picker ===== */
+          tab === 'play' && lessonId ? (
+            /* ===== QUIZ INDIVIDUAL - Cuando estás jugando una lección ===== */
+            <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+              <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <div className="flex items-center gap-2">
+                  <div>
+                    {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
+                    Pregunta {questions.length ? idx + 1 : 0}/{questions.length} • Aciertos {correctAnswered}/{totalAnswered}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-xl bg-rose-500/70 px-3 py-2 text-xs font-black text-white hover:bg-rose-500"
+                  onClick={() => setExitConfirm(true)}
+                >
+                  Salir
+                </button>
+              </div>
+
+              {!lessonId ? (
+                <div className="mt-3 text-sm text-amber-300">
+                  No hay lecciones en Firestore. Crea documentos en la colección <code>lessons</code>.
+                </div>
+              ) : null}
+
+              <div className="mt-2 text-lg font-semibold">{q?.prompt || '—'}</div>
+
+              {timerOn ? (
+                <div className="mt-2 flex items-center justify-between rounded-2xl bg-slate-950/30 px-3 py-2 text-xs font-black text-slate-200 ring-1 ring-white/10">
+                  <div>⏱️ Tiempo</div>
+                  <div>{timeLeft}s</div>
+                </div>
+              ) : null}
+
+              {qType === 'multiple_choice' ? (
+                <div className="mt-4 grid grid-cols-1 gap-2">
+                  {((q as any).options || []).map((opt: string, i: number) => (
+                    <button
+                      key={i}
+                      type="button"
+                      disabled={alreadyAnswered}
+                      className="rounded-2xl bg-slate-950/40 px-3 py-3 text-left text-sm font-bold ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                      onPointerUp={() => answerChoice(i)}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              ) : qType === 'true_false' ? (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={alreadyAnswered}
+                    className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                    onPointerUp={() => answerTF(true)}
+                  >
+                    Verdadero
+                  </button>
+                  <button
+                    type="button"
+                    disabled={alreadyAnswered}
+                    className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                    onPointerUp={() => answerTF(false)}
+                  >
+                    Falso
+                  </button>
+                </div>
+              ) : qType === 'order_words' ? (
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+                    <div className="text-xs text-slate-300/80">Tu oración</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {orderSelected.length ? (
+                        orderSelected.map((t, i) => (
+                          <button
+                            key={i}
+                            disabled={alreadyAnswered}
+                            className="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black text-white ring-1 ring-white/10 hover:bg-white/15 disabled:opacity-60"
+                            onClick={() => {
+                              if (alreadyAnswered) return
+                              setOrderSelected((s) => s.filter((_, idx2) => idx2 !== i))
+                            }}
+                          >
+                            {t}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-sm text-slate-300/70">Toca palabras abajo para ordenarlas aquí.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
+                    <div className="text-xs text-slate-300/80">Palabras</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {orderPool
+                        .filter((t) => !orderSelected.includes(t))
+                        .map((t, i) => (
+                          <button
+                            key={i}
+                            disabled={alreadyAnswered}
+                            className="rounded-2xl bg-slate-950/40 px-3 py-2 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
+                            onClick={() => {
+                              if (alreadyAnswered) return
+                              setOrderSelected((s) => [...s, t])
+                            }}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={alreadyAnswered || orderSelected.length !== orderTokens.length}
+                    className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
+                    onClick={() => submitAnswerGeneric(orderSelected)}
+                  >
+                    Comprobar
+                  </button>
+                </div>
+              ) : qType === 'match_pairs' ? (
+                <div className="mt-4 space-y-3">
+                  <div className="text-xs text-slate-300/80">Toca un concepto (izquierda) y luego su pareja (derecha).</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      {matchPairs.map((p, i) => {
+                        const isActive = matchLeft === p.left
+                        const chosen = matchMap[p.left]
+                        return (
+                          <button
+                            key={i}
+                            disabled={alreadyAnswered}
+                            className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-60 ${
+                              isActive ? 'bg-[#7C4DFF]/50' : 'bg-slate-950/40 hover:bg-slate-950/60'
+                            }`}
+                            onClick={() => {
+                              if (alreadyAnswered) return
+                              setMatchLeft(p.left)
+                            }}
+                          >
+                            {p.left}
+                            {chosen ? <div className="mt-1 text-xs text-slate-200/80">→ {chosen}</div> : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="space-y-2">
+                      {matchRights.map((r, i) => {
+                        const used = matchRightsUsed.has(i)
+                        return (
+                          <button
+                            key={i}
+                            disabled={alreadyAnswered || !matchLeft || used}
+                            className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-50 ${
+                              used ? 'bg-slate-800/30' : 'bg-slate-950/40 hover:bg-slate-950/60'
+                            }`}
+                            onClick={() => {
+                              if (alreadyAnswered) return
+                              if (!matchLeft) return
+                              setMatchMap((m) => ({ ...m, [matchLeft]: r }))
+                              setMatchRightsUsed((s) => new Set(s).add(i))
+                              setMatchLeft(null)
+                            }}
+                          >
+                            {r}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={alreadyAnswered || Object.keys(matchMap).length !== matchPairs.length}
+                    className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
+                    onClick={() => submitAnswerGeneric(matchMap)}
+                  >
+                    Comprobar
+                  </button>
+                </div>
+              ) : (
+                <form className="mt-4 space-y-3" onSubmit={submitTextAnswer}>
+                  <input
+                    className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6] disabled:opacity-60"
+                    value={answerText}
+                    onChange={(e) => setAnswerText(e.target.value)}
+                    placeholder={alreadyAnswered ? 'Ya respondiste esta pregunta' : 'Escribe tu respuesta'}
+                    disabled={alreadyAnswered || !q}
+                  />
+
+                  <button
+                    className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
+                    disabled={alreadyAnswered || !q}
+                  >
+                    {alreadyAnswered ? 'Respondida' : 'Comprobar'}
+                  </button>
+                </form>
+              )}
+
+              {feedback ? (
+                <div className="mt-3 rounded-xl bg-slate-950/60 p-3 text-sm ring-1 ring-white/10">
+                  <div className="font-semibold">{feedback}</div>
+                  {q?.explanation ? <div className="mt-1 text-slate-300">{q.explanation}</div> : null}
+                  <button
+                    type="button"
+                    className="mt-3 w-full rounded-xl bg-slate-800 px-3 py-2 font-semibold hover:bg-slate-700"
+                    onClick={next}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="mt-4 text-xs text-slate-400">Tipos: write/fill_blank, multiple_choice, true_false, order_words, match_pairs (v1).</div>
+            </div>
+          ) : (
+          /* ===== MODO INDIVIDUAL - World picker, Route map, Reto Diario (cuando NO estás jugando) ===== */
+          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+            {/* Reto Diario */}
+            {!dailyChallenge ? (
+              <button
+                className="w-full rounded-3xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] p-4 text-left shadow-lg active:border-b-0 active:translate-y-1"
+                onClick={async () => {
+                  if (!user) return
+                  const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
+                  const qs: any[] = []
+                  for (const s of subjects) {
+                    try {
+                      const lessonId = `${s}-${Math.floor(Math.random() * 100) + 1}`
+                      const lessonsQs = await listQuestions(lessonId)
+                      if (lessonsQs.length) qs.push(lessonsQs[Math.floor(Math.random() * lessonsQs.length)])
+                    } catch { /* skip */ }
+                  }
+                  setDailyChallenge({ questions: qs.slice(0, 5), idx: 0, lives: 3, completed: false, rewardClaimed: false })
+                  setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-black text-slate-900">🏆 RETO DIARIO</div>
+                    <div className="mt-1 text-xs font-bold text-slate-800">5 preguntas · 3 vidas · Bonus XP</div>
+                  </div>
+                  <div className="text-3xl">🔥</div>
+                </div>
+              </button>
+            ) : dailyChallenge.completed && !dailyChallenge.rewardClaimed ? (
+              <div className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7DFE00] to-[#58CC02] p-4 text-center">
+                <div className="text-base font-black text-slate-900">🎉 ¡Completado!</div>
+                <div className="mt-1 text-xs font-bold text-slate-800">Bonus: +50 XP</div>
+                <button
+                  className="mt-2 w-full rounded-2xl bg-[#4AA000] py-2 text-sm font-black text-white"
+                  onClick={async () => {
+                    if (!user) return
+                    await recordAttempt({
+                      userId: user.id, lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
+                      questionId: 'daily-challenge', answerRaw: 'completed', wasCorrect: true,
+                      answeredCount: 5, correctCount: 5,
+                    })
+                    setDailyChallenge((d: any) => d ? { ...d, rewardClaimed: true } : d)
+                  }}
+                >
+                  Reclamar Bonus
+                </button>
+              </div>
+            ) : dailyChallenge.completed && dailyChallenge.rewardClaimed ? (
+              <div className="rounded-3xl bg-[#58CC02]/20 p-4 text-center ring-1 ring-[#58CC02]">
+                <div className="text-sm font-black text-[#58CC02]">✅ Reto Diario Completado</div>
+                <div className="mt-1 text-xs text-slate-300">Mañana habrá uno nuevo</div>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-black text-white">🏆 Reto Diario</div>
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="text-lg">{i < dailyChallenge.lives ? '❤️' : '🖤'}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-1 text-xs text-slate-300">Pregunta {dailyChallenge.idx + 1}/5</div>
+                {dailyChallenge.questions[dailyChallenge.idx] ? (
+                  <div className="mt-3">
+                    <div className="text-sm font-bold text-white">{dailyChallenge.questions[dailyChallenge.idx].question}</div>
+                    {dailyChallenge.questions[dailyChallenge.idx].options ? (
+                      <div className="mt-2 grid grid-cols-1 gap-2">
+                        {dailyChallenge.questions[dailyChallenge.idx].options.map((opt: string, oi: number) => {
+                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+                          if (dcAnswered) {
+                            if (oi === dcFeedback?.correctIndex) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
+                            else if (oi === dcSelected && !dcFeedback?.correct) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
+                          }
+                          return (
+                            <button
+                              key={oi}
+                              className={`rounded-2xl border-b-4 px-4 py-3 text-left text-sm font-black transition-colors ${cls}`}
+                              style={{ borderColor: dcAnswered && oi === dcFeedback?.correctIndex ? '#46A302' : dcAnswered && oi === dcSelected ? '#be123c' : '#374151' }}
+                              onClick={() => {
+                                if (dcAnswered) return
+                                const correct = dailyChallenge.questions[dailyChallenge.idx].correctIndex
+                                const correctIndex = typeof correct === 'number' ? correct : 0
+                                setDcSelected(oi)
+                                setDcFeedback({ correct: oi === correctIndex, correctIndex })
+                                setDcAnswered(true)
+                                if (oi !== correctIndex) {
+                                  setDailyChallenge((d: any) => ({ ...d, lives: d.lives - 1 }))
+                                }
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                    {dcAnswered ? (
+                      <button
+                        className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
+                        onClick={() => {
+                          const next = dailyChallenge.idx + 1
+                          if (next >= 5 || dailyChallenge.lives <= 0) {
+                            setDailyChallenge((d: any) => ({ ...d, completed: true }))
+                          } else {
+                            setDailyChallenge((d: any) => ({ ...d, idx: next }))
+                            setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
+                          }
+                        }}
+                      >
+                        Siguiente →
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-slate-400">Cargando pregunta…</div>
+                )}
+                <button className="mt-2 text-xs text-slate-500 underline" onClick={() => { setDailyChallenge(null); setDcAnswered(false); setDcFeedback(null); setDcSelected(null) }}>
+                  Salir del reto
+                </button>
+              </div>
+            )}
+
+            {/* World picker */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {subjectGroups.map((g) => {
+                const active = world === g.subject
+                return (
+                  <button
+                    key={g.subject}
+                    className={`rounded-3xl bg-slate-950/40 p-4 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
+                    onClick={() => {
+                      setWorld(g.subject)
+                      setRoutePage(0)
+                      setLessonId(g.lessons[0]?.id || '')
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-slate-300/80">Mundo</div>
+                      <div className={`rounded-2xl bg-gradient-to-br ${subjectGradient(g.subject)} px-2 py-1 text-xs font-black text-white ring-1 ring-white/10`}>
+                        {subjectIcon(g.subject)}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-base font-extrabold">{subjectTitle(g.subject)}</div>
+                    <div className="mt-2 text-xs text-slate-300/70">{g.lessons.length} lecciones</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Route map */}
+            {world ? (
+              <div className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold">Ruta · {subjectTitle(world)}</div>
+                  <button
+                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold hover:bg-slate-700"
+                    onClick={() => setWorld(null)}
+                  >
+                    Cambiar mundo
+                  </button>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((p) => (
+                    <button
+                      key={p}
+                      className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${routePage === p ? 'bg-[#1CB0F6]/70' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}
+                      onClick={() => setRoutePage(p)}
+                    >
+                      {p * 10 + 1}-{Math.min(p * 10 + 10, 100)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative mt-6 flex flex-col items-center gap-10 pb-4">
+                  <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-white/10" />
+
+                  {worldGroups[0]?.lessons?.slice(routePage * 10, routePage * 10 + 10).map((l, i0) => {
+                    const i = routePage * 10 + i0
+                    const completed = isLessonCompleted(l.id)
+                    const prev = worldGroups[0]?.lessons?.[i - 1]
+                    const prevCompleted = prev ? isLessonCompleted(prev.id) : true
+                    const unlocked = i === 0 ? true : prevCompleted
+                    const current = unlocked && !completed && (i === 0 || prevCompleted)
+                    const locked = !unlocked
+
+                    const x = Math.sin(i * 1.2) * 60
+                    return (
+                      <div key={l.id} className="relative z-10" style={{ marginLeft: `${x}px` }}>
+                        <button
+                          disabled={locked}
+                          className={`group relative flex h-20 w-20 items-center justify-center rounded-full border-b-8 text-center transition-all active:border-b-0 active:translate-y-2 disabled:cursor-not-allowed disabled:opacity-70
+                            ${completed
+                              ? 'bg-[#58CC02] border-[#46A302]'
+                              : locked
+                                ? 'bg-slate-700/50 border-slate-700'
+                                : current
+                                  ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20 animate-bounce'
+                                  : 'bg-slate-900/70 border-slate-700 hover:bg-slate-900'}
+                          `}
+                          onClick={() => {
+                            setStartModalLesson(l)
+                          }}
+                          title={l.title || l.id}
+                        >
+                          <span className="text-xs font-black text-white">{completed ? '✓' : i + 1}</span>
+
+                          {progressMap[l.id]?.starsBest ? (
+                            <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black text-[#FFC800] drop-shadow">
+                              {'★'.repeat(Math.max(0, Math.min(3, Number(progressMap[l.id]?.starsBest || 0))))}
+                            </div>
+                          ) : null}
+
+                          <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-black/70 px-3 py-1 text-xs font-bold text-white opacity-0 ring-1 ring-white/10 transition-opacity group-hover:opacity-100">
+                            {l.title || l.id}
+                          </div>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-3 text-xs text-slate-300/70">
+                  Tip: se desbloquea la siguiente lección cuando completas la anterior (contesta 6 preguntas).
+                </div>
+              </div>
+            ) : null}
+          </div>
+          )
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             {/* Battle config modal */}
@@ -2078,449 +2527,8 @@ export default function App() {
                 </div>
               </div>
             ) : null}
-            {/* Reto Diario */}
-            {!dailyChallenge ? (
-              <button
-                className="w-full rounded-3xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] p-4 text-left shadow-lg active:border-b-0 active:translate-y-1"
-                onClick={async () => {
-                  if (!user) return
-                  const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
-                  const qs: any[] = []
-                  for (const s of subjects) {
-                    try {
-                      const lessonId = `${s}-${Math.floor(Math.random() * 100) + 1}`
-                      const lessonsQs = await listQuestions(lessonId)
-                      if (lessonsQs.length) qs.push(lessonsQs[Math.floor(Math.random() * lessonsQs.length)])
-                    } catch { /* skip */ }
-                  }
-                  setDailyChallenge({ questions: qs.slice(0, 5), idx: 0, lives: 3, completed: false, rewardClaimed: false })
-                  setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-black text-slate-900">🏆 RETO DIARIO</div>
-                    <div className="mt-1 text-xs font-bold text-slate-800">5 preguntas · 3 vidas · Bonus XP</div>
-                  </div>
-                  <div className="text-3xl">🔥</div>
-                </div>
-              </button>
-            ) : dailyChallenge.completed && !dailyChallenge.rewardClaimed ? (
-              <div className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7DFE00] to-[#58CC02] p-4 text-center">
-                <div className="text-base font-black text-slate-900">🎉 ¡Completado!</div>
-                <div className="mt-1 text-xs font-bold text-slate-800">Bonus: +50 XP</div>
-                <button
-                  className="mt-2 w-full rounded-2xl bg-[#4AA000] py-2 text-sm font-black text-white"
-                  onClick={async () => {
-                    if (!user) return
-                    await recordAttempt({
-                      userId: user.id, lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
-                      questionId: 'daily-challenge', answerRaw: 'completed', wasCorrect: true,
-                      answeredCount: 5, correctCount: 5,
-                    })
-                    setDailyChallenge((d: any) => d ? { ...d, rewardClaimed: true } : d)
-                  }}
-                >
-                  Reclamar Bonus
-                </button>
-              </div>
-            ) : dailyChallenge.completed && dailyChallenge.rewardClaimed ? (
-              <div className="rounded-3xl bg-[#58CC02]/20 p-4 text-center ring-1 ring-[#58CC02]">
-                <div className="text-sm font-black text-[#58CC02]">✅ Reto Diario Completado</div>
-                <div className="mt-1 text-xs text-slate-300">Mañana habrá uno nuevo</div>
-              </div>
-            ) : (
-              <div className="rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-black text-white">🏆 Reto Diario</div>
-                  <div className="flex gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className="text-lg">{i < dailyChallenge.lives ? '❤️' : '🖤'}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="mt-1 text-xs text-slate-300">Pregunta {dailyChallenge.idx + 1}/5</div>
-                {dailyChallenge.questions[dailyChallenge.idx] ? (
-                  <div className="mt-3">
-                    <div className="text-sm font-bold text-white">{dailyChallenge.questions[dailyChallenge.idx].question}</div>
-                    {dailyChallenge.questions[dailyChallenge.idx].options ? (
-                      <div className="mt-2 grid grid-cols-1 gap-2">
-                        {dailyChallenge.questions[dailyChallenge.idx].options.map((opt: string, oi: number) => {
-                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
-                          if (dcAnswered) {
-                            if (oi === dcFeedback?.correctIndex) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
-                            else if (oi === dcSelected && !dcFeedback?.correct) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
-                          }
-                          return (
-                            <button
-                              key={oi}
-                              className={`rounded-2xl border-b-4 px-4 py-3 text-left text-sm font-black transition-colors ${cls}`}
-                              style={{ borderColor: dcAnswered && oi === dcFeedback?.correctIndex ? '#46A302' : dcAnswered && oi === dcSelected ? '#be123c' : '#374151' }}
-                              onClick={() => {
-                                if (dcAnswered) return
-                                const correct = dailyChallenge.questions[dailyChallenge.idx].correctIndex
-                                const correctIndex = typeof correct === 'number' ? correct : 0
-                                setDcSelected(oi)
-                                setDcFeedback({ correct: oi === correctIndex, correctIndex })
-                                setDcAnswered(true)
-                                if (oi !== correctIndex) {
-                                  setDailyChallenge((d: any) => ({ ...d, lives: d.lives - 1 }))
-                                }
-                              }}
-                            >
-                              {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ) : null}
-                    {dcAnswered ? (
-                      <button
-                        className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
-                        onClick={() => {
-                          const next = dailyChallenge.idx + 1
-                          if (next >= 5 || dailyChallenge.lives <= 0) {
-                            setDailyChallenge((d: any) => ({ ...d, completed: true }))
-                          } else {
-                            setDailyChallenge((d: any) => ({ ...d, idx: next }))
-                            setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
-                          }
-                        }}
-                      >
-                        Siguiente →
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="mt-2 text-xs text-slate-400">Cargando pregunta…</div>
-                )}
-                <button className="mt-2 text-xs text-slate-500 underline" onClick={() => { setDailyChallenge(null); setDcAnswered(false); setDcFeedback(null); setDcSelected(null) }}>
-                  Salir del reto
-                </button>
-              </div>
-            )}
-
-            {/* World picker */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {subjectGroups.map((g) => {
-                const active = world === g.subject
-                return (
-                  <button
-                    key={g.subject}
-                    className={`rounded-3xl bg-slate-950/40 p-4 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
-                    onClick={() => {
-                      setWorld(g.subject)
-                      setRoutePage(0)
-                      setLessonId(g.lessons[0]?.id || '')
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-slate-300/80">Mundo</div>
-                      <div className={`rounded-2xl bg-gradient-to-br ${subjectGradient(g.subject)} px-2 py-1 text-xs font-black text-white ring-1 ring-white/10`}>
-                        {subjectIcon(g.subject)}
-                      </div>
-                    </div>
-                    <div className="mt-2 text-base font-extrabold">{subjectTitle(g.subject)}</div>
-                    <div className="mt-2 text-xs text-slate-300/70">{g.lessons.length} lecciones</div>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Route map */}
-            {world ? (
-              <div className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-bold">Ruta · {subjectTitle(world)}</div>
-                  <button
-                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold hover:bg-slate-700"
-                    onClick={() => setWorld(null)}
-                  >
-                    Cambiar mundo
-                  </button>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((p) => (
-                    <button
-                      key={p}
-                      className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${routePage === p ? 'bg-[#1CB0F6]/70' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}
-                      onClick={() => setRoutePage(p)}
-                    >
-                      {p * 10 + 1}-{Math.min(p * 10 + 10, 100)}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="relative mt-6 flex flex-col items-center gap-10 pb-4">
-                  <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-white/10" />
-
-                  {worldGroups[0]?.lessons?.slice(routePage * 10, routePage * 10 + 10).map((l, i0) => {
-                    const i = routePage * 10 + i0
-                    const completed = isLessonCompleted(l.id)
-                    const prev = worldGroups[0]?.lessons?.[i - 1]
-                    const prevCompleted = prev ? isLessonCompleted(prev.id) : true
-                    const unlocked = i === 0 ? true : prevCompleted
-                    const current = unlocked && !completed && (i === 0 || prevCompleted)
-                    const locked = !unlocked
-
-                    const x = Math.sin(i * 1.2) * 60
-                    return (
-                      <div key={l.id} className="relative z-10" style={{ marginLeft: `${x}px` }}>
-                        <button
-                          disabled={locked}
-                          className={`group relative flex h-20 w-20 items-center justify-center rounded-full border-b-8 text-center transition-all active:border-b-0 active:translate-y-2 disabled:cursor-not-allowed disabled:opacity-70
-                            ${completed
-                              ? 'bg-[#58CC02] border-[#46A302]'
-                              : locked
-                                ? 'bg-slate-700/50 border-slate-700'
-                                : current
-                                  ? 'bg-[#1CB0F6] border-[#1899D6] ring-8 ring-[#1CB0F6]/20 animate-bounce'
-                                  : 'bg-slate-900/70 border-slate-700 hover:bg-slate-900'}
-                          `}
-                          onClick={() => {
-                            setStartModalLesson(l)
-                          }}
-                          title={l.title || l.id}
-                        >
-                          <span className="text-xs font-black text-white">{completed ? '✓' : i + 1}</span>
-
-                          {progressMap[l.id]?.starsBest ? (
-                            <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-black text-[#FFC800] drop-shadow">
-                              {'★'.repeat(Math.max(0, Math.min(3, Number(progressMap[l.id]?.starsBest || 0))))}
-                            </div>
-                          ) : null}
-
-                          <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-black/70 px-3 py-1 text-xs font-bold text-white opacity-0 ring-1 ring-white/10 transition-opacity group-hover:opacity-100">
-                            {l.title || l.id}
-                          </div>
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div className="mt-3 text-xs text-slate-300/70">
-                  Tip: se desbloquea la siguiente lección cuando completas la anterior (contesta 6 preguntas).
-                </div>
-              </div>
-            ) : null}
           </div>
-        ) : (
-          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-            <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <div className="flex items-center gap-2">
-                <div>
-                  {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
-                  Pregunta {questions.length ? idx + 1 : 0}/{questions.length} • Aciertos {correctAnswered}/{totalAnswered}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="rounded-xl bg-rose-500/70 px-3 py-2 text-xs font-black text-white hover:bg-rose-500"
-                onClick={() => setExitConfirm(true)}
-              >
-                Salir
-              </button>
-            </div>
-
-            {!lessonId ? (
-              <div className="mt-3 text-sm text-amber-300">
-                No hay lecciones en Firestore. Crea documentos en la colección <code>lessons</code>.
-              </div>
-            ) : null}
-
-            <div className="mt-2 text-lg font-semibold">{q?.prompt || '—'}</div>
-
-            {timerOn ? (
-              <div className="mt-2 flex items-center justify-between rounded-2xl bg-slate-950/30 px-3 py-2 text-xs font-black text-slate-200 ring-1 ring-white/10">
-                <div>⏱️ Tiempo</div>
-                <div>{timeLeft}s</div>
-              </div>
-            ) : null}
-
-            {qType === 'multiple_choice' ? (
-              <div className="mt-4 grid grid-cols-1 gap-2">
-                {((q as any).options || []).map((opt: string, i: number) => (
-                  <button
-                    key={i}
-                    type="button"
-                    disabled={alreadyAnswered}
-                    className="rounded-2xl bg-slate-950/40 px-3 py-3 text-left text-sm font-bold ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                    onPointerUp={() => answerChoice(i)}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            ) : qType === 'true_false' ? (
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={alreadyAnswered}
-                  className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                  onPointerUp={() => answerTF(true)}
-                >
-                  Verdadero
-                </button>
-                <button
-                  type="button"
-                  disabled={alreadyAnswered}
-                  className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                  onPointerUp={() => answerTF(false)}
-                >
-                  Falso
-                </button>
-              </div>
-            ) : qType === 'order_words' ? (
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
-                  <div className="text-xs text-slate-300/80">Tu oración</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {orderSelected.length ? (
-                      orderSelected.map((t, i) => (
-                        <button
-                          key={i}
-                          disabled={alreadyAnswered}
-                          className="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black text-white ring-1 ring-white/10 hover:bg-white/15 disabled:opacity-60"
-                          onClick={() => {
-                            if (alreadyAnswered) return
-                            setOrderSelected((s) => s.filter((_, idx2) => idx2 !== i))
-                          }}
-                        >
-                          {t}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="text-sm text-slate-300/70">Toca palabras abajo para ordenarlas aquí.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
-                  <div className="text-xs text-slate-300/80">Palabras</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {orderPool
-                      .filter((t) => !orderSelected.includes(t))
-                      .map((t, i) => (
-                        <button
-                          key={i}
-                          disabled={alreadyAnswered}
-                          className="rounded-2xl bg-slate-950/40 px-3 py-2 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                          onClick={() => {
-                            if (alreadyAnswered) return
-                            setOrderSelected((s) => [...s, t])
-                          }}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                  </div>
-                </div>
-
-                <button
-                  disabled={alreadyAnswered || orderSelected.length !== orderTokens.length}
-                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
-                  onClick={() => submitAnswerGeneric(orderSelected)}
-                >
-                  Comprobar
-                </button>
-              </div>
-            ) : qType === 'match_pairs' ? (
-              <div className="mt-4 space-y-3">
-                <div className="text-xs text-slate-300/80">Toca un concepto (izquierda) y luego su pareja (derecha).</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    {matchPairs.map((p, i) => {
-                      const isActive = matchLeft === p.left
-                      const chosen = matchMap[p.left]
-                      return (
-                        <button
-                          key={i}
-                          disabled={alreadyAnswered}
-                          className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-60 ${
-                            isActive ? 'bg-[#7C4DFF]/50' : 'bg-slate-950/40 hover:bg-slate-950/60'
-                          }`}
-                          onClick={() => {
-                            if (alreadyAnswered) return
-                            setMatchLeft(p.left)
-                          }}
-                        >
-                          {p.left}
-                          {chosen ? <div className="mt-1 text-xs text-slate-200/80">→ {chosen}</div> : null}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="space-y-2">
-                    {matchRights.map((r, i) => {
-                      const used = matchRightsUsed.has(i)
-                      return (
-                        <button
-                          key={i}
-                          disabled={alreadyAnswered || !matchLeft || used}
-                          className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-50 ${
-                            used ? 'bg-slate-800/30' : 'bg-slate-950/40 hover:bg-slate-950/60'
-                          }`}
-                          onClick={() => {
-                            if (alreadyAnswered) return
-                            if (!matchLeft) return
-                            setMatchMap((m) => ({ ...m, [matchLeft]: r }))
-                            setMatchRightsUsed((s) => new Set(s).add(i))
-                            setMatchLeft(null)
-                          }}
-                        >
-                          {r}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <button
-                  disabled={alreadyAnswered || Object.keys(matchMap).length !== matchPairs.length}
-                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
-                  onClick={() => submitAnswerGeneric(matchMap)}
-                >
-                  Comprobar
-                </button>
-              </div>
-            ) : (
-              <form className="mt-4 space-y-3" onSubmit={submitTextAnswer}>
-                <input
-                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6] disabled:opacity-60"
-                  value={answerText}
-                  onChange={(e) => setAnswerText(e.target.value)}
-                  placeholder={alreadyAnswered ? 'Ya respondiste esta pregunta' : 'Escribe tu respuesta'}
-                  disabled={alreadyAnswered || !q}
-                />
-
-                <button
-                  className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] px-3 py-3 text-sm font-black uppercase tracking-widest text-white disabled:opacity-60 active:border-b-0 active:translate-y-1"
-                  disabled={alreadyAnswered || !q}
-                >
-                  {alreadyAnswered ? 'Respondida' : 'Comprobar'}
-                </button>
-              </form>
-            )}
-
-            {feedback ? (
-              <div className="mt-3 rounded-xl bg-slate-950/60 p-3 text-sm ring-1 ring-white/10">
-                <div className="font-semibold">{feedback}</div>
-                {q?.explanation ? <div className="mt-1 text-slate-300">{q.explanation}</div> : null}
-                <button
-                  type="button"
-                  className="mt-3 w-full rounded-xl bg-slate-800 px-3 py-2 font-semibold hover:bg-slate-700"
-                  onClick={next}
-                >
-                  Siguiente
-                </button>
-              </div>
-            ) : null}
-
-            <div className="mt-4 text-xs text-slate-400">Tipos: write/fill_blank, multiple_choice, true_false, order_words, match_pairs (v1).</div>
-          </div>
-        )}
+        ) : null}
 
         <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto</footer>
 
