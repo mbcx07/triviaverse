@@ -13,6 +13,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  deleteDoc,
   runTransaction,
   onSnapshot,
   type Unsubscribe,
@@ -945,5 +946,37 @@ export function subscribeWeeklyLeaderboard(params: {
       }
     })
     params.cb(list)
+  })
+}
+
+// Cancel a battle room (host only)
+export async function cancelBattleRoom(params: { roomId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  await deleteDoc(ref)
+}
+
+// Leave a battle room (non-host players)
+export async function leaveBattleRoom(params: { roomId: string; userId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', params.roomId)
+  
+  await runTransaction(dbi, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) return
+    const data = snap.data() as BattleRoom
+    
+    // Remove user from all teams
+    const teams = { ...(data.teams || {}) }
+    for (const key of ['A', 'B', 'C', 'D'] as const) {
+      if (teams[key]?.members?.includes(params.userId)) {
+        teams[key] = {
+          ...teams[key],
+          members: teams[key]!.members.filter((id) => id !== params.userId),
+        }
+      }
+    }
+    
+    tx.set(ref, { teams }, { merge: true })
   })
 }

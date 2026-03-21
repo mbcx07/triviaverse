@@ -17,6 +17,8 @@ import {
   subscribeWeeklyLeaderboard,
   updateTeamTitle,
   createBattleRoom,
+  cancelBattleRoom,
+  leaveBattleRoom,
   joinBattleRoom,
   subscribeBattleRoom,
   subscribeBattleMessages,
@@ -2195,6 +2197,76 @@ export default function App() {
                   <div className="mt-2 rounded-2xl bg-[#FFC800]/20 p-2 text-xs text-[#FFC800]">
                       💡 Compartí este código para que otros se unan
                     </div>
+
+                  {/* Info de configuración de la sala */}
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    <div className="rounded-xl bg-black/20 p-2 text-center">
+                      <div className="text-[10px] text-slate-400">Timer</div>
+                      <div className="text-sm font-black">{battleRoom.timerSeconds || 120}s</div>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-2 text-center">
+                      <div className="text-[10px] text-slate-400">Equipos</div>
+                      <div className="text-sm font-black">{battleRoom.teamCount || 2}</div>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-2 text-center">
+                      <div className="text-[10px] text-slate-400">Jug/Eq</div>
+                      <div className="text-sm font-black">{battleRoom.maxPerTeam || 1}</div>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-2 text-center">
+                      <div className="text-[10px] text-slate-400">Pregs</div>
+                      <div className="text-sm font-black">{battleRoom.questionCount || 10}</div>
+                    </div>
+                  </div>
+
+                  {/* Indicador de host */}
+                  {user?.id === battleRoom.hostUserId ? (
+                    <div className="mt-2 inline-block rounded-full bg-[#FFC800]/20 px-3 py-1 text-xs font-black text-[#FFC800]">👑 Eres el HOST</div>
+                  ) : null}
+
+                  {/* Botones de acción */}
+                  <div className="mt-3 flex gap-2">
+                    {user?.id === battleRoom.hostUserId ? (
+                      <>
+                        <button
+                          className="flex-1 rounded-2xl border-b-4 border-[#be123c] bg-gradient-to-b from-rose-500 to-rose-600 py-2 text-xs font-black text-white active:border-b-0 active:translate-y-1"
+                          onClick={async () => {
+                            if (!battleRoomId) return
+                            if (confirm('¿Cancelar la sala?')) {
+                              await cancelBattleRoom({ roomId: battleRoomId })
+                              setBattleRoom(null)
+                              setBattleRoomId('')
+                              ;(window as any).__tv_unsubBattle?.()
+                            }
+                          }}
+                        >
+                          ❌ Cancelar
+                        </button>
+                        <button
+                          className="flex-1 rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-2 text-xs font-black text-white active:border-b-0 active:translate-y-1"
+                          onClick={async () => {
+                            if (!battleRoomId) return
+                            await startBattleMatch({ roomId: battleRoomId })
+                          }}
+                        >
+                          🚀 INICIAR
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="w-full rounded-2xl border-b-4 border-[#be123c] bg-gradient-to-b from-rose-500 to-rose-600 py-2 text-xs font-black text-white active:border-b-0 active:translate-y-1"
+                        onClick={async () => {
+                          if (!battleRoomId || !user) return
+                          await leaveBattleRoom({ roomId: battleRoomId, userId: user.id })
+                          setBattleRoom(null)
+                          setBattleRoomId('')
+                          ;(window as any).__tv_unsubBattle?.()
+                        }}
+                      >
+                        ❌ Salir de la sala
+                      </button>
+                    )}
+                  </div>
+
                   <div className="mt-2 text-xs text-slate-300/80">Estado: <span className="font-black text-white">{battleRoom.status || 'open'}</span></div>
                   <div className="mt-2 text-xs text-slate-300/80">
                     Host: <span className="font-black text-white">{battleRoom.hostTeamId || '-'}</span> vs Guest:{' '}
