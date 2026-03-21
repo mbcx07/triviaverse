@@ -176,9 +176,10 @@ export default function App() {
   const [battleQuestionCount, setBattleQuestionCount] = useState(10)
   const [battleTeamCount, setBattleTeamCount] = useState(2) // número de equipos (1-4)
   const [battleTimerConfig, setBattleTimerConfig] = useState(120) // segundos por pregunta configurados
-  const [battleSuddenDeath, setBattleSuddenDeath] = useState(true) // ronda decisiva activa
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
+  // suddenDeath está en battleRoom.suddenDeath, se usa al crear sala
+  const battleSuddenDeath = true
 
   // Daily Challenge state
   const [dailyChallenge, setDailyChallenge] = useState<{ questions: any[]; idx: number; lives: number; completed: boolean; rewardClaimed: boolean } | null>(null)
