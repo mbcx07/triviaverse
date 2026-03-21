@@ -2019,81 +2019,119 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <button
-                  className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7ED321] to-[#58CC02] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                  onClick={async () => {
-                    if (!user) return
-                    setShowBattleConfig(false)
-                    setBattleStatus('match') // Ir directo al quiz
-                    try {
-                      const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: 'esp', maxPerTeam: 1, visibility: 'private' })
-                      // Agregar jugador IA automáticamente
-                      await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia' })
-                      setBattleRoomId(r.id)
-                      ;(window as any).__tv_unsubBattle?.()
-                      ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                      // Iniciar automáticamente sin esperar
-                      await startBattleMatch({ roomId: r.id })
-                    } catch (err) {
-                      console.error('Error vs IA:', err)
-                      const msg = err instanceof Error ? err.message : String(err)
-                      setError(`Error: ${msg}`)
-                    }
-                  }}
-                >
-                  🤖 Jugar vs IA
-                  <div className="mt-1 text-xs opacity-90">Practica contra la computadora</div>
-                </button>
-
-                <button
-                  className="rounded-3xl border-b-4 border-[#1899D6] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                  onClick={() => { if (!user) return; setPendingBattleVisibility('open'); setShowBattleConfig(true) }}
-                >
-                  Crear batalla abierta
-                  <div className="mt-1 text-xs opacity-90">Aparece en Lobby</div>
-                </button>
-
-                <button
-                  className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                  onClick={() => { if (!user) return; setPendingBattleVisibility('private'); setShowBattleConfig(true) }}
-                >
-                  Crear batalla privada
-                  <div className="mt-1 text-xs opacity-90">Solo con código</div>
-                </button>
-              </div>
-
-              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Unirme con código (batalla privada)</div>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    className="flex-1 min-w-0 rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
-                    value={battleRoomId}
-                    onChange={(e) => setBattleRoomId(e.target.value.trim())}
-                    placeholder="Código de sala"
-                  />
+            {!battleRoom && !showBattleConfig ? (
+              /* ===== MENÚ DE BATALLA - Solo cuando NO hay batalla activa ===== */
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <button
-                    className="shrink-0 rounded-2xl bg-[#FFC800] px-4 py-3 text-sm font-black text-slate-900"
+                    className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7ED321] to-[#58CC02] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
                     onClick={async () => {
                       if (!user) return
-                      if (!battleRoomId) return
+                      setShowBattleConfig(false)
+                      setBattleStatus('match')
                       try {
-                        await joinBattleRoom({ roomId: battleRoomId, userId: user.id, teamId: user.teamId || 'belas' })
+                        const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject: 'esp', maxPerTeam: 1, visibility: 'private' })
+                        await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia' })
+                        setBattleRoomId(r.id)
                         ;(window as any).__tv_unsubBattle?.()
-                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
-                        ;(window as any).__tv_unsubBattleMsgs?.()
-                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                        await startBattleMatch({ roomId: r.id })
                       } catch (err) {
-                        console.error('Error uniéndose a batalla:', err)
-                        setError('Error al unirse a la batalla. Verifica el código.')
+                        console.error('Error vs IA:', err)
+                        const msg = err instanceof Error ? err.message : String(err)
+                        setError(`Error: ${msg}`)
                       }
                     }}
                   >
-                    Unirme
+                    🤖 Jugar vs IA
+                    <div className="mt-1 text-xs opacity-90">Practica contra la computadora</div>
+                  </button>
+
+                  <button
+                    className="rounded-3xl border-b-4 border-[#1899D6] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                    onClick={() => { if (!user) return; setPendingBattleVisibility('open'); setShowBattleConfig(true) }}
+                  >
+                    Crear batalla abierta
+                    <div className="mt-1 text-xs opacity-90">Aparece en Lobby</div>
+                  </button>
+
+                  <button
+                    className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                    onClick={() => { if (!user) return; setPendingBattleVisibility('private'); setShowBattleConfig(true) }}
+                  >
+                    Crear batalla privada
+                    <div className="mt-1 text-xs opacity-90">Solo con código</div>
                   </button>
                 </div>
-                <div className="mt-2 text-xs text-slate-300/70">Las salas abiertas aparecen en el Lobby ↑</div>
-              </div>
+
+                <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                  <div className="text-sm font-extrabold">Unirme con código (batalla privada)</div>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      className="flex-1 min-w-0 rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
+                      value={battleRoomId}
+                      onChange={(e) => setBattleRoomId(e.target.value.trim())}
+                      placeholder="Código de sala"
+                    />
+                    <button
+                      className="shrink-0 rounded-2xl bg-[#FFC800] px-4 py-3 text-sm font-black text-slate-900"
+                      onClick={async () => {
+                        if (!user) return
+                        if (!battleRoomId) return
+                        try {
+                          await joinBattleRoom({ roomId: battleRoomId, userId: user.id, teamId: user.teamId || 'belas' })
+                          ;(window as any).__tv_unsubBattle?.()
+                          ;(window as any).__tv_unsubBattle = subscribeBattleRoom(battleRoomId, (rr) => setBattleRoom(rr))
+                          ;(window as any).__tv_unsubBattleMsgs?.()
+                          ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(battleRoomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                        } catch (err) {
+                          console.error('Error uniéndose a batalla:', err)
+                          setError('Error al unirse a la batalla. Verifica el código.')
+                        }
+                      }}
+                    >
+                      Unirme
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-300/70">Las salas abiertas aparecen en el Lobby ↑</div>
+                </div>
+
+                {/* Lobby de salas abiertas */}
+                {openRooms.length > 0 && (
+                  <div className="rounded-3xl bg-slate-900/50 p-4 ring-1 ring-white/10">
+                    <div className="mb-2 text-sm font-extrabold">Salas abiertas</div>
+                    <div className="space-y-2">
+                      {openRooms.map((room: any) => (
+                        <div key={room.id} className="flex items-center justify-between rounded-2xl bg-black/30 px-3 py-2 text-sm">
+                          <div>
+                            <div className="font-bold">{room.id}</div>
+                            <div className="text-xs text-slate-300/70">{room.subject || 'mixto'} · {room.maxPerTeam || 1}vs{room.maxPerTeam || 1}</div>
+                          </div>
+                          <button
+                            className="rounded-xl bg-[#1CB0F6] px-3 py-1 text-xs font-bold text-white"
+                            onClick={async () => {
+                              if (!user) return
+                              try {
+                                await joinBattleRoom({ roomId: room.id, userId: user.id, teamId: user.teamId || 'belas' })
+                                ;(window as any).__tv_unsubBattle?.()
+                                ;(window as any).__tv_unsubBattle = subscribeBattleRoom(room.id, (rr) => setBattleRoom(rr))
+                                ;(window as any).__tv_unsubBattleMsgs?.()
+                                ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(room.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                              } catch (err) {
+                                console.error('Error uniéndose a sala:', err)
+                                setError('Error al unirse a la sala')
+                              }
+                            }}
+                          >
+                            Unirse
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : null}
 
               {battleRoom && battleRoom.status === 'open' ? (
                 <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
