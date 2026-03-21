@@ -505,6 +505,7 @@ export type BattleRoom = {
   teamCount?: number // 1-4 equipos
   timerSeconds?: number // tiempo por pregunta
   questionCount?: number // cantidad de preguntas
+  suddenDeath?: boolean // ronda decisiva para empates
   subject?: string // esp|mat|cien|hist|geo|civ|mixed
   visibility?: 'open' | 'private'
   missionId?: string
@@ -556,6 +557,7 @@ export async function createBattleRoom(params: {
   teamCount?: number
   timerSeconds?: number
   questionCount?: number
+  suddenDeath?: boolean
   visibility?: 'open' | 'private'
 }) {
   const dbi = ensureDb()
@@ -565,6 +567,7 @@ export async function createBattleRoom(params: {
   const teamCount = Math.min(4, Math.max(1, params.teamCount || 2))
   const timerSeconds = params.timerSeconds || 120
   const questionCount = params.questionCount || 10
+  const suddenDeath = params.suddenDeath !== false // true por defecto
   const visibility = params.visibility || 'open'
 
   const data: BattleRoom = {
@@ -575,6 +578,7 @@ export async function createBattleRoom(params: {
     teamCount,
     timerSeconds,
     questionCount,
+    suddenDeath,
     missionId: stableMissionId(subject, ref.id),
     teams: {
       A: { teamId: params.teamId, members: [params.userId] },

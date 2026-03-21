@@ -176,6 +176,7 @@ export default function App() {
   const [battleQuestionCount, setBattleQuestionCount] = useState(10)
   const [battleTeamCount, setBattleTeamCount] = useState(2) // número de equipos (1-4)
   const [battleTimerConfig, setBattleTimerConfig] = useState(120) // segundos por pregunta configurados
+  const [battleSuddenDeath, setBattleSuddenDeath] = useState(true) // ronda decisiva activa
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
@@ -1953,6 +1954,7 @@ export default function App() {
                     const teamCount = battleTeamCount || 2
                     const timerSeconds = battleTimerConfig || 120
                     const questionCount = battleQuestionCount || 10
+                    const suddenDeath = battleSuddenDeath
                     try {
                       const r = await createBattleRoom({ 
                         userId: user.id, 
@@ -1962,6 +1964,7 @@ export default function App() {
                         teamCount,
                         timerSeconds,
                         questionCount,
+                        suddenDeath,
                         visibility: pendingBattleVisibility 
                       })
                       setBattleRoomId(r.id)
@@ -1987,8 +1990,8 @@ export default function App() {
               </div>
             ) : null}
 
-            {/* Menú de Batallas - oculto durante batalla activa */}
-            <div className={battleRoom ? 'hidden' : ''}>
+            {/* Menú de Batallas - oculto durante batalla activa (started) */}
+            <div className={battleRoom?.status === 'started' ? 'hidden' : ''}>
             <div className="flex items-center justify-between gap-2">
               <div>
                 <div className="text-lg font-extrabold">Batallas</div>
