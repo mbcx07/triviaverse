@@ -2150,32 +2150,42 @@ export default function App() {
                   <div className="rounded-3xl bg-slate-900/50 p-4 ring-1 ring-white/10">
                     <div className="mb-2 text-sm font-extrabold">Salas abiertas</div>
                     <div className="space-y-2">
-                      {openRooms.map((room: any) => (
-                        <div key={room.id} className="flex items-center justify-between rounded-2xl bg-black/30 px-3 py-2 text-sm">
-                          <div>
-                            <div className="font-bold">{room.id}</div>
-                            <div className="text-xs text-slate-300/70">{room.subject || 'mixto'} · {room.maxPerTeam || 1}vs{room.maxPerTeam || 1}</div>
+                      {openRooms.map((room: any) => {
+                        const teamCount = room.teamCount || 2
+                        const totalPlayers = ['A', 'B', 'C', 'D'].slice(0, teamCount).reduce((acc: number, key: string) => acc + ((room.teams as any)?.[key]?.members?.length || 0), 0)
+                        const maxPlayers = teamCount * (room.maxPerTeam || 1)
+                        return (
+                          <div key={room.id} className="flex items-center justify-between rounded-2xl bg-black/30 px-3 py-2 text-sm">
+                            <div className="flex-1">
+                              <div className="font-bold">{subjectTitle(room.subject || 'esp')}</div>
+                              <div className="text-xs text-slate-300/70">
+                                {teamCount} equipos · {room.maxPerTeam || 1}vs{room.maxPerTeam || 1} · {room.timerSeconds || 120}s/preg
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {totalPlayers}/{maxPlayers} jugadores
+                              </div>
+                            </div>
+                            <button
+                              className="ml-2 rounded-xl bg-[#1CB0F6] px-3 py-1 text-xs font-bold text-white"
+                              onClick={async () => {
+                                if (!user) return
+                                try {
+                                  await joinBattleRoom({ roomId: room.id, userId: user.id, teamId: user.teamId || 'belas' })
+                                  ;(window as any).__tv_unsubBattle?.()
+                                  ;(window as any).__tv_unsubBattle = subscribeBattleRoom(room.id, (rr) => setBattleRoom(rr))
+                                  ;(window as any).__tv_unsubBattleMsgs?.()
+                                  ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(room.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                                } catch (err) {
+                                  console.error('Error uniéndose a sala:', err)
+                                  setError('Error al unirse a la sala')
+                                }
+                              }}
+                            >
+                              Unirse
+                            </button>
                           </div>
-                          <button
-                            className="rounded-xl bg-[#1CB0F6] px-3 py-1 text-xs font-bold text-white"
-                            onClick={async () => {
-                              if (!user) return
-                              try {
-                                await joinBattleRoom({ roomId: room.id, userId: user.id, teamId: user.teamId || 'belas' })
-                                ;(window as any).__tv_unsubBattle?.()
-                                ;(window as any).__tv_unsubBattle = subscribeBattleRoom(room.id, (rr) => setBattleRoom(rr))
-                                ;(window as any).__tv_unsubBattleMsgs?.()
-                                ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(room.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                              } catch (err) {
-                                console.error('Error uniéndose a sala:', err)
-                                setError('Error al unirse a la sala')
-                              }
-                            }}
-                          >
-                            Unirse
-                          </button>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
