@@ -172,6 +172,8 @@ export default function App() {
   const [battleSubject, setBattleSubject] = useState('esp')
   const [battleSize, setBattleSize] = useState(4)
   const [battleQuestionCount, setBattleQuestionCount] = useState(10)
+  const [battleTeamCount, setBattleTeamCount] = useState(2) // número de equipos (1-4)
+  const [battleTimerConfig, setBattleTimerConfig] = useState(120) // segundos por pregunta configurados
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
 
@@ -1880,7 +1882,22 @@ export default function App() {
                 </div>
 
                 <div className="mt-4">
-                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Tamaño de equipo</div>
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Número de equipos</div>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {[1, 2, 3, 4].map((n) => (
+                      <button
+                        key={n}
+                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleTeamCount === n ? 'bg-[#7C4DFF]/30 ring-[#7C4DFF] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => setBattleTeamCount(n)}
+                      >
+                        {n === 1 ? 'Solo' : `${n} Equipos`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Jugadores por equipo</div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
                     {[1, 2, 3, 4].map((size) => (
                       <button
@@ -1888,7 +1905,22 @@ export default function App() {
                         className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleSize === size ? 'bg-[#58CC02]/30 ring-[#58CC02] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
                         onClick={() => setBattleSize(size)}
                       >
-                        {size}v{size}
+                        {size} {size === 1 ? 'jugador' : 'jugadores'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Tiempo por pregunta (segundos)</div>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {[30, 60, 90, 120].map((t) => (
+                      <button
+                        key={t}
+                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleTimerConfig === t ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        onClick={() => setBattleTimerConfig(t)}
+                      >
+                        {t}s
                       </button>
                     ))}
                   </div>
@@ -1915,9 +1947,21 @@ export default function App() {
                     if (!user) return
                     setShowBattleConfig(false)
                     const subject = battleSubject || 'esp'
-                    const maxPerTeam = battleSize || 4
+                    const maxPerTeam = battleSize || 1
+                    const teamCount = battleTeamCount || 2
+                    const timerSeconds = battleTimerConfig || 120
+                    const questionCount = battleQuestionCount || 10
                     try {
-                      const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: pendingBattleVisibility })
+                      const r = await createBattleRoom({ 
+                        userId: user.id, 
+                        teamId: user.teamId || 'belas', 
+                        subject, 
+                        maxPerTeam, 
+                        teamCount,
+                        timerSeconds,
+                        questionCount,
+                        visibility: pendingBattleVisibility 
+                      })
                       setBattleRoomId(r.id)
                       ;(window as any).__tv_unsubBattle?.()
                       ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))

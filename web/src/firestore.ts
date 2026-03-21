@@ -499,21 +499,31 @@ export type BattleRoom = {
   id: string
   createdAt?: any
   status?: 'open' | 'started' | 'finished'
-  // v2 team-based
-  maxPerTeam?: number
+  // Config
+  maxPerTeam?: number // 1-4 jugadores por equipo
+  teamCount?: number // 1-4 equipos
+  timerSeconds?: number // tiempo por pregunta
+  questionCount?: number // cantidad de preguntas
   subject?: string // esp|mat|cien|hist|geo|civ|mixed
+  visibility?: 'open' | 'private'
   missionId?: string
+  // Teams (dinámico: A, B, C, D)
   teams?: {
-    A?: { teamId: string; members: string[] }
-    B?: { teamId: string; members: string[] }
+    A?: { teamId: string; members: string[]; name?: string }
+    B?: { teamId: string; members: string[]; name?: string }
+    C?: { teamId: string; members: string[]; name?: string }
+    D?: { teamId: string; members: string[]; name?: string }
   }
-  // legacy fields kept for compatibility
+  // Host control
   hostUserId?: string
   hostTeamId?: string
+  // Legacy fields kept for compatibility
   guestUserId?: string
   guestTeamId?: string
   // Chat scope control
   chatPhase?: 'lobby' | 'match' | 'post'
+  // Chat messages
+  messages?: Array<{ userId: string; text: string; createdAt: any }>
   // Ready system (v2)
   readyUsers?: { [userId: string]: boolean }
   countdownStarted?: boolean
@@ -542,13 +552,18 @@ export async function createBattleRoom(params: {
   teamId: string
   subject?: string
   maxPerTeam?: number
+  teamCount?: number
+  timerSeconds?: number
+  questionCount?: number
   visibility?: 'open' | 'private'
 }) {
   const dbi = ensureDb()
   const ref = doc(collection(dbi, 'battleRooms'))
   const subject = params.subject || 'esp'
-  const maxPerTeam = Math.min(4, Math.max(1, params.maxPerTeam || 4))
-
+  const maxPerTeam = Math.min(4, Math.max(1, params.maxPerTeam || 1))
+  const teamCount = Math.min(4, Math.max(1, params.teamCount || 2))
+  const timerSeconds = params.timerSeconds || 120
+  const questionCount = params.questionCount || 10
   const visibility = params.visibility || 'open'
 
   const data: BattleRoom = {
@@ -556,18 +571,21 @@ export async function createBattleRoom(params: {
     status: 'open',
     subject,
     maxPerTeam,
+    teamCount,
+    timerSeconds,
+    questionCount,
     missionId: stableMissionId(subject, ref.id),
     teams: {
       A: { teamId: params.teamId, members: [params.userId] },
-      // B se agrega cuando alguien se une
+      // otros equipos se agregan cuando alguien se une
     },
-    chatPhase: 'lobby',
-    // legacy
     hostUserId: params.userId,
     hostTeamId: params.teamId,
+    chatPhase: 'lobby',
+    visibility,
   }
 
-  await setDoc(ref, { ...data, visibility, createdAt: serverTimestamp() }, { merge: true })
+  await setDoc(ref, { ...data, createdAt: serverTimestamp() }, { merge: true })
   return data
 }
 
