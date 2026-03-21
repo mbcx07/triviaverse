@@ -1798,20 +1798,20 @@ export default function App() {
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl bg-black/20 px-3 py-2">
-                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams?.A?.teamId || 'A'}</div>
-                    <div className="mt-1 text-2xl font-black text-white">
-                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => acc + ((battleRoom.teams?.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
-                      <span className="text-sm text-slate-400"> pts</span>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-black/20 px-3 py-2">
-                    <div className="text-xs font-bold text-slate-300/80">Equipo {battleRoom.teams?.B?.teamId || 'B'}</div>
-                    <div className="mt-1 text-2xl font-black text-white">
-                      {Object.entries(battleRoom.scores || {}).reduce((acc, [uid, s]: any) => acc + ((battleRoom.teams?.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
-                      <span className="text-sm text-slate-400"> pts</span>
-                    </div>
-                  </div>
+                  {['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map((teamKey) => {
+                    const teamData = (battleRoom.teams as any)?.[teamKey]
+                    const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => acc + (teamData?.members?.includes(uid) ? (s.correct || 0) : 0), 0)
+                    const teamColors: Record<string, string> = { A: '#1CB0F6', B: '#FF4D4D', C: '#58CC02', D: '#7C4DFF' }
+                    return (
+                      <div key={teamKey} className="rounded-2xl bg-black/20 px-3 py-2">
+                        <div className="text-xs font-bold" style={{ color: teamColors[teamKey] || '#9CA3AF' }}>Equipo {teamData?.teamId || teamKey}</div>
+                        <div className="mt-1 text-2xl font-black text-white">
+                          {teamScore}
+                          <span className="text-sm text-slate-400"> pts</span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
                 {bq ? (
                   <div className="mt-4">
