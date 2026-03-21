@@ -590,7 +590,7 @@ export async function createBattleRoom(params: {
   return data
 }
 
-export async function joinBattleRoom(params: { roomId: string; userId: string; teamId: string }) {
+export async function joinBattleRoom(params: { roomId: string; userId: string; teamId: string; teamKey?: 'A' | 'B' | 'C' | 'D' }) {
   const dbi = ensureDb()
   const ref = doc(dbi, 'battleRooms', params.roomId)
   await runTransaction(dbi, async (tx) => {
@@ -603,37 +603,35 @@ export async function joinBattleRoom(params: { roomId: string; userId: string; t
 
     const maxPerTeam = Math.min(4, Math.max(1, Number(r.maxPerTeam || 4)))
     const teams = (r.teams || {}) as any
-    const A = teams.A as any
-    const B = teams.B as any
 
-    function addMember(teamKey: 'A' | 'B') {
-      const cur = (teamKey === 'A' ? A : B) || { teamId: params.teamId, members: [] }
-      const members = Array.isArray(cur.members) ? cur.members.map(String) : []
-      if (members.includes(params.userId)) return
-      if (members.length >= maxPerTeam) throw new Error('Equipo lleno.')
+    // Si el usuario especificó un equipo, intentar unirse a ese
+    if (params.teamKey) {
+      const team = teams[params.teamKey] as any
+      const members = Array.isArray(team?.members) ? team.members.map(String) : []
+      if (members.includes(params.userId)) {
+        // Ya está en este equipo, no hacer nada
+        return
+      }
+      if (members.length >= maxPerTeam) {
+        throw new Error('Equipo lleno.')
+      }
       members.push(params.userId)
-      tx.set(ref, { teams: { [teamKey]: { teamId: cur.teamId || params.teamId, members } } }, { merge: true })
-    }
-
-    // If joining same team as A
-    if (A?.teamId && String(A.teamId) === params.teamId) {
-      addMember('A')
-      return
-    }
-    // If B exists and matches
-    if (B?.teamId && String(B.teamId) === params.teamId) {
-      addMember('B')
-      return
-    }
-    // Else, if B empty, create B with this team
-    if (!B?.teamId) {
-      tx.set(ref, { teams: { B: { teamId: params.teamId, members: [params.userId] } } }, { merge: true })
-      // Start match as soon as there are two teams
-      tx.set(ref, { status: 'started', startedAt: serverTimestamp(), chatPhase: 'match' }, { merge: true })
+      tx.set(ref, { teams: { [params.teamKey]: { teamId: params.teamId || `team-${params.teamKey}`, members } } }, { merge: true })
       return
     }
 
-    throw new Error('Sala llena o equipo no coincide.')
+    // Si no especificó equipo, asignar automáticamente al primer equipo con espacio
+    for (const key of ['A', 'B', 'C', 'D'] as const) {
+      const team = teams[key] as any
+      const members = Array.isArray(team?.members) ? team.members.map(String) : []
+      if (members.length < maxPerTeam) {
+        members.push(params.userId)
+        tx.set(ref, { teams: { [key]: { teamId: params.teamId || `team-${key}`, members } } }, { merge: true })
+        return
+      }
+    }
+
+    throw new Error('Todos los equipos están llenos.')
   })
 }
 
