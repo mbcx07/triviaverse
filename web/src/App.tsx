@@ -2803,7 +2803,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.14</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.15</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
