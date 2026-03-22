@@ -454,6 +454,43 @@ export default function App() {
     return () => clearInterval(t)
   }, [timerOn, tab, lessonId, questions.length, celebration])
 
+  // Guest mode: auto-join room from URL ?room=XXX
+  useEffect(() => {
+    if (user) return // already logged in
+    const params = new URLSearchParams(window.location.search)
+    const roomId = params.get('room')
+    if (!roomId) return
+    
+    // Create guest user
+    const guestId = 'guest_' + Math.random().toString(36).slice(2, 10)
+    const guestUser: User = {
+      id: guestId,
+      nickname: 'Invitado',
+      nicknameNorm: 'invitado',
+      teamId: 'guests',
+      avatar: '🎭',
+      displayName: 'Invitado',
+      xpTotal: 0,
+      streakCount: 0,
+    }
+    setUser(guestUser)
+    setAvatar('🎭')
+    setDisplayName('Invitado')
+    setBattleRoomId(roomId)
+    setTab('battle')
+    
+    // Auto-join the room
+    joinBattleRoom({ roomId, userId: guestId, teamId: 'guests' }).catch((err) => {
+      console.error('Error joining room:', err)
+      setError('No se pudo unir a la sala. Verifica el código.')
+    })
+    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(roomId, (rr) => setBattleRoom(rr))
+    ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(roomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+    
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [user])
+
   // Battle countdown (3, 2, 1...) when started
   useEffect(() => {
     if (!battleRoom) return
@@ -2211,6 +2248,15 @@ export default function App() {
                       onClick={() => { navigator.clipboard.writeText(battleRoom.id).catch(() => {}) }}
                     >
                       📋 Copiar
+                    </button>
+                    <button
+                      className="shrink-0 rounded-2xl bg-[#25D366] px-3 py-2 text-xs font-black text-white"
+                      onClick={() => { 
+                        const msg = encodeURIComponent(`¡Únete a mi batalla en Triviverso! 🎮\n\nCódigo: ${battleRoom.id}\n\nhttps://mbcx07.github.io/triviaverse/?room=${battleRoom.id}`)
+                        window.open(`https://wa.me/?text=${msg}`, '_blank')
+                      }}
+                    >
+                      📤 WhatsApp
                     </button>
                   </div>
                   <div className="mt-2 rounded-2xl bg-[#FFC800]/20 p-2 text-xs text-[#FFC800]">
