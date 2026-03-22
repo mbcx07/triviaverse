@@ -2706,7 +2706,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso • Piloto</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.9</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
