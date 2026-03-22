@@ -2108,10 +2108,15 @@ export default function App() {
                 <div className="mt-1 text-xs text-slate-300/80">Únete a una sala abierta o crea una nueva.</div>
 
                 <div className="mt-3 space-y-2">
-                  {openRooms.map((r) => (
+                  {openRooms.map((r: any) => {
+                    const teamCount = r.teamCount || 2
+                    const maxPerTeam = r.maxPerTeam || 1
+                    const totalPlayers = ['A', 'B', 'C', 'D'].slice(0, teamCount).reduce((acc: number, key: string) => acc + ((r.teams as any)?.[key]?.members?.length || 0), 0)
+                    const maxPlayers = teamCount * maxPerTeam
+                    return (
                     <div key={r.id} className="flex items-center gap-2">
                       <button
-                        className="flex-1 rounded-2xl bg-white/5 px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 hover:bg-white/10"
+                        className="flex-1 rounded-2xl bg-white/5 px-3 py-3 text-left text-sm ring-1 ring-white/10 hover:bg-white/10"
                         onClick={async () => {
                           if (!user) return
                           setBattleRoomId(r.id)
@@ -2122,7 +2127,13 @@ export default function App() {
                           ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
                         }}
                       >
-                        Sala {r.id} • {r.subject || 'esp'} • Host {r.hostTeamId || '-'}
+                        <div className="font-black">{subjectTitle(r.subject || 'esp')}</div>
+                        <div className="mt-1 text-xs text-slate-300/70">
+                          {teamCount} equipos · {maxPerTeam}vs{maxPerTeam} · {r.timerSeconds || 120}s/preg · {r.questionCount || 10} preguntas
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {totalPlayers}/{maxPlayers} jugadores
+                        </div>
                       </button>
                       <button
                         className="shrink-0 rounded-xl bg-red-500/20 px-2 py-2 text-xs text-red-300 hover:bg-red-500/40"
@@ -2136,7 +2147,7 @@ export default function App() {
                         🗑️
                       </button>
                     </div>
-                  ))}
+                  )})}
                   {!openRooms.length ? <div className="text-xs text-slate-300/70">No hay salas abiertas ahora.</div> : null}
                 </div>
               </div>
@@ -2226,37 +2237,47 @@ export default function App() {
                     <div className="space-y-2">
                       {openRooms.map((room: any) => {
                         const teamCount = room.teamCount || 2
-                        const totalPlayers = ['A', 'B', 'C', 'D'].slice(0, teamCount).reduce((acc: number, key: string) => acc + ((room.teams as any)?.[key]?.members?.length || 0), 0)
-                        const maxPlayers = teamCount * (room.maxPerTeam || 1)
+                        const teams = ['A', 'B', 'C', 'D'].slice(0, teamCount)
+                        const teamColors: Record<string, string> = { A: '#FF4B4B', B: '#4B9DFF', C: '#4BFF7A', D: '#FFB84B' }
                         return (
-                          <div key={room.id} className="flex items-center justify-between rounded-2xl bg-black/30 px-3 py-2 text-sm">
-                            <div className="flex-1">
-                              <div className="font-bold">{subjectTitle(room.subject || 'esp')}</div>
-                              <div className="text-xs text-slate-300/70">
-                                {teamCount} equipos · {room.maxPerTeam || 1}vs{room.maxPerTeam || 1} · {room.timerSeconds || 120}s/preg
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                {totalPlayers}/{maxPlayers} jugadores
+                          <div key={room.id} className="rounded-2xl bg-black/30 p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-bold">{subjectTitle(room.subject || 'esp')}</div>
+                                <div className="text-xs text-slate-300/70">
+                                  {teamCount} equipos · {room.maxPerTeam || 1}vs{room.maxPerTeam || 1} · {room.timerSeconds || 120}s/preg
+                                </div>
                               </div>
                             </div>
-                            <button
-                              className="ml-2 rounded-xl bg-[#1CB0F6] px-3 py-1 text-xs font-bold text-white"
-                              onClick={async () => {
-                                if (!user) return
-                                try {
-                                  await joinBattleRoom({ roomId: room.id, userId: user.id, teamId: user.teamId || 'belas' })
-                                  ;(window as any).__tv_unsubBattle?.()
-                                  ;(window as any).__tv_unsubBattle = subscribeBattleRoom(room.id, (rr) => setBattleRoom(rr))
-                                  ;(window as any).__tv_unsubBattleMsgs?.()
-                                  ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(room.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                                } catch (err) {
-                                  console.error('Error uniéndose a sala:', err)
-                                  setError('Error al unirse a la sala')
-                                }
-                              }}
-                            >
-                              Unirse
-                            </button>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {teams.map((t) => {
+                                const members = (room.teams as any)?.[t]?.members || []
+                                const isFull = members.length >= (room.maxPerTeam || 1)
+                                return (
+                                  <button
+                                    key={t}
+                                    className={`rounded-xl px-3 py-1 text-xs font-bold ${isFull ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700'}`}
+                                    style={{ borderLeft: `3px solid ${teamColors[t]}` }}
+                                    disabled={isFull}
+                                    onClick={async () => {
+                                      if (!user || isFull) return
+                                      try {
+                                        await joinBattleRoom({ roomId: room.id, userId: user.id, teamId: t, teamKey: t as any })
+                                        ;(window as any).__tv_unsubBattle?.()
+                                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(room.id, (rr) => setBattleRoom(rr))
+                                        ;(window as any).__tv_unsubBattleMsgs?.()
+                                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(room.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                                      } catch (err) {
+                                        console.error('Error uniéndose a sala:', err)
+                                        setError('Error al unirse a la sala')
+                                      }
+                                    }}
+                                  >
+                                    <span style={{ color: teamColors[t] }}>Eq. {t}</span> ({members.length}/{room.maxPerTeam || 1})
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </div>
                         )
                       })}
@@ -2782,7 +2803,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.13</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.14</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
