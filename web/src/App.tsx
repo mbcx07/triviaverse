@@ -2527,7 +2527,7 @@ export default function App() {
 
                     <audio id="tv-voice-remote" autoPlay playsInline />
 
-                    {voiceErr ? <div className="mt-2 text-xs font-bold text-rose-300">{voiceErr}</div> : null}
+                    {voiceErr ? <div className="mt-2 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-bold text-red-300">{voiceErr}</div> : null}
 
                     {voiceOn ? (
                       <button
@@ -2540,7 +2540,7 @@ export default function App() {
                         Mantén presionado para hablar
                       </button>
                     ) : null}
-                    <div className="mt-2 max-h-40 space-y-2 overflow-auto">
+                    <div className="mt-2 max-h-40 space-y-2 overflow-auto" id="battle-chat-scroll">
                       {battleMsgs.map((m) => (
                         <div key={m.id} className={`rounded-2xl px-3 py-2 text-sm ring-1 ring-white/10 ${m.userId === user?.id ? 'bg-[#1CB0F6]/20' : 'bg-white/5'}`}>
                           <div className="text-[10px] font-black text-slate-200/70">{m.userId === user?.id ? 'Tú' : m.userId}</div>
@@ -2803,7 +2803,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.15</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.16</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
