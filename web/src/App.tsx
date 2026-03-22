@@ -15,7 +15,6 @@ import {
   subscribeUser,
   subscribeProgressMap,
   subscribeWeeklyLeaderboard,
-  updateTeamTitle,
   createBattleRoom,
   cancelBattleRoom,
   leaveBattleRoom,
@@ -151,7 +150,6 @@ export default function App() {
   const [newPin, setNewPin] = useState('')
 
   // team config
-  const [teamName, setTeamName] = useState('')
   const [avatar, setAvatar] = useState('🪐')
   const [displayName, setDisplayName] = useState('')
 
@@ -179,7 +177,7 @@ export default function App() {
   const [showBattleConfig, setShowBattleConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
   // suddenDeath está en battleRoom.suddenDeath, se usa al crear sala
-  const battleSuddenDeath = true
+  const [battleSuddenDeath, setBattleSuddenDeath] = useState(true)
 
   // Daily Challenge state
   const [dailyChallenge, setDailyChallenge] = useState<{ questions: any[]; idx: number; lives: number; completed: boolean; rewardClaimed: boolean } | null>(null)
@@ -1930,40 +1928,40 @@ export default function App() {
                 <div className="mt-4">
                   <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Número de equipos</div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
-                    {[1, 2, 3, 4].map((n) => (
+                    {[2, 3, 4].map((n) => (
                       <button
                         key={n}
-                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleTeamCount === n ? 'bg-[#7C4DFF]/30 ring-[#7C4DFF] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        className={`rounded-xl py-2 text-xs font-black ring-1 transition-colors ${battleTeamCount === n ? 'bg-[#7C4DFF]/30 ring-[#7C4DFF] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
                         onClick={() => setBattleTeamCount(n)}
                       >
-                        {n === 1 ? 'Solo' : `${n} Equipos`}
+                        {n} Equipos
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-3">
                   <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Jugadores por equipo</div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
                     {[1, 2, 3, 4].map((size) => (
                       <button
                         key={size}
-                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleSize === size ? 'bg-[#58CC02]/30 ring-[#58CC02] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        className={`rounded-xl py-2 text-xs font-black ring-1 transition-colors ${battleSize === size ? 'bg-[#58CC02]/30 ring-[#58CC02] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
                         onClick={() => setBattleSize(size)}
                       >
-                        {size} {size === 1 ? 'jugador' : 'jugadores'}
+                        {size}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Tiempo por pregunta (segundos)</div>
+                <div className="mt-3">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Tiempo por pregunta</div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
                     {[30, 60, 90, 120].map((t) => (
                       <button
                         key={t}
-                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleTimerConfig === t ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        className={`rounded-xl py-2 text-xs font-black ring-1 transition-colors ${battleTimerConfig === t ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
                         onClick={() => setBattleTimerConfig(t)}
                       >
                         {t}s
@@ -1972,19 +1970,32 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Preguntas</div>
+                <div className="mt-3">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Preguntas (múltiplos de 2)</div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
-                    {[5, 10, 15, 20].map((n) => (
+                    {[4, 6, 8, 10, 12, 14, 16, 20].map((n) => (
                       <button
                         key={n}
-                        className={`rounded-2xl py-3 text-sm font-black ring-1 transition-colors ${battleQuestionCount === n ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
+                        className={`rounded-xl py-2 text-xs font-black ring-1 transition-colors ${battleQuestionCount === n ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
                         onClick={() => setBattleQuestionCount(n)}
                       >
                         {n}
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="mt-3 flex items-center gap-3 rounded-xl bg-black/20 p-3">
+                  <input
+                    type="checkbox"
+                    id="suddenDeath"
+                    checked={battleSuddenDeath}
+                    onChange={(e) => setBattleSuddenDeath(e.target.checked)}
+                    className="h-4 w-4 rounded"
+                  />
+                  <label htmlFor="suddenDeath" className="text-xs font-bold text-slate-200">
+                    ⚡ Pregunta decisiva (desempate): el primero en responder correctamente gana
+                  </label>
                 </div>
 
                 <button
@@ -2063,32 +2074,9 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-              <div className="text-sm font-extrabold">Nombre de tu equipo</div>
-              <div className="mt-2 flex gap-2">
-                <input
-                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="Team Belas"
-                />
-                <button
-                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
-                  onClick={async () => {
-                    if (!user) return
-                    const teamId = user.teamId || 'belas'
-                    await updateTeamTitle({ teamId, title: teamName || 'Team Belas' })
-                  }}
-                >
-                  Guardar
-                </button>
-              </div>
-            </div>
-
             <div className="mt-4 grid grid-cols-1 gap-3">
               <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                 <div className="text-sm font-extrabold">Salas abiertas</div>
-                <div className="mt-1 text-xs text-slate-300/80">Únete a una sala o crea una nueva.</div>
                 <div className="mt-1 text-xs text-slate-300/80">Únete a una sala abierta o crea una nueva.</div>
 
                 <div className="mt-3 space-y-2">
@@ -2241,23 +2229,25 @@ export default function App() {
               {battleRoom && battleRoom.status === 'open' ? (
                 <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                   <div className="text-sm font-extrabold">Tu sala</div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="flex-1 rounded-2xl bg-black/30 px-3 py-2 text-xs font-black text-[#FFC800]">{battleRoom.id}</div>
-                    <button
-                      className="shrink-0 rounded-2xl bg-[#FFC800] px-3 py-2 text-xs font-black text-slate-900"
-                      onClick={() => { navigator.clipboard.writeText(battleRoom.id).catch(() => {}) }}
-                    >
-                      📋 Copiar
-                    </button>
-                    <button
-                      className="shrink-0 rounded-2xl bg-[#25D366] px-3 py-2 text-xs font-black text-white"
-                      onClick={() => { 
-                        const msg = encodeURIComponent(`¡Únete a mi batalla en Triviverso! 🎮\n\nCódigo: ${battleRoom.id}\n\nhttps://mbcx07.github.io/triviaverse/?room=${battleRoom.id}`)
-                        window.open(`https://wa.me/?text=${msg}`, '_blank')
-                      }}
-                    >
-                      📤 WhatsApp
-                    </button>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="flex-1 rounded-2xl bg-black/30 px-3 py-2 text-xs font-black text-[#FFC800] text-center sm:text-left">{battleRoom.id}</div>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        className="shrink-0 rounded-xl bg-[#FFC800] px-3 py-2 text-xs font-black text-slate-900"
+                        onClick={() => { navigator.clipboard.writeText(battleRoom.id).catch(() => {}) }}
+                      >
+                        📋 Copiar
+                      </button>
+                      <button
+                        className="shrink-0 rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white"
+                        onClick={() => { 
+                          const msg = encodeURIComponent(`¡Únete a mi batalla en Triviverso! 🎮\n\nCódigo: ${battleRoom.id}\n\nhttps://mbcx07.github.io/triviaverse/?room=${battleRoom.id}`)
+                          window.open(`https://wa.me/?text=${msg}`, '_blank')
+                        }}
+                      >
+                        📤
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-2 rounded-2xl bg-[#FFC800]/20 p-2 text-xs text-[#FFC800]">
                       💡 Compartí este código para que otros se unan
