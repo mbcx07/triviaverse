@@ -2227,63 +2227,8 @@ export default function App() {
                       Unirme
                     </button>
                   </div>
-                  <div className="mt-2 text-xs text-slate-300/70">Las salas abiertas aparecen en el Lobby ↑</div>
+                  <div className="mt-2 text-xs text-slate-300/70">Las salas abiertas aparecen arriba con el botón "Salas Abiertas"</div>
                 </div>
-
-                {/* Lobby de salas abiertas */}
-                {openRooms.length > 0 && (
-                  <div className="rounded-3xl bg-slate-900/50 p-4 ring-1 ring-white/10">
-                    <div className="mb-2 text-sm font-extrabold">Salas abiertas</div>
-                    <div className="space-y-2">
-                      {openRooms.map((room: any) => {
-                        const teamCount = room.teamCount || 2
-                        const teams = ['A', 'B', 'C', 'D'].slice(0, teamCount)
-                        const teamColors: Record<string, string> = { A: '#FF4B4B', B: '#4B9DFF', C: '#4BFF7A', D: '#FFB84B' }
-                        return (
-                          <div key={room.id} className="rounded-2xl bg-black/30 p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-bold">{subjectTitle(room.subject || 'esp')}</div>
-                                <div className="text-xs text-slate-300/70">
-                                  {teamCount} equipos · {room.maxPerTeam || 1}vs{room.maxPerTeam || 1} · {room.timerSeconds || 120}s/preg
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {teams.map((t) => {
-                                const members = (room.teams as any)?.[t]?.members || []
-                                const isFull = members.length >= (room.maxPerTeam || 1)
-                                return (
-                                  <button
-                                    key={t}
-                                    className={`rounded-xl px-3 py-1 text-xs font-bold ${isFull ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700'}`}
-                                    style={{ borderLeft: `3px solid ${teamColors[t]}` }}
-                                    disabled={isFull}
-                                    onClick={async () => {
-                                      if (!user || isFull) return
-                                      try {
-                                        await joinBattleRoom({ roomId: room.id, userId: user.id, teamId: t, teamKey: t as any })
-                                        ;(window as any).__tv_unsubBattle?.()
-                                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(room.id, (rr) => setBattleRoom(rr))
-                                        ;(window as any).__tv_unsubBattleMsgs?.()
-                                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(room.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                                      } catch (err) {
-                                        console.error('Error uniéndose a sala:', err)
-                                        setError('Error al unirse a la sala')
-                                      }
-                                    }}
-                                  >
-                                    <span style={{ color: teamColors[t] }}>Eq. {t}</span> ({members.length}/{room.maxPerTeam || 1})
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
               </>
             ) : null}
 
@@ -2803,7 +2748,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.16</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.17</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
