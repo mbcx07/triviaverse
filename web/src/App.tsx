@@ -1713,7 +1713,7 @@ export default function App() {
 
             {/* World picker */}
             <div className="mt-4 grid grid-cols-2 gap-3">
-              {subjectGroups.map((g) => {
+              {subjectGroups.filter((g) => g.subject !== 'gen').map((g) => {
                 const active = world === g.subject
                 return (
                   <button
@@ -1736,6 +1736,34 @@ export default function App() {
                   </button>
                 )
               })}
+              {/* Mundo Sorpresa - Portal aleatorio */}
+              <button
+                className="rounded-3xl bg-gradient-to-br from-[#7C4DFF] via-[#1CB0F6] to-[#FFC800] p-4 text-left ring-1 ring-white/20 hover:opacity-90"
+                onClick={() => {
+                  const picked = pickRandomUnlockedLesson()
+                  if (!picked) {
+                    setError('Completa al menos una lección para desbloquear el Mundo Sorpresa')
+                    return
+                  }
+                  setPortalOpen(true)
+                  setTimeout(() => {
+                    setPortalOpen(false)
+                    setWorld(String(picked.subject || 'esp'))
+                    setLessonId(picked.id)
+                    setTab('play')
+                    setFeedback(null)
+                    setError(null)
+                    setStatus(null)
+                  }, 650)
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/80">Portal</div>
+                  <div className="rounded-2xl bg-black/30 px-2 py-1 text-lg">🌀</div>
+                </div>
+                <div className="mt-2 text-base font-extrabold text-white">Mundo Sorpresa</div>
+                <div className="mt-2 text-xs text-white/70">Misión aleatoria</div>
+              </button>
             </div>
 
             {/* Route map */}
@@ -2081,21 +2109,33 @@ export default function App() {
 
                 <div className="mt-3 space-y-2">
                   {openRooms.map((r) => (
-                    <button
-                      key={r.id}
-                      className="w-full rounded-2xl bg-white/5 px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 hover:bg-white/10"
-                      onClick={async () => {
-                        if (!user) return
-                        setBattleRoomId(r.id)
-                        await joinBattleRoom({ roomId: r.id, userId: user.id, teamId: user.teamId || 'belas' })
-                        ;(window as any).__tv_unsubBattle?.()
-                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                        ;(window as any).__tv_unsubBattleMsgs?.()
-                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                      }}
-                    >
-                      Sala {r.id} • {r.subject || 'esp'} • Host {r.hostTeamId || '-'}
-                    </button>
+                    <div key={r.id} className="flex items-center gap-2">
+                      <button
+                        className="flex-1 rounded-2xl bg-white/5 px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 hover:bg-white/10"
+                        onClick={async () => {
+                          if (!user) return
+                          setBattleRoomId(r.id)
+                          await joinBattleRoom({ roomId: r.id, userId: user.id, teamId: user.teamId || 'belas' })
+                          ;(window as any).__tv_unsubBattle?.()
+                          ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                          ;(window as any).__tv_unsubBattleMsgs?.()
+                          ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                        }}
+                      >
+                        Sala {r.id} • {r.subject || 'esp'} • Host {r.hostTeamId || '-'}
+                      </button>
+                      <button
+                        className="shrink-0 rounded-xl bg-red-500/20 px-2 py-2 text-xs text-red-300 hover:bg-red-500/40"
+                        onClick={async () => {
+                          if (confirm('¿Eliminar esta sala?')) {
+                            await cancelBattleRoom({ roomId: r.id })
+                            setOpenRooms((prev) => prev.filter((room) => room.id !== r.id))
+                          }
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   ))}
                   {!openRooms.length ? <div className="text-xs text-slate-300/70">No hay salas abiertas ahora.</div> : null}
                 </div>
@@ -2742,7 +2782,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.11</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.13</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
