@@ -942,7 +942,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0b3b] via-[#2a1158] to-[#070B2A] text-slate-100">
-      <div className="mx-auto max-w-md p-4">
+      <div className="mx-auto max-w-md lg:max-w-4xl p-4">
         <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
             <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-auto object-contain" alt="Triviverso" />
@@ -1717,7 +1717,7 @@ export default function App() {
             )}
 
             {/* World picker */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {subjectGroups.filter((g) => g.subject !== 'gen').map((g) => {
                 const active = world === g.subject
                 return (
@@ -2634,7 +2634,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.6</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.7</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
