@@ -295,6 +295,8 @@ export default function App() {
 
   const [answerText, setAnswerText] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [_lessonAnswered, setLessonAnswered] = useState(false)
+  const [_lessonSelectedChoice, setLessonSelectedChoice] = useState<number | null>(null)
 
   // order_words UI state
   const [orderSelected, setOrderSelected] = useState<string[]>([])
@@ -694,7 +696,15 @@ export default function App() {
     const { ok } = checkAnswer(q, answerRaw)
     const nextResults = { ...results, [q.id]: ok }
     setResults(nextResults)
-    setFeedback(ok ? '✅ Correcto' : '❌ Incorrecto')
+    
+    // Mostrar feedback visual con la respuesta correcta
+    const correctAnswer = (q as any).correctIndex ?? (q as any).answer ?? 0
+    const userAnswer = typeof answerRaw === 'number' ? answerRaw : -1
+    setFeedback(ok ? '✅ Correcto' : `❌ Incorrecto. Respuesta: ${((q as any).options || [])[correctAnswer] || correctAnswer}`)
+    
+    // Guardar información del feedback para mostrar
+    setLessonAnswered(true)
+    setLessonSelectedChoice(userAnswer)
 
     try {
       const r = await recordAttempt({
@@ -745,13 +755,6 @@ export default function App() {
     await submitAnswerGeneric(answerText)
   }
 
-  async function answerChoice(choiceIndex: number) {
-    if (!user || !lessonId || !q) return
-    if (alreadyAnswered) return
-
-    await submitAnswerGeneric(choiceIndex)
-  }
-
   async function answerTF(v: boolean) {
     if (!user || !lessonId || !q) return
     if (alreadyAnswered) return
@@ -765,6 +768,8 @@ export default function App() {
     setOrderSelected([])
     setMatchLeft(null)
     setMatchMap({})
+    setLessonAnswered(false)
+    setLessonSelectedChoice(null)
     setIdx((i) => (i + 1) % Math.max(questions.length, 1))
   }
 
@@ -1389,17 +1394,26 @@ export default function App() {
 
               {qType === 'multiple_choice' ? (
                 <div className="mt-4 grid grid-cols-1 gap-2">
-                  {((q as any).options || []).map((opt: string, i: number) => (
+                  {((q as any).options || []).map((opt: string, i: number) => {
+                    const isSelected = battleAnswered && (battleRoom?.lastAnswer?.choice === i || (battleRoom?.lastAnswer?.answers as any)?.[user?.id || ''] === i)
+                    const isCorrect = battleAnswered && battleRoom?.lastAnswer?.correct === i
+                    const isWrong = isSelected && !isCorrect
+                    return (
                     <button
                       key={i}
                       type="button"
-                      disabled={alreadyAnswered}
-                      className="rounded-2xl bg-slate-950/40 px-3 py-3 text-left text-sm font-bold ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                      onPointerUp={() => answerChoice(i)}
+                      disabled={battleAnswered}
+                      className={`rounded-2xl px-4 py-3 text-left text-sm font-bold transition-all duration-200 active:scale-95 ${isSelected ? 'ring-2 ring-white scale-105' : 'ring-1 ring-white/10'} ${battleAnswered ? (isCorrect ? 'bg-[#58CC02]/40 text-white' : isWrong ? 'bg-red-500/40 text-white' : 'bg-slate-950/40 opacity-50') : 'bg-slate-950/40 hover:bg-white/10'}`}
+                      onPointerUp={() => {
+                        if (!battleAnswered) {
+                          submitBattleAnswerGeneric(i)
+                        }
+                      }}
                     >
+                      <span className="mr-2 inline-block w-6 rounded-full bg-white/10 text-center text-xs">{['A', 'B', 'C', 'D'][i]}</span>
                       {opt}
                     </button>
-                  ))}
+                  )})}
                 </div>
               ) : qType === 'true_false' ? (
                 <div className="mt-4 grid grid-cols-2 gap-2">
@@ -2130,7 +2144,7 @@ export default function App() {
                             ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
                           }}
                         >
-                          Unirse
+                          {isMyRoom ? ' Entrar' : 'Unirse'}
                         </button>
                       </div>
                       {isMyRoom ? (
@@ -2740,7 +2754,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.9</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.0</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
