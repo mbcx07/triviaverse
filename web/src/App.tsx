@@ -2405,13 +2405,14 @@ export default function App() {
                       <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80 mb-2">
                         Elige tu equipo ({battleRoom.teamCount || 2} equipos)
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className={`grid gap-2 ${battleRoom.teamCount === 2 ? 'grid-cols-2' : battleRoom.teamCount === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
                         {['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map((t) => {
                           const members = (battleRoom.teams as any)?.[t]?.members || []
                           const maxPerTeam = battleRoom.maxPerTeam || 1
                           const isFull = members.length >= maxPerTeam
                           const isSelected = selectedTeamKey === t
                           const teamColors: Record<string, string> = { A: '#FF4B4B', B: '#4B9DFF', C: '#4BFF7A', D: '#FFB84B' }
+                          const teamNames: Record<string, string> = { A: 'Rojos', B: 'Azules', C: 'Verdes', D: 'Naranjas' }
                           return (
                             <button
                               key={t}
@@ -2429,7 +2430,7 @@ export default function App() {
                               }}
                             >
                               <div className="text-2xl">{t === 'A' ? '🔴' : t === 'B' ? '🔵' : t === 'C' ? '🟢' : '🟠'}</div>
-                              <div className="text-sm font-black" style={{ color: teamColors[t] }}>Equipo {t}</div>
+                              <div className="text-sm font-black" style={{ color: teamColors[t] }}>{teamNames[t]}</div>
                               <div className="text-xs text-slate-400">{members.length}/{maxPerTeam}</div>
                             </button>
                           )
@@ -2754,7 +2755,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.0</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.1</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
