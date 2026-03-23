@@ -2113,39 +2113,47 @@ export default function App() {
                     const maxPerTeam = r.maxPerTeam || 1
                     const totalPlayers = ['A', 'B', 'C', 'D'].slice(0, teamCount).reduce((acc: number, key: string) => acc + ((r.teams as any)?.[key]?.members?.length || 0), 0)
                     const maxPlayers = teamCount * maxPerTeam
+                    const isMyRoom = user?.id === r.hostUserId
                     return (
-                    <div key={r.id} className="flex items-center gap-2">
-                      <button
-                        className="flex-1 rounded-2xl bg-white/5 px-3 py-3 text-left text-sm ring-1 ring-white/10 hover:bg-white/10"
-                        onClick={async () => {
-                          if (!user) return
-                          setBattleRoomId(r.id)
-                          await joinBattleRoom({ roomId: r.id, userId: user.id, teamId: user.teamId || 'belas' })
-                          ;(window as any).__tv_unsubBattle?.()
-                          ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                          ;(window as any).__tv_unsubBattleMsgs?.()
-                          ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                        }}
-                      >
-                        <div className="font-black">{subjectTitle(r.subject || 'esp')}</div>
-                        <div className="mt-1 text-xs text-slate-300/70">
-                          {teamCount} equipos · {maxPerTeam}vs{maxPerTeam} · {r.timerSeconds || 120}s/preg · {r.questionCount || 10} preguntas
+                    <div key={r.id} className="rounded-2xl bg-black/30 p-3 ring-1 ring-white/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-bold">{subjectTitle(r.subject || 'esp')}</div>
+                          <div className="text-xs text-slate-300/70">
+                            {teamCount} equipos · {maxPerTeam}vs{maxPerTeam} · {r.timerSeconds || 120}s/preg · {r.questionCount || 10} preguntas
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {totalPlayers}/{maxPlayers} jugadores
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-400">
-                          {totalPlayers}/{maxPlayers} jugadores
-                        </div>
-                      </button>
-                      <button
-                        className="shrink-0 rounded-xl bg-red-500/20 px-2 py-2 text-xs text-red-300 hover:bg-red-500/40"
-                        onClick={async () => {
-                          if (confirm('¿Eliminar esta sala?')) {
-                            await cancelBattleRoom({ roomId: r.id })
-                            setOpenRooms((prev) => prev.filter((room) => room.id !== r.id))
-                          }
-                        }}
-                      >
-                        🗑️
-                      </button>
+                        <button
+                          className="rounded-xl bg-[#1CB0F6] px-4 py-2 text-sm font-bold text-white active:scale-95"
+                          onClick={async () => {
+                            if (!user) return
+                            setBattleRoomId(r.id)
+                            await joinBattleRoom({ roomId: r.id, userId: user.id, teamId: user.teamId || 'belas' })
+                            ;(window as any).__tv_unsubBattle?.()
+                            ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                            ;(window as any).__tv_unsubBattleMsgs?.()
+                            ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+                          }}
+                        >
+                          Unirse
+                        </button>
+                      </div>
+                      {isMyRoom ? (
+                        <button
+                          className="mt-2 w-full rounded-xl bg-red-500/20 py-1 text-xs text-red-300 hover:bg-red-500/40"
+                          onClick={async () => {
+                            if (confirm('¿Eliminar esta sala?')) {
+                              await cancelBattleRoom({ roomId: r.id })
+                              setOpenRooms((prev) => prev.filter((room) => room.id !== r.id))
+                            }
+                          }}
+                        >
+                          🗑️ Eliminar mi sala
+                        </button>
+                      ) : null}
                     </div>
                   )})}
                   {!openRooms.length ? <div className="text-xs text-slate-300/70">No hay salas abiertas ahora.</div> : null}
@@ -2748,7 +2756,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · Piloto · v0.4.17</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.0</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
