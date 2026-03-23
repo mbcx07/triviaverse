@@ -2231,9 +2231,11 @@ export default function App() {
                             className="flex-1 rounded-2xl bg-[#58CC02] py-3 text-sm font-black text-white"
                             onClick={async () => {
                               if (!user) return
+                              console.log('[IA] Iniciando modo IA...', { userId: user.id, subject: battleSubject, questions: battleQuestionCount, timer: battleTimerConfig })
                               setShowIAConfig(false)
                               setBattleStatus('match')
                               try {
+                                console.log('[IA] Creando sala...')
                                 const r = await createBattleRoom({ 
                                   userId: user.id, 
                                   teamId: user.teamId || 'belas', 
@@ -2243,13 +2245,18 @@ export default function App() {
                                   questionCount: battleQuestionCount,
                                   timerSeconds: battleTimerConfig
                                 })
+                                console.log('[IA] Sala creada:', r.id)
+                                console.log('[IA] Uniendo bot...')
                                 await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia' })
+                                console.log('[IA] Bot unido')
                                 setBattleRoomId(r.id)
                                 ;(window as any).__tv_unsubBattle?.()
                                 ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                                console.log('[IA] Iniciando partida...')
                                 await startBattleMatch({ roomId: r.id })
+                                console.log('[IA] Partida iniciada')
                               } catch (err) {
-                                console.error('Error vs IA:', err)
+                                console.error('[IA] Error:', err)
                                 setError(`Error: ${err instanceof Error ? err.message : String(err)}`)
                               }
                             }}
@@ -2717,7 +2724,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.4</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.5</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (

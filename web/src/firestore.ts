@@ -616,12 +616,21 @@ export async function joinBattleRoom(params: { roomId: string; userId: string; t
         // Ya está en este equipo, no hacer nada
         return
       }
+      // Prevenir que el host se una a otro equipo
+      if (params.userId === r.hostUserId) {
+        throw new Error('El host ya está en la sala.')
+      }
       if (members.length >= maxPerTeam) {
         throw new Error('Equipo lleno.')
       }
       members.push(params.userId)
       tx.set(ref, { teams: { [params.teamKey]: { teamId: params.teamId || `team-${params.teamKey}`, members } } }, { merge: true })
       return
+    }
+
+    // Prevenir que el host se una a otro equipo
+    if (params.userId === r.hostUserId) {
+      throw new Error('El host ya está en la sala.')
     }
 
     // Si no especificó equipo, asignar automáticamente al primer equipo con espacio
