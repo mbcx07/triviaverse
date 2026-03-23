@@ -1228,7 +1228,7 @@ export default function App() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg font-extrabold">Amigos</div>
-                <div className="mt-1 text-xs text-slate-300/80">Estilo Roblox (v1): solicitudes, lista e invitación a batalla.</div>
+                <div className="mt-1 text-xs text-slate-300/80">Estilo Roblox: solicitudes, lista e invitación a batalla.</div>
               </div>
               <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
                 Volver
@@ -1590,8 +1590,7 @@ export default function App() {
                 </div>
               ) : null}
 
-              <div className="mt-4 text-xs text-slate-400">Tipos: write/fill_blank, multiple_choice, true_false, order_words, match_pairs (v1).</div>
-            </div>
+              </div>
           ) : (
           /* ===== MODO INDIVIDUAL - World picker, Route map, Reto Diario (cuando NO estás jugando) ===== */
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
@@ -2472,12 +2471,7 @@ export default function App() {
                 </div>
               ) : null}
             </div>
-
-            <div className="mt-4 text-xs text-slate-300/70">
-              Siguiente: reglas completas de batalla (mismo set de misión, puntaje y ganador). Audio/llamada va en fase WebRTC.
-            </div>
-
-            {/* Battle ready system (v2) */}
+            {/* Battle ready system */}
             {battleRoom && battleRoom.status === 'open' && battleRoom.teams?.A && battleRoom.teams?.B ? (
               <div className="mt-4 rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
                 <div className="text-sm font-extrabold">Listos para empezar</div>
@@ -2640,7 +2634,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.5</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.6</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
