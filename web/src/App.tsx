@@ -2136,8 +2136,13 @@ export default function App() {
                           className="mt-2 w-full rounded-xl bg-red-500/20 py-1 text-xs text-red-300 hover:bg-red-500/40"
                           onClick={async () => {
                             if (confirm('¿Eliminar esta sala?')) {
-                              await cancelBattleRoom({ roomId: r.id })
-                              setOpenRooms((prev) => prev.filter((room) => room.id !== r.id))
+                              try {
+                                await cancelBattleRoom({ roomId: r.id })
+                                setOpenRooms((prev) => prev.filter((room) => room.id !== r.id))
+                              } catch (err) {
+                                console.error('Error eliminando sala:', err)
+                                setError('Error al eliminar la sala')
+                              }
                             }
                           }}
                         >
@@ -2230,7 +2235,11 @@ export default function App() {
                           <button
                             className="flex-1 rounded-2xl bg-[#58CC02] py-3 text-sm font-black text-white"
                             onClick={async () => {
-                              if (!user) return
+                              if (!user) {
+                                console.log('[IA] ERROR: user no está definido')
+                                setError('Debes iniciar sesión para jugar contra la IA')
+                                return
+                              }
                               console.log('[IA] Iniciando modo IA...', { userId: user.id, subject: battleSubject, questions: battleQuestionCount, timer: battleTimerConfig })
                               setShowIAConfig(false)
                               setBattleStatus('match')
@@ -2724,7 +2733,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.5</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.6</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
