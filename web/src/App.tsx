@@ -2178,7 +2178,13 @@ export default function App() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <button
                     className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7ED321] to-[#58CC02] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                    onClick={() => { if (!user) setShowIAConfig(true) }}
+                    onClick={() => {
+                      if (!user) {
+                        setError('Debes iniciar sesión para jugar contra la IA')
+                        return
+                      }
+                      setShowIAConfig(true)
+                    }}
                   >
                     🤖 Jugar vs IA
                     <div className="mt-1 text-xs opacity-90">Practica contra la computadora</div>
@@ -2755,7 +2761,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.1</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.2</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
