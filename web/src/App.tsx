@@ -2027,6 +2027,7 @@ export default function App() {
                     const timerSeconds = battleTimerConfig || 120
                     const questionCount = battleQuestionCount || 10
                     const suddenDeath = battleSuddenDeath
+                    console.log('[BATALLA] Creando batalla:', { subject, maxPerTeam, teamCount, timerSeconds, questionCount, suddenDeath, visibility: pendingBattleVisibility })
                     try {
                       const r = await createBattleRoom({ 
                         userId: user.id, 
@@ -2039,6 +2040,7 @@ export default function App() {
                         suddenDeath,
                         visibility: pendingBattleVisibility 
                       })
+                      console.log('[BATALLA] Sala creada:', r.id, 'teamCount:', r.teamCount)
                       setBattleRoomId(r.id)
                       ;(window as any).__tv_unsubBattle?.()
                       ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
@@ -2381,11 +2383,13 @@ export default function App() {
                   ) : null}
 
                   {/* Selección de equipo estilo Mario Kart */}
-                  {battleRoom.status === 'open' && battleRoom.teamCount && battleRoom.teamCount > 1 ? (
+                  {battleRoom.status === 'open' ? (
                     <div className="mt-4 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10">
-                      <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80 mb-2">Elige tu equipo</div>
+                      <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80 mb-2">
+                        Elige tu equipo ({battleRoom.teamCount || 2} equipos)
+                      </div>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        {['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount).map((t) => {
+                        {['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map((t) => {
                           const members = (battleRoom.teams as any)?.[t]?.members || []
                           const maxPerTeam = battleRoom.maxPerTeam || 1
                           const isFull = members.length >= maxPerTeam
@@ -2733,7 +2737,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.6</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.7</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
