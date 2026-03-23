@@ -28,10 +28,6 @@ import {
   startBattleCountdown,
   startBattleMatch,
   finishBattle,
-  subscribeVoiceSignal,
-  subscribeVoiceCandidates,
-  publishVoiceSignal,
-  publishVoiceCandidate,
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
@@ -263,11 +259,6 @@ export default function App() {
   const [reqIn, setReqIn] = useState<Array<{ id: string; fromUserId: string }>>([])
   const [reqOut, setReqOut] = useState<Array<{ id: string; toUserId: string }>>([])
   const [invites, setInvites] = useState<Array<{ id: string; fromUserId: string; roomId: string }>>([])
-
-  // voice (beta) - v1 supports only 1v1 reliably
-  const [voiceOn, setVoiceOn] = useState(false)
-  const [voiceErr, setVoiceErr] = useState<string | null>(null)
-  const [pttDown, setPttDown] = useState(false)
 
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
@@ -578,12 +569,6 @@ export default function App() {
   }, [battleRoom?.status, battleRoom?.countdownStarted, battleRoom?.startedAt, battleStatus])
 
   // Voice PTT: enable/disable mic track
-  useEffect(() => {
-    const track = (window as any).__tv_voiceTrack as MediaStreamTrack | undefined
-    if (!track) return
-    track.enabled = Boolean(pttDown)
-  }, [pttDown])
-
   // Auto-scroll battle chat
   useEffect(() => {
     if (tab !== 'battle') return
@@ -2467,151 +2452,9 @@ export default function App() {
                   </div>
 
                   <div className="mt-3 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80">Chat</div>
-                      <button
-                        className={`rounded-xl px-3 py-2 text-[11px] font-black ring-1 ring-white/10 ${voiceOn ? 'bg-[#58CC02]/80' : 'bg-white/5 hover:bg-white/10'}`}
-                        onClick={async () => {
-                          if (!user) return
-                          if (!battleRoomId) return
+                    <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80 mb-2">Chat</div>
 
-                          // Voz disponible en todos los modos
-                          if (voiceOn) {
-                            setVoiceOn(false)
-                            setVoiceErr(null)
-                            ;(window as any).__tv_unsubVoiceOffer?.()
-                            ;(window as any).__tv_unsubVoiceAnswer?.()
-                            ;(window as any).__tv_unsubVoiceCandIn?.()
-                            ;(window as any).__tv_unsubVoiceCandOut = null
-                            try {
-                              ;(window as any).__tv_voicePC?.close?.()
-                            } catch {
-                              // ignore
-                            }
-                            try {
-                              ;(window as any).__tv_voiceStream?.getTracks?.().forEach((t: any) => t.stop())
-                            } catch {
-                              // ignore
-                            }
-                            ;(window as any).__tv_voicePC = null
-                            ;(window as any).__tv_voiceTrack = null
-                            return
-                          }
-
-                          setVoiceErr(null)
-                          setVoiceOn(true)
-
-                          // determine scope per phase (B): team during match, global otherwise
-                          const scopeKey = battleRoom?.chatPhase === 'match' && user.teamId ? `team:${user.teamId}` : 'global'
-
-                          try {
-                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-                            ;(window as any).__tv_voiceStream = stream
-                            const track = stream.getAudioTracks()[0]
-                            ;(window as any).__tv_voiceTrack = track
-                            track.enabled = false // push-to-talk
-
-                            const pc = new RTCPeerConnection({
-                              iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-                            })
-                            ;(window as any).__tv_voicePC = pc
-
-                            pc.addTrack(track, stream)
-
-                            pc.ontrack = (ev) => {
-                              const remote = ev.streams[0]
-                              const el = document.getElementById('tv-voice-remote') as HTMLAudioElement | null
-                              if (el && remote) {
-                                el.srcObject = remote as any
-                                el.play().catch(() => {})
-                              }
-                            }
-
-                            pc.onicecandidate = async (ev) => {
-                              if (!ev.candidate) return
-                              const isCaller = user.id === battleRoom?.hostUserId
-                              await publishVoiceCandidate({
-                                roomId: battleRoomId,
-                                scopeKey,
-                                kind: isCaller ? 'caller' : 'callee',
-                                candidate: ev.candidate.toJSON(),
-                              })
-                            }
-
-                            const isCaller = user.id === battleRoom?.hostUserId
-
-                            // subscribe to remote candidates
-                            ;(window as any).__tv_unsubVoiceCandIn?.()
-                            ;(window as any).__tv_unsubVoiceCandIn = subscribeVoiceCandidates({
-                              roomId: battleRoomId,
-                              scopeKey,
-                              kind: isCaller ? 'callee' : 'caller',
-                              cb: async (c) => {
-                                try {
-                                  await pc.addIceCandidate(c)
-                                } catch {
-                                  // ignore
-                                }
-                              },
-                            })
-
-                            if (isCaller) {
-                              const offer = await pc.createOffer()
-                              await pc.setLocalDescription(offer)
-                              await publishVoiceSignal({ roomId: battleRoomId, scopeKey, kind: 'offer', sdp: offer })
-
-                              ;(window as any).__tv_unsubVoiceAnswer?.()
-                              ;(window as any).__tv_unsubVoiceAnswer = subscribeVoiceSignal({
-                                roomId: battleRoomId,
-                                scopeKey,
-                                kind: 'answer',
-                                cb: async (data) => {
-                                  if (!data?.sdp) return
-                                  if (pc.currentRemoteDescription) return
-                                  await pc.setRemoteDescription(data.sdp)
-                                },
-                              })
-                            } else {
-                              ;(window as any).__tv_unsubVoiceOffer?.()
-                              ;(window as any).__tv_unsubVoiceOffer = subscribeVoiceSignal({
-                                roomId: battleRoomId,
-                                scopeKey,
-                                kind: 'offer',
-                                cb: async (data) => {
-                                  if (!data?.sdp) return
-                                  await pc.setRemoteDescription(data.sdp)
-                                  const answer = await pc.createAnswer()
-                                  await pc.setLocalDescription(answer)
-                                  await publishVoiceSignal({ roomId: battleRoomId, scopeKey, kind: 'answer', sdp: answer })
-                                },
-                              })
-                            }
-                          } catch { 
-                            setVoiceErr('No pude activar micrófono/voz (permiso o navegador).')
-                            setVoiceOn(false)
-                          }
-                        }}
-                      >
-                        Voz
-                      </button>
-                    </div>
-
-                    <audio id="tv-voice-remote" autoPlay playsInline />
-
-                    {voiceErr ? <div className="mt-2 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-bold text-red-300">{voiceErr}</div> : null}
-
-                    {voiceOn ? (
-                      <button
-                        className={`mt-2 w-full rounded-2xl border-b-4 px-3 py-3 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1 ${pttDown ? 'border-[#0e6e94] bg-[#1CB0F6]' : 'border-slate-700 bg-white/10 hover:bg-white/15'}`}
-                        onPointerDown={() => setPttDown(true)}
-                        onPointerUp={() => setPttDown(false)}
-                        onPointerCancel={() => setPttDown(false)}
-                        onPointerLeave={() => setPttDown(false)}
-                      >
-                        Mantén presionado para hablar
-                      </button>
-                    ) : null}
-                    <div className="mt-2 max-h-40 space-y-2 overflow-auto" id="battle-chat-scroll">
+                    <div className="max-h-60 space-y-2 overflow-auto rounded-xl bg-black/30 p-2" id="battle-chat-scroll">
                       {battleMsgs.map((m) => (
                         <div key={m.id} className={`rounded-2xl px-3 py-2 text-sm ring-1 ring-white/10 ${m.userId === user?.id ? 'bg-[#1CB0F6]/20' : 'bg-white/5'}`}>
                           <div className="text-[10px] font-black text-slate-200/70">{m.userId === user?.id ? 'Tú' : m.userId}</div>
@@ -2874,7 +2717,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.2</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.4</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
