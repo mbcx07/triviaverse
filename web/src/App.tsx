@@ -252,6 +252,7 @@ export default function App() {
     setShowStickers(false)
   }
   const [openRooms, setOpenRooms] = useState<Array<{ id: string; hostTeamId?: string; status?: string; subject?: string }>>([])
+  const [selectedTeamKey, setSelectedTeamKey] = useState<'A' | 'B' | 'C' | 'D'>('A')
   const [openLobbyOn, setOpenLobbyOn] = useState(false)
 
   // friends
@@ -1898,7 +1899,10 @@ export default function App() {
                             else if (battleFeedback.selected !== undefined && idx === battleFeedback.selected && !battleFeedback.ok) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
                           }
                           return (
-                            <button key={idx} className={`rounded-2xl px-4 py-3 text-left text-sm font-black ${cls}`} onClick={() => !battleAnswered && submitBattleAnswerGeneric(idx)} disabled={battleAnswered}>
+                            <button key={idx} 
+                            className={`rounded-2xl px-4 py-3 text-left text-sm font-black transition-all duration-150 active:scale-95 ${cls} ${!battleAnswered ? 'hover:bg-white/10 cursor-pointer' : 'cursor-not-allowed'}`} 
+                            onPointerUp={() => { if (!battleAnswered) submitBattleAnswerGeneric(idx) }} 
+                            disabled={battleAnswered}>
                               <span className="mr-2 text-xs opacity-60">{['A', 'B', 'C', 'D'][idx]}</span>{opt}
                             </button>
                           )
@@ -2292,6 +2296,43 @@ export default function App() {
                     <div className="mt-2 inline-block rounded-full bg-[#FFC800]/20 px-3 py-1 text-xs font-black text-[#FFC800]">👑 Eres el HOST</div>
                   ) : null}
 
+                  {/* Selección de equipo estilo Mario Kart */}
+                  {battleRoom.status === 'open' && battleRoom.teamCount && battleRoom.teamCount > 1 ? (
+                    <div className="mt-4 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10">
+                      <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80 mb-2">Elige tu equipo</div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount).map((t) => {
+                          const members = (battleRoom.teams as any)?.[t]?.members || []
+                          const maxPerTeam = battleRoom.maxPerTeam || 1
+                          const isFull = members.length >= maxPerTeam
+                          const isSelected = selectedTeamKey === t
+                          const teamColors: Record<string, string> = { A: '#FF4B4B', B: '#4B9DFF', C: '#4BFF7A', D: '#FFB84B' }
+                          return (
+                            <button
+                              key={t}
+                              className={`rounded-2xl p-3 text-center ring-2 transition-all ${isSelected ? 'ring-white bg-white/10 scale-105' : isFull ? 'ring-slate-700 bg-slate-800/50 opacity-50' : 'ring-white/20 hover:ring-white/50 hover:bg-white/5'}`}
+                              style={{ borderColor: isSelected ? teamColors[t] : 'transparent' }}
+                              disabled={isFull && !isSelected}
+                              onClick={async () => {
+                                if (!user || isFull) return
+                                setSelectedTeamKey(t as any)
+                                try {
+                                  await joinBattleRoom({ roomId: battleRoom.id, userId: user.id, teamId: t, teamKey: t as any })
+                                } catch (err) {
+                                  console.error('Error joining team:', err)
+                                }
+                              }}
+                            >
+                              <div className="text-2xl">{t === 'A' ? '🔴' : t === 'B' ? '🔵' : t === 'C' ? '🟢' : '🟠'}</div>
+                              <div className="text-sm font-black" style={{ color: teamColors[t] }}>Equipo {t}</div>
+                              <div className="text-xs text-slate-400">{members.length}/{maxPerTeam}</div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
                   {/* Botones de acción */}
                   <div className="mt-3 flex gap-2">
                     {user?.id === battleRoom.hostUserId ? (
@@ -2351,13 +2392,7 @@ export default function App() {
                           if (!user) return
                           if (!battleRoomId) return
 
-                          // v1: only support when maxPerTeam==1 and two players
-                          const maxPerTeam = Number(battleRoom?.maxPerTeam || 1)
-                          if (maxPerTeam !== 1) {
-                            setVoiceErr('Voz beta: por ahora solo funciona en 1v1.')
-                            return
-                          }
-
+                          // Voz disponible en todos los modos
                           if (voiceOn) {
                             setVoiceOn(false)
                             setVoiceErr(null)
