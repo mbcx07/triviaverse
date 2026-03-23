@@ -2252,17 +2252,20 @@ export default function App() {
                                   teamId: user.teamId || 'belas', 
                                   subject: battleSubject, 
                                   maxPerTeam: 1, 
+                                  teamCount: 2,
                                   visibility: 'private',
                                   questionCount: battleQuestionCount,
                                   timerSeconds: battleTimerConfig
                                 })
-                                console.log('[IA] Sala creada:', r.id)
-                                console.log('[IA] Uniendo bot...')
-                                await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia' })
-                                console.log('[IA] Bot unido')
+                                console.log('[IA] Sala creada:', r.id, 'teams:', r.teams)
+                                await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia', teamKey: 'B' })
+                                console.log('[IA] Bot unido al equipo B')
                                 setBattleRoomId(r.id)
                                 ;(window as any).__tv_unsubBattle?.()
-                                ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                                ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => {
+                                  console.log('[IA] Room update:', rr?.status, rr?.teams)
+                                  setBattleRoom(rr)
+                                })
                                 console.log('[IA] Iniciando partida...')
                                 await startBattleMatch({ roomId: r.id })
                                 console.log('[IA] Partida iniciada')
@@ -2737,7 +2740,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.7</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.8</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
