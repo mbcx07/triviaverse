@@ -171,7 +171,6 @@ export default function App() {
   const [battleTeamCount, setBattleTeamCount] = useState(2) // número de equipos (1-4)
   const [battleTimerConfig, setBattleTimerConfig] = useState(120) // segundos por pregunta configurados
   const [showBattleConfig, setShowBattleConfig] = useState(false)
-  const [showIAConfig, setShowIAConfig] = useState(false)
   const [pendingBattleVisibility, setPendingBattleVisibility] = useState<'open' | 'private'>('open')
   // suddenDeath está en battleRoom.suddenDeath, se usa al crear sala
   const [battleSuddenDeath, setBattleSuddenDeath] = useState(true)
@@ -2179,133 +2178,7 @@ export default function App() {
             {!battleRoom && !showBattleConfig ? (
               /* ===== MENÚ DE BATALLA - Solo cuando NO hay batalla activa ===== */
               <>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <button
-                    className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7ED321] to-[#58CC02] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
-                    onClick={() => {
-                      if (!user) {
-                        setError('Debes iniciar sesión para jugar contra la IA')
-                        return
-                      }
-                      setShowIAConfig(true)
-                    }}
-                  >
-                    🤖 Jugar vs IA
-                    <div className="mt-1 text-xs opacity-90">Practica contra la computadora</div>
-                  </button>
-
-                  {/* Modal de configuración IA */}
-                  {showIAConfig ? (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-                      <div className="w-full max-w-md rounded-3xl bg-slate-900 p-6 ring-1 ring-white/10">
-                        <div className="text-lg font-extrabold text-white">Jugar vs IA</div>
-                        <div className="mt-1 text-xs text-slate-300/80">Configura tu partida</div>
-
-                        {/* Materia */}
-                        <div className="mt-4">
-                          <div className="text-xs font-extrabold uppercase tracking-widest text-slate-300/80">Materia</div>
-                          <div className="mt-2 grid grid-cols-4 gap-2">
-                            {['esp', 'mat', 'cien', 'hist', 'geo', 'ing', 'civ'].map((key) => (
-                              <button
-                                key={key}
-                                className={`flex flex-col items-center rounded-2xl p-2 text-xs font-black ring-1 transition-all ${battleSubject === key ? 'bg-[#1CB0F6]/30 ring-[#1CB0F6] text-white scale-105' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
-                                onClick={() => setBattleSubject(key)}
-                              >
-                                <div className="text-lg">{subjectIcon(key)}</div>
-                                <div className="mt-1 text-[10px]">{subjectTitle(key).slice(0, 3)}</div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Preguntas */}
-                        <div className="mt-4">
-                          <div className="text-xs font-extrabold uppercase tracking-widest text-slate-300/80">Preguntas</div>
-                          <div className="mt-2 grid grid-cols-4 gap-2">
-                            {[4, 6, 8, 10].map((n) => (
-                              <button
-                                key={n}
-                                className={`rounded-xl py-2 text-sm font-black ring-1 transition-all ${battleQuestionCount === n ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white scale-105' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
-                                onClick={() => setBattleQuestionCount(n)}
-                              >
-                                {n}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Timer */}
-                        <div className="mt-4">
-                          <div className="text-xs font-extrabold uppercase tracking-widest text-slate-300/80">Tiempo por pregunta</div>
-                          <div className="mt-2 grid grid-cols-4 gap-2">
-                            {[30, 60, 90, 120].map((t) => (
-                              <button
-                                key={t}
-                                className={`rounded-xl py-2 text-sm font-black ring-1 transition-all ${battleTimerConfig === t ? 'bg-[#FFC800]/30 ring-[#FFC800] text-white scale-105' : 'bg-white/5 ring-white/10 text-slate-300 hover:bg-white/10'}`}
-                                onClick={() => setBattleTimerConfig(t)}
-                              >
-                                {t}s
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Botones */}
-                        <div className="mt-6 flex gap-2">
-                          <button
-                            className="flex-1 rounded-2xl bg-slate-700 py-3 text-sm font-black text-white"
-                            onClick={() => setShowIAConfig(false)}
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            className="flex-1 rounded-2xl bg-[#58CC02] py-3 text-sm font-black text-white"
-                            onClick={async () => {
-                              if (!user) {
-                                console.log('[IA] ERROR: user no está definido')
-                                setError('Debes iniciar sesión para jugar contra la IA')
-                                return
-                              }
-                              console.log('[IA] Iniciando modo IA...', { userId: user.id, subject: battleSubject, questions: battleQuestionCount, timer: battleTimerConfig })
-                              setShowIAConfig(false)
-                              setBattleStatus('match')
-                              try {
-                                console.log('[IA] Creando sala...')
-                                const r = await createBattleRoom({ 
-                                  userId: user.id, 
-                                  teamId: user.teamId || 'belas', 
-                                  subject: battleSubject, 
-                                  maxPerTeam: 1, 
-                                  teamCount: 2,
-                                  visibility: 'private',
-                                  questionCount: battleQuestionCount,
-                                  timerSeconds: battleTimerConfig
-                                })
-                                console.log('[IA] Sala creada:', r.id, 'teams:', r.teams)
-                                await joinBattleRoom({ roomId: r.id, userId: 'IA_BOT', teamId: 'ia', teamKey: 'B' })
-                                console.log('[IA] Bot unido al equipo B')
-                                setBattleRoomId(r.id)
-                                ;(window as any).__tv_unsubBattle?.()
-                                ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => {
-                                  console.log('[IA] Room update:', rr?.status, rr?.teams)
-                                  setBattleRoom(rr)
-                                })
-                                console.log('[IA] Iniciando partida...')
-                                await startBattleMatch({ roomId: r.id })
-                                console.log('[IA] Partida iniciada')
-                              } catch (err) {
-                                console.error('[IA] Error:', err)
-                                setError(`Error: ${err instanceof Error ? err.message : String(err)}`)
-                              }
-                            }}
-                          >
-                            🚀 Iniciar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     className="rounded-3xl border-b-4 border-[#1899D6] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
                     onClick={() => { if (!user) return; setPendingBattleVisibility('open'); setShowBattleConfig(true) }}
@@ -2765,7 +2638,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.3</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.4</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
