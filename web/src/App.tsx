@@ -2601,18 +2601,15 @@ export default function App() {
                     {voiceErr ? <div className="mt-2 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-bold text-red-300">{voiceErr}</div> : null}
 
                     {voiceOn ? (
-                      <div className="mt-2 rounded-xl bg-[#58CC02]/20 p-3">
-                        <div className="text-xs font-bold text-[#58CC02] text-center mb-2">🎤 Voz activa - Mantén presionado para hablar</div>
-                        <button
-                          className={`w-full rounded-2xl border-b-4 px-3 py-4 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1 ${pttDown ? 'border-[#0e6e94] bg-[#1CB0F6]' : 'border-slate-700 bg-white/10 hover:bg-white/15'}`}
-                          onPointerDown={() => setPttDown(true)}
-                          onPointerUp={() => setPttDown(false)}
-                          onPointerCancel={() => setPttDown(false)}
-                          onPointerLeave={() => setPttDown(false)}
-                        >
-                          Mantén presionado para hablar
-                        </button>
-                      </div>
+                      <button
+                        className={`mt-2 w-full rounded-2xl border-b-4 px-3 py-3 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1 ${pttDown ? 'border-[#0e6e94] bg-[#1CB0F6]' : 'border-slate-700 bg-white/10 hover:bg-white/15'}`}
+                        onPointerDown={() => setPttDown(true)}
+                        onPointerUp={() => setPttDown(false)}
+                        onPointerCancel={() => setPttDown(false)}
+                        onPointerLeave={() => setPttDown(false)}
+                      >
+                        Mantén presionado para hablar
+                      </button>
                     ) : null}
                     <div className="mt-2 max-h-40 space-y-2 overflow-auto" id="battle-chat-scroll">
                       {battleMsgs.map((m) => (
@@ -2877,7 +2874,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.3</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.5.2</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
