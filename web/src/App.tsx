@@ -1403,15 +1403,19 @@ export default function App() {
                       key={i}
                       type="button"
                       disabled={battleAnswered}
-                      className={`rounded-2xl px-4 py-3 text-left text-sm font-bold transition-all duration-200 active:scale-95 ${isSelected ? 'ring-2 ring-white scale-105' : 'ring-1 ring-white/10'} ${battleAnswered ? (isCorrect ? 'bg-[#58CC02]/40 text-white' : isWrong ? 'bg-red-500/40 text-white' : 'bg-slate-950/40 opacity-50') : 'bg-slate-950/40 hover:bg-white/10'}`}
+                      className={`group relative overflow-hidden rounded-2xl px-4 py-4 text-left text-sm font-bold transition-all duration-300 transform active:scale-95 ${isSelected ? 'scale-105 ring-2 ring-white shadow-lg' : 'ring-1 ring-white/20'} ${battleAnswered ? (isCorrect ? 'bg-[#58CC02] text-white animate-pulse ring-[#58CC02]' : isWrong ? 'bg-red-500 text-white animate-pulse ring-red-500' : 'bg-slate-800/50 opacity-50') : 'bg-slate-800 hover:bg-slate-700 hover:ring-white/40 hover:scale-[1.02]'}`}
                       onPointerUp={() => {
                         if (!battleAnswered) {
                           submitBattleAnswerGeneric(i)
                         }
                       }}
                     >
-                      <span className="mr-2 inline-block w-6 rounded-full bg-white/10 text-center text-xs">{['A', 'B', 'C', 'D'][i]}</span>
-                      {opt}
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-black transition-all duration-200 ${battleAnswered && isCorrect ? 'bg-white/30' : battleAnswered && isWrong ? 'bg-white/30' : 'bg-white/10 group-hover:bg-white/20'}`}>{['A', 'B', 'C', 'D'][i]}</span>
+                        <span className="flex-1">{opt}</span>
+                        {battleAnswered && isCorrect && <span className="text-xl">✓</span>}
+                        {battleAnswered && isWrong && <span className="text-xl">✗</span>}
+                      </div>
                     </button>
                   )})}
                 </div>
@@ -2761,7 +2765,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.2</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.3</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
