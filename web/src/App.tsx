@@ -2841,12 +2841,15 @@ export default function App() {
               <div className="space-y-3 p-6">
                 <button
                   onClick={async () => {
-                    setLessonId(startModalLesson.id)
-                    setTab('play')
-                    setStartModalLesson(null)
+                    // Si es reintento, primero limpiar intentos en Firestore
                     if (isLessonCompleted(startModalLesson.id)) {
                       await resetLessonProgress({ userId: user!.id, lessonId: startModalLesson.id })
                     }
+                    // Luego limpiar estado local y cargar preguntas frescas
+                    setResults({})
+                    setLessonId(startModalLesson.id)
+                    setTab('play')
+                    setStartModalLesson(null)
                   }}
                   className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-lg font-black uppercase tracking-widest text-white transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
                 >
