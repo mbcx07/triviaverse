@@ -514,7 +514,7 @@ export default function App() {
     return () => clearInterval(t)
   }, [battleRoom?.countdownStarted, battleRoom?.countdownFrom])
 
-  // Battle timer (2 min = 120s)
+  // Battle timer (configurable via battleRoom.timerSeconds, default 120s)
   useEffect(() => {
     if (!battleRoom) return
     const status = battleRoom.status
@@ -525,9 +525,10 @@ export default function App() {
     // startedAt timestamp
     const startedAt = battleRoom.startedAt
     if (!startedAt) return
+    const timerSeconds = battleRoom.timerSeconds || 120
     const now = Date.now()
     const elapsed = Math.floor((now - startedAt.toDate().getTime()) / 1000)
-    const remaining = Math.max(0, 120 - elapsed)
+    const remaining = Math.max(0, timerSeconds - elapsed)
     setBattleTimer(remaining)
     if (remaining <= 0) {
       finishBattle({ roomId: battleRoom.id, winnerTeamId: null }).catch(() => {})
@@ -535,7 +536,7 @@ export default function App() {
     const t = setInterval(() => {
       const now2 = Date.now()
       const elapsed2 = Math.floor((now2 - startedAt.toDate().getTime()) / 1000)
-      const remaining2 = Math.max(0, 120 - elapsed2)
+      const remaining2 = Math.max(0, timerSeconds - elapsed2)
       setBattleTimer(remaining2)
       if (remaining2 <= 0) {
         clearInterval(t)
@@ -543,7 +544,7 @@ export default function App() {
       }
     }, 1000)
     return () => clearInterval(t)
-  }, [battleRoom?.status, battleRoom?.startedAt])
+  }, [battleRoom?.status, battleRoom?.startedAt, battleRoom?.timerSeconds])
 
   // Load battle questions once battle is starting (status becomes 'started', battleStatus becomes 'match')
   useEffect(() => {
