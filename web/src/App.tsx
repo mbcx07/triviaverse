@@ -1588,6 +1588,22 @@ export default function App() {
                     Siguiente
                   </button>
                 </div>
+              ) : alreadyAnswered ? (
+                <div className="mt-3 rounded-xl bg-slate-950/60 p-3 text-sm ring-1 ring-white/10">
+                  <div className="font-semibold">✓ Ya respondiste esta pregunta</div>
+                  {q && 'correctIndex' in q && 'options' in q && q.correctIndex !== undefined && (q.options as string[]) ? (
+                    <div className="mt-2 rounded-lg bg-[#58CC02]/20 p-2 text-xs text-[#58CC02]">
+                      Respuesta correcta: {(q.options as string[])[q.correctIndex as number]}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="mt-3 w-full rounded-xl bg-slate-800 px-3 py-2 font-semibold hover:bg-slate-700"
+                    onClick={next}
+                  >
+                    Siguiente
+                  </button>
+                </div>
               ) : null}
 
               </div>

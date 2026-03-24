@@ -391,7 +391,9 @@ function histQuestions(n) {
     ], `${pre.feat}. ${pre2.feat}.`));
 
     qs.push(qMC(`La ${mx.name} (${mx.yr}) tuvo como consecuencia:`, [mx.result,'Mayor territorio','Paz total','Independencia total'], 0, `${mx.name}: ${mx.result}.`));
-    qs.push(qMC(`¿Quién fue el principal protagonista de la ${mx2.name}?`, [mx2.hero,'Hernán Cortés','Benito Juárez','Porfirio Díaz'], 0, `${mx2.hero} fue el protagonista de ${mx2.name}.`));
+    // Evitar duplicados: opciones incorrectas que no coincidan con el héroe correcto
+    const wrongHeroes = ['Hernán Cortés', 'Benito Juárez', 'Porfirio Díaz', 'Miguel Hidalgo', 'Venustiano Carranza'].filter(h => h !== mx2.hero);
+    qs.push(qMC(`¿Quién fue el principal protagonista de la ${mx2.name}?`, [mx2.hero, wrongHeroes[0], wrongHeroes[1], wrongHeroes[2]], 0, `${mx2.hero} fue el protagonista de ${mx2.name}.`));
     qs.push(qOrder('Ordena cronológicamente (del más antiguo al más reciente):', [
       'Olmecas (~1500 a.C.)','Mayas (~250 d.C.)','Guerra de Independencia (1810)','Revolución Mexicana (1910)'
     ], 'Olmecas → Mayas → Independencia → Revolución'));
