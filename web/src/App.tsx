@@ -164,7 +164,9 @@ export default function App() {
   const [_battleResults, setBattleResults] = useState<Record<string, boolean>>({})
   const [battleFeedback, setBattleFeedback] = useState<any>(null)
   const [battleAnswered, setBattleAnswered] = useState(false)
-  const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'ended' | 'results'>('countdown')
+  const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'sudden_death' | 'ended' | 'results'>('countdown')
+  const [battleSuddenDeathActive, setBattleSuddenDeathActive] = useState(false) // estamos en ronda de muerte súbita
+  const [battleSuddenDeathWinner, setBattleSuddenDeathWinner] = useState<string | null>(null) // userId del primero en responder bien
   const [battleSubject, setBattleSubject] = useState('esp')
   const [battleSize, setBattleSize] = useState(4)
   const [battleQuestionCount, setBattleQuestionCount] = useState(10)
@@ -182,6 +184,7 @@ export default function App() {
   const [dcSelected, setDcSelected] = useState<number | null>(null)
 
   // Battle quiz: submit answer and show feedback
+  // In sudden death mode, first correct answer wins
   async function submitBattleAnswerGeneric(answerRaw: any) {
     if (!user || !battleRoom || !bq) return
     const questionId = bq.id || String(battleIdx)
@@ -190,12 +193,24 @@ export default function App() {
     setBattleResults((prev) => ({ ...prev, [questionId]: wasCorrect }))
     setBattleFeedback(wasCorrect ? { ok: 1 } : { ok: 0, correct: correctIndex })
     setBattleAnswered(true)
+    
     // Update local score
     const currentScore = battleRoom.scores?.[user.id]
     const newCorrect = (currentScore?.correct || 0) + (wasCorrect ? 1 : 0)
     const newAnswered = (currentScore?.answered || 0) + 1
     if (battleRoomId) {
       await submitBattleScore({ roomId: battleRoomId, userId: user.id, correct: newCorrect, answered: newAnswered }).catch(() => {})
+    }
+    
+    // Sudden death: first correct answer wins
+    if (battleSuddenDeathActive && wasCorrect && battleRoomId) {
+      setBattleSuddenDeathWinner(user.id)
+      // Find user's team
+      const userTeam = Object.entries(battleRoom.teams || {}).find(([, teamData]) => 
+        (teamData as any)?.members?.includes(user.id)
+      )?.[0] || 'A'
+      await finishBattle({ roomId: battleRoomId, winnerTeamId: userTeam }).catch(() => {})
+      setBattleStatus('ended')
     }
   }
 
@@ -515,6 +530,7 @@ export default function App() {
   }, [battleRoom?.countdownStarted, battleRoom?.countdownFrom])
 
   // Battle timer (configurable via battleRoom.timerSeconds, default 120s)
+  // Handles sudden death when timer reaches 0 with tied scores
   useEffect(() => {
     if (!battleRoom) return
     const status = battleRoom.status
@@ -530,21 +546,62 @@ export default function App() {
     const elapsed = Math.floor((now - startedAt.toDate().getTime()) / 1000)
     const remaining = Math.max(0, timerSeconds - elapsed)
     setBattleTimer(remaining)
-    if (remaining <= 0) {
-      finishBattle({ roomId: battleRoom.id, winnerTeamId: null }).catch(() => {})
+    
+    // Check for tie when timer reaches 0
+    if (remaining <= 0 && !battleSuddenDeathActive) {
+      // Calculate team scores
+      const teams = battleRoom.teams || {}
+      const scores = battleRoom.scores || {}
+      const teamScores: Record<string, number> = {}
+      
+      for (const [teamKey, teamData] of Object.entries(teams)) {
+        const members = (teamData as any)?.members || []
+        let teamTotal = 0
+        for (const uid of members) {
+          teamTotal += (scores[uid] as any)?.correct || 0
+        }
+        teamScores[teamKey] = teamTotal
+      }
+      
+      // Find max score and check for tie
+      const scoreValues = Object.values(teamScores)
+      const maxScore = Math.max(...scoreValues.map(Number))
+      const teamsWithMax = Object.entries(teamScores).filter(([, s]) => s === maxScore)
+      
+      if (teamsWithMax.length > 1 && battleRoom.suddenDeath) {
+        // TIE with sudden death enabled -> enter sudden death mode
+        setBattleSuddenDeathActive(true)
+        setBattleStatus('sudden_death')
+        // Load a random question for sudden death
+        const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
+        const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
+        const randomLevel = Math.floor(Math.random() * 100) + 1
+        const lessonId = `${randomSubject}-${randomLevel}`
+        subscribeLessonQuestions(lessonId, (qs) => {
+          if (qs.length > 0) {
+            // Add one sudden death question
+            setBattleQuestions(prev => [...prev, qs[Math.floor(Math.random() * qs.length)]])
+          }
+        })
+      } else {
+        // No tie or sudden death disabled -> finish battle
+        const winnerTeamId = teamsWithMax.length === 1 ? teamsWithMax[0][0] : null
+        finishBattle({ roomId: battleRoom.id, winnerTeamId }).catch(() => {})
+      }
     }
+    
     const t = setInterval(() => {
       const now2 = Date.now()
       const elapsed2 = Math.floor((now2 - startedAt.toDate().getTime()) / 1000)
       const remaining2 = Math.max(0, timerSeconds - elapsed2)
       setBattleTimer(remaining2)
-      if (remaining2 <= 0) {
+      if (remaining2 <= 0 && !battleSuddenDeathActive) {
         clearInterval(t)
-        finishBattle({ roomId: battleRoom.id, winnerTeamId: null }).catch(() => {})
+        // Same tie check as above (already handled in first check)
       }
     }, 1000)
     return () => clearInterval(t)
-  }, [battleRoom?.status, battleRoom?.startedAt, battleRoom?.timerSeconds])
+  }, [battleRoom?.status, battleRoom?.startedAt, battleRoom?.timerSeconds, battleSuddenDeathActive])
 
   // Load battle questions once battle is starting (status becomes 'started', battleStatus becomes 'match')
   useEffect(() => {
@@ -1907,6 +1964,12 @@ export default function App() {
                 </div>
                 {bq ? (
                   <div className="mt-4">
+                    {battleSuddenDeathActive ? (
+                      <div className="mb-3 rounded-xl bg-rose-500/20 px-3 py-2 text-center ring-1 ring-rose-500">
+                        <div className="text-sm font-black text-rose-300">⚡ MUERTE SÚBITA</div>
+                        <div className="text-xs text-rose-200">¡El primero en responder correctamente gana!</div>
+                      </div>
+                    ) : null}
                     <div className="mb-3 text-xs font-bold text-slate-300/80">Pregunta {battleIdx + 1}/{battleQuestions.length || '?'}</div>
                     <div className="mb-4 rounded-2xl bg-white/5 px-4 py-4 text-center text-sm font-black text-white ring-1 ring-white/10">
                       {bq.question || bq.prompt || '¿?'}
@@ -1930,7 +1993,7 @@ export default function App() {
                         })}
                       </div>
                     ) : <div className="text-center text-xs text-slate-400">{bq.type || 'cargando...'}</div>}
-                    {battleAnswered && (
+                    {battleAnswered && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
                           finishBattle({ roomId: battleRoomId, winnerTeamId: 'A' }).catch(() => {})
@@ -1942,6 +2005,12 @@ export default function App() {
                       }}>
                         {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Terminar' : 'Siguiente'}
                       </button>
+                    )}
+                    {battleSuddenDeathWinner && (
+                      <div className="mt-3 rounded-xl bg-[#58CC02]/20 px-3 py-3 text-center ring-1 ring-[#58CC02]">
+                        <div className="text-sm font-black text-[#58CC02]">🏆 ¡GANASTE!</div>
+                        <div className="text-xs text-white/80">Respondiste correctamente primero</div>
+                      </div>
                     )}
                   </div>
                 ) : <div className="mt-4 text-center text-sm text-slate-400">Cargando preguntas...</div>}
