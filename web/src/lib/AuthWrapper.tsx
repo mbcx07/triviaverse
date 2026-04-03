@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from './useAuth'
 import { getProfileByUid, migratePinUserToFirebase } from './auth'
-import type { UserProfile } from './auth'
 import type { User } from '../firestore'
 
 interface AuthWrapperProps {
@@ -24,7 +23,6 @@ export function AuthWrapper({ children, onLogin }: AuthWrapperProps) {
     ;(async () => {
       const profile = await getProfileByUid(firebaseUser.uid)
       if (profile) {
-        // User exists, convert to app User and login
         onLogin({
           id: profile.id,
           nickname: profile.nickname,
@@ -90,7 +88,6 @@ export function AuthWrapper({ children, onLogin }: AuthWrapperProps) {
     )
   }
 
-  // User is logged in via Firebase Auth but needs to migrate/create profile
   if (firebaseUser && mode === 'migrate') {
     return (
       <div className="rounded-2xl bg-slate-950/30 p-4 ring-1 ring-white/10">
@@ -142,7 +139,6 @@ export function AuthWrapper({ children, onLogin }: AuthWrapperProps) {
     )
   }
 
-  // User needs to sign in
   return (
     <div className="space-y-4">
       {error && (
