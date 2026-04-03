@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from './lib/useAuth'
-import { getProfileByUid } from './lib/auth'
+import { getProfileByUid, createProfileFromFirebase } from './lib/auth'
 
 
 import {
@@ -146,6 +146,9 @@ export default function App() {
 
   // Firebase Auth
   const { user: firebaseUser, signInWithGoogle } = useAuth()
+  const [showCreateProfile, setShowCreateProfile] = useState(false)
+  const [newUserNickname, setNewUserNickname] = useState('')
+  const [creatingProfile, setCreatingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [oldPin, setOldPin] = useState('')
   const [newPin, setNewPin] = useState('')
@@ -470,24 +473,71 @@ export default function App() {
   useEffect(() => {
     if (!firebaseUser) return
     ;(async () => {
-      const profile = await getProfileByUid(firebaseUser.uid)
-      if (profile) {
-        setUser({
-          id: profile.id,
-          nickname: profile.nickname,
-          nicknameNorm: profile.nicknameNorm,
-          xpTotal: profile.xpTotal,
-          streakCount: profile.streakCount,
-          teamId: profile.teamId,
-          avatar: profile.avatar,
-          displayName: profile.displayName,
-        })
-        setAvatar(profile.avatar || '🪐')
-        setDisplayName(profile.displayName || '')
-        setTab('mode')
+      try {
+        const profile = await getProfileByUid(firebaseUser.uid)
+        if (profile) {
+          setUser({
+            id: profile.id,
+            nickname: profile.nickname,
+            nicknameNorm: profile.nicknameNorm,
+            xpTotal: profile.xpTotal,
+            streakCount: profile.streakCount,
+            teamId: profile.teamId,
+            avatar: profile.avatar,
+            displayName: profile.displayName,
+          })
+          setAvatar(profile.avatar || '🪐')
+          setDisplayName(profile.displayName || '')
+          setTab('mode')
+        } else {
+          // Usuario nuevo de Google - mostrar formulario para crear perfil
+          setShowCreateProfile(true)
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err)
+        setShowCreateProfile(true)
       }
     })()
   }, [firebaseUser])
+
+  // Crear perfil para usuario nuevo de Google
+  async function handleCreateProfile() {
+    if (!firebaseUser) return
+    if (!newUserNickname.trim()) {
+      setError('Ingresa un nickname')
+      return
+    }
+    if (newUserNickname.trim().length < 2) {
+      setError('El nickname debe tener al menos 2 caracteres')
+      return
+    }
+    
+    setCreatingProfile(true)
+    setError(null)
+    
+    try {
+      const profile = await createProfileFromFirebase(firebaseUser, newUserNickname.trim())
+      setUser({
+        id: profile.id,
+        nickname: profile.nickname,
+        nicknameNorm: profile.nicknameNorm,
+        xpTotal: profile.xpTotal || 0,
+        streakCount: profile.streakCount || 0,
+        teamId: profile.teamId,
+        avatar: profile.avatar,
+        displayName: profile.displayName,
+      })
+      setAvatar(profile.avatar || '🪐')
+      setDisplayName(profile.displayName || '')
+      setShowCreateProfile(false)
+      setTab('mode')
+    } catch (err: any) {
+      console.error('Error creating profile:', err)
+      setError(err.message || 'Error al crear perfil')
+    } finally {
+      setCreatingProfile(false)
+    }
+  }
 
   // Guest mode: auto-join room from URL ?room=XXX
   useEffect(() => {
@@ -1030,7 +1080,7 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-b from-[#1a0b3b] via-[#2a1158] to-[#070B2A] text-slate-100">
       <div className="mx-auto max-w-md lg:max-w-4xl p-4">
         <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
             <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-auto object-contain" alt="Triviverso" />
             <div className="text-lg font-extrabold tracking-tight">Triviverso</div>
           </div>
@@ -1091,7 +1141,7 @@ export default function App() {
             </div>
           ) : (
             <div className="text-sm text-slate-400">
-              <div className="mb-1 text-xs text-slate-500">Versión de pruebas</div>
+              <div className="mb-1 text-xs text-slate-500"></div>
             </div>
           )}
         </header>
@@ -1219,6 +1269,51 @@ export default function App() {
               </p>
             </div>
 
+            {showCreateProfile && firebaseUser && (
+              <div className="mt-6 rounded-2xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="text-sm font-bold">Crear tu perfil</div>
+                <div className="mt-1 text-xs text-slate-300/80">Elige un nickname para tu cuenta</div>
+                
+                {error && (
+                  <div className="mt-3 rounded-xl bg-rose-950/40 p-3 text-sm text-rose-200">{error}</div>
+                )}
+                
+                <div className="mt-4 space-y-3">
+                  <label className="block">
+                    <div className="mb-1 text-xs text-slate-300">Nickname</div>
+                    <input
+                      className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
+                      value={newUserNickname}
+                      onChange={(e) => setNewUserNickname(e.target.value)}
+                      placeholder="tuNickname"
+                    />
+                  </label>
+                  
+                  <button
+                    type="button"
+                    className="w-full rounded-xl bg-[#1CB0F6] px-3 py-2 font-semibold hover:bg-[#35C6FF] disabled:opacity-50"
+                    onClick={handleCreateProfile}
+                    disabled={creatingProfile || !newUserNickname.trim()}
+                  >
+                    {creatingProfile ? 'Creando...' : 'Crear mi perfil'}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    className="w-full rounded-xl bg-slate-800 px-3 py-2 text-sm hover:bg-slate-700"
+                    onClick={() => {
+                      setShowCreateProfile(false)
+                      setNewUserNickname('')
+                      setError(null)
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!showCreateProfile && (
             <div className="mt-6 rounded-2xl bg-slate-950/30 p-4 ring-1 ring-white/10">
               <div className="text-sm font-bold">Entrar</div>
               <div className="mt-1 text-xs text-slate-300/80">Nickname + PIN (4 dígitos)</div>
@@ -1283,6 +1378,7 @@ export default function App() {
                 Continuar con Google
               </button>
             </div>
+            )}
           </div>
         ) : tab === 'mode' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
