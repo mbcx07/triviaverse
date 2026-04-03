@@ -1215,7 +1215,7 @@ export default function App() {
                 className="h-48 w-full max-w-[320px] object-contain drop-shadow-[0_10px_35px_rgba(0,0,0,0.55)]"
               />
               <p className="mt-4 text-center text-sm text-slate-300/90">
-                Elige tu mundo, completa lecciones y sube en la liga.
+                Preguntas de 5° y 6° de primaria. ¡Aprende jugando!
               </p>
             </div>
 
@@ -2768,7 +2768,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · v0.6.7</footer>
+        <footer className="py-6 text-center text-xs text-slate-500">Triviverso · 5° y 6° Primaria</footer>
 
         {/* Trophy toast */}
         {trophyToast ? (
