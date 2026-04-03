@@ -1,13 +1,121 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // PROTOTYPE RULES
-    // This app uses a simple nickname+PIN login WITHOUT Firebase Auth.
-    // Because Firestore rules cannot validate a PIN sent from the client, this is intentionally open.
-    // For production: add Firebase Auth and restrict reads/writes by request.auth.
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasTeam(teamId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
+    }
 
-    match /{document=**} {
-      allow read, write: if true;
+    // Users collection - each user can only read/write their own document
+    match /users/{userId} {
+      // Anyone can create a user document (for signup)
+      allow create: if true;
+      
+      // Users can read their own document
+      allow read: if isOwner(userId);
+      
+      // Users can update their own document (profile, streak, etc.)
+      allow update: if isOwner(userId);
+      
+      // Users cannot delete their document
+      allow delete: if false;
+      
+      // Attempts subcollection - user's own quiz attempts
+      match /attempts/{attemptId} {
+        allow create: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if false;
+      }
+      
+      // Progress subcollection - user's own lesson progress
+      match /progress/{lessonId} {
+        allow create: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if false;
+      }
+    }
+    
+    // Lessons collection - public read, admin write only
+    match /lessons/{lessonId} {
+      // Anyone authenticated can read lessons (for playing)
+      allow read: if isAuthenticated();
+      
+      // Only server/admin can write lessons (via seed scripts)
+      allow write: if false;
+    }
+    
+    // Teams collection - public read, admin write
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'updatedAt']));
+      allow delete: if false;
+    }
+    
+    // Battle rooms - authenticated users only
+    match /battleRooms/{roomId} {
+      // Users can read open/started rooms to find matches
+      allow read: if isAuthenticated();
+      
+      // Authenticated users can create rooms
+      allow create: if isAuthenticated();
+      
+      // Users can update rooms they're participating in
+      allow update: if isAuthenticated() && 
+        (roomId in request.auth.uid || 
+         resource.data.hostUserId == request.auth.uid ||
+         request.auth.uid in resource.data.readyUsers);
+      
+      // No deletion
+      allow delete: if false;
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow create: if isAuthenticated();
+        allow read: if isAuthenticated();
+        allow update, delete: if false;
+      }
+    }
+    
+    // Weekly leaderboard - public read
+    match /weeklyLeaderboard/{docId} {
+      allow read: if true;
+      allow write: if false; // Only updated by cloud functions
+    }
+    
+    // Friend requests
+    match /friendRequests/{requestId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.fromUserId == request.auth.uid || 
+         resource.data.toUserId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+        resource.data.toUserId == request.auth.uid;
+      allow delete: if isAuthenticated() && 
+        (resource.data.fromUserId == request.auth.uid || 
+         resource.data.toUserId == request.auth.uid);
+    }
+    
+    // Friendships
+    match /friends/{friendshipId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.users[0] == request.auth.uid || 
+         resource.data.users[1] == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow delete: if isAuthenticated() && 
+        request.auth.uid in resource.data.users;
     }
   }
 }
