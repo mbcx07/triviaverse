@@ -488,6 +488,14 @@ export default function App() {
           })
           setAvatar(profile.avatar || '🪐')
           setDisplayName(profile.displayName || '')
+          
+          // Cargar lecciones y progreso
+          const ls = await listLessons()
+          setLessons(ls)
+          setLessonId((prev) => prev || ls[0]?.id || '')
+          const pm = await loadProgressMap(profile.id)
+          setProgressMap(pm)
+          
           setTab('mode')
         } else {
           // Usuario nuevo de Google - mostrar formulario para crear perfil
@@ -529,6 +537,12 @@ export default function App() {
       })
       setAvatar(profile.avatar || '🪐')
       setDisplayName(profile.displayName || '')
+      
+      // Cargar lecciones después de crear perfil
+      const ls = await listLessons()
+      setLessons(ls)
+      setLessonId((prev) => prev || ls[0]?.id || '')
+      
       setShowCreateProfile(false)
       setTab('mode')
     } catch (err: any) {
