@@ -53,8 +53,14 @@ const END = args.to || 100;
 function qMC(prompt, options, correctIndex, explanation) {
   const valid = (options || []).filter(o => o !== undefined && String(o).trim() !== '');
   const correct = String(options[correctIndex]);
-  const safeIdx = Math.max(0, valid.findIndex(o => String(o) === correct));
-  return { type: 'multiple_choice', prompt, options: valid, correctIndex: safeIdx, explanation: explanation || '' };
+  // Randomizar opciones
+  const shuffled = [...valid];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const newCorrectIndex = shuffled.findIndex(o => String(o) === correct);
+  return { type: 'multiple_choice', prompt, options: shuffled, correctIndex: Math.max(0, newCorrectIndex), explanation: explanation || '' };
 }
 function qTF(prompt, answer, explanation) {
   return { type: 'true_false', prompt, answer: Boolean(answer), explanation: explanation || '' };
