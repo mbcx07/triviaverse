@@ -7,7 +7,6 @@ import { getProfileByUid, createProfileFromFirebase } from './lib/auth'
 import {
   listLessons,
   listQuestions,
-  loadAttemptsForLesson,
   loadProgressMap,
   loginWithNicknamePin,
   subscribeOpenBattleRooms,
@@ -47,14 +46,6 @@ import {
   type User,
 } from './firestore'
 import { checkAnswer } from './lib/questionCheck'
-
-function firstUnansweredIndex(questions: Question[], results: Record<string, boolean>) {
-  for (let i = 0; i < questions.length; i++) {
-    const q = questions[i]
-    if (!Object.prototype.hasOwnProperty.call(results, q.id)) return i
-  }
-  return 0
-}
 
 function groupLessonsBySubject(lessons: Lesson[]): Array<{ subject: string; lessons: Lesson[] }> {
   const map = new Map<string, Lesson[]>()
@@ -815,12 +806,12 @@ export default function App() {
       setTimeLeft(60)
 
       try {
-        const [qs, at] = await Promise.all([listQuestions(lessonId), loadAttemptsForLesson(user.id, lessonId)])
+        const qs = await listQuestions(lessonId)
 
         if (cancelled) return
         setQuestions(qs)
-        setResults(at)
-        setIdx(firstUnansweredIndex(qs, at))
+        setResults({})  // Empezar desde cero (reintento)
+        setIdx(0)  // Primera pregunta
         setMatchRightsUsed(new Set())
         setStatus(null)
       } catch (err: any) {
