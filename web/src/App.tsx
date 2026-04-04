@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './lib/useAuth'
 import { getProfileByUid, createProfileFromFirebase } from './lib/auth'
 
@@ -300,7 +300,7 @@ export default function App() {
 
   // questionId -> wasCorrect
   const [results, setResults] = useState<Record<string, boolean>>({})
-  const [isAnswering, setIsAnswering] = useState(false)  // Flag para evitar limpiar feedback
+  const isAnsweringRef = useRef(false)  // Ref para evitar limpiar feedback (no causa re-render)
 
   // lessonId -> progress
   const [progressMap, setProgressMap] = useState<
@@ -797,7 +797,7 @@ export default function App() {
     let cancelled = false
     ;(async () => {
       // Solo limpiar si no estamos respondiendo
-      if (!isAnswering) {
+      if (!isAnsweringRef.current) {
         setError(null)
         setStatus('Cargando preguntas…')
         setFeedback(null)
@@ -829,7 +829,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [user, lessonId, tab, isAnswering])
+  }, [user, lessonId, tab])  // isAnsweringRef es una ref, no necesita estar en dependencias
 
   async function submitAnswerGeneric(answerRaw: any) {
     console.log('[DEBUG] submitAnswerGeneric called', { alreadyAnswered, questionId: q?.id, answerRaw })
@@ -840,12 +840,14 @@ export default function App() {
       return
     }
 
+    // IMPORTANTE: Marcar que estamos respondiendo ANTES de cualquier setState
+    isAnsweringRef.current = true
+
     const { ok } = checkAnswer(q, answerRaw)
     console.log('[DEBUG] Answer result:', { ok, correctAnswer: (q as any).correctIndex })
     const nextResults = { ...results, [q.id]: ok }
     console.log('[DEBUG] Setting results:', nextResults)
     setResults(nextResults)
-    setIsAnswering(true)  // Flag: estamos respondiendo
     
     // Mostrar feedback visual con la respuesta correcta
     const correctAnswer = (q as any).correctIndex ?? (q as any).answer ?? 0
@@ -914,7 +916,7 @@ export default function App() {
 
   function next() {
     // Si es la última pregunta, salir de la lección
-    setIsAnswering(false)  // Resetear flag
+    isAnsweringRef.current = false  // Resetear flag
     if (idx + 1 >= questions.length) {
       setLessonId('')
       setQuestions([])
