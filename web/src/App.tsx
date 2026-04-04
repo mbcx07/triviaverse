@@ -903,6 +903,23 @@ export default function App() {
   }
 
   function next() {
+    // Si es la última pregunta, salir de la lección
+    if (idx + 1 >= questions.length) {
+      setLessonId('')
+      setQuestions([])
+      setResults({})
+      setIdx(0)
+      setTab('mode')
+      setFeedback(null)
+      setAnswerText('')
+      setOrderSelected([])
+      setMatchLeft(null)
+      setMatchMap({})
+      setLessonAnswered(false)
+      setLessonSelectedChoice(null)
+      return
+    }
+    // Si no es la última, pasar a la siguiente
     setAnswerText('')
     setFeedback(null)
     setOrderSelected([])
@@ -910,7 +927,7 @@ export default function App() {
     setMatchMap({})
     setLessonAnswered(false)
     setLessonSelectedChoice(null)
-    setIdx((i) => (i + 1) % Math.max(questions.length, 1))
+    setIdx(idx + 1)
   }
 
   const lesson = useMemo(() => lessons.find((l) => l.id === lessonId) || null, [lessons, lessonId])
@@ -1611,7 +1628,7 @@ export default function App() {
                       type="button"
                       disabled={alreadyAnswered}
                       className={`group relative overflow-hidden rounded-2xl px-4 py-4 text-left text-sm font-bold transition-all duration-300 transform active:scale-95 ${alreadyAnswered ? 'scale-105 ring-2' : 'ring-1 ring-white/20'} ${alreadyAnswered ? (isCorrect ? 'ring-green-500 bg-[#58CC02] text-white' : isWrong ? 'ring-red-500 bg-red-500 text-white' : 'ring-white/20 bg-slate-800/50 opacity-50') : 'bg-slate-800 hover:bg-slate-700 hover:ring-white/40 hover:scale-[1.02]'}`}
-                      onPointerUp={() => {
+                      onClick={() => {
                         if (!alreadyAnswered) {
                           (q as any)._selectedAnswer = i
                           submitAnswerGeneric(i)
@@ -1633,7 +1650,7 @@ export default function App() {
                     type="button"
                     disabled={alreadyAnswered}
                     className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                    onPointerUp={() => answerTF(true)}
+                    onClick={() => answerTF(true)}
                   >
                     Verdadero
                   </button>
@@ -1641,7 +1658,7 @@ export default function App() {
                     type="button"
                     disabled={alreadyAnswered}
                     className="rounded-2xl bg-slate-950/40 px-3 py-3 text-sm font-black ring-1 ring-white/10 hover:bg-slate-950/60 disabled:opacity-60"
-                    onPointerUp={() => answerTF(false)}
+                    onClick={() => answerTF(false)}
                   >
                     Falso
                   </button>
