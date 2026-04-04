@@ -300,6 +300,7 @@ export default function App() {
 
   // questionId -> wasCorrect
   const [results, setResults] = useState<Record<string, boolean>>({})
+  const [isAnswering, setIsAnswering] = useState(false)  // Flag para evitar limpiar feedback
 
   // lessonId -> progress
   const [progressMap, setProgressMap] = useState<
@@ -795,13 +796,16 @@ export default function App() {
 
     let cancelled = false
     ;(async () => {
-      setError(null)
-      setStatus('Cargando preguntas…')
-      setFeedback(null)
-      setAnswerText('')
-      setOrderSelected([])
-      setMatchLeft(null)
-      setMatchMap({})
+      // Solo limpiar si no estamos respondiendo
+      if (!isAnswering) {
+        setError(null)
+        setStatus('Cargando preguntas…')
+        setFeedback(null)
+        setAnswerText('')
+        setOrderSelected([])
+        setMatchLeft(null)
+        setMatchMap({})
+      }
 
       // reset timer
       setTimeLeft(60)
@@ -825,7 +829,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [user, lessonId, tab])
+  }, [user, lessonId, tab, isAnswering])
 
   async function submitAnswerGeneric(answerRaw: any) {
     console.log('[DEBUG] submitAnswerGeneric called', { alreadyAnswered, questionId: q?.id, answerRaw })
@@ -841,6 +845,7 @@ export default function App() {
     const nextResults = { ...results, [q.id]: ok }
     console.log('[DEBUG] Setting results:', nextResults)
     setResults(nextResults)
+    setIsAnswering(true)  // Flag: estamos respondiendo
     
     // Mostrar feedback visual con la respuesta correcta
     const correctAnswer = (q as any).correctIndex ?? (q as any).answer ?? 0
@@ -909,6 +914,7 @@ export default function App() {
 
   function next() {
     // Si es la última pregunta, salir de la lección
+    setIsAnswering(false)  // Resetear flag
     if (idx + 1 >= questions.length) {
       setLessonId('')
       setQuestions([])
