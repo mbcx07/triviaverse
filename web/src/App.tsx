@@ -275,7 +275,7 @@ export default function App() {
 
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
-  const [celebration, setCelebration] = useState<{ title: string; xpDelta: number } | null>(null)
+  const [celebration, setCelebration] = useState<{ title: string; xpDelta: number; failed?: boolean } | null>(null)
   const [exitConfirm, setExitConfirm] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number>(60)
 
@@ -883,8 +883,13 @@ export default function App() {
         },
       }))
 
-      if (Object.keys(nextResults).length === 6) {
-        setCelebration({ title: lesson?.title || 'Lección', xpDelta: r.xpDelta })
+      if (Object.keys(nextResults).length === questions.length) {
+        const starsEarned = r.starsLast ?? 0
+        setCelebration({ 
+          title: lesson?.title || 'Lección', 
+          xpDelta: r.xpDelta,
+          failed: starsEarned === 0
+        })
         if (tab === 'battle' && battleRoomId) {
           await submitBattleScore({
             roomId: battleRoomId,
@@ -2957,12 +2962,14 @@ export default function App() {
           </div>
         ) : null}
 
-        {/* Celebration */}
+        {/* Celebration / Failed Modal */}
         {celebration ? (
           <div className="fixed inset-0 z-[105] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
-              <div className="bg-gradient-to-br from-[#58CC02] to-[#FFC800] p-7 text-center text-slate-900">
-                <div className="text-sm font-extrabold uppercase tracking-widest opacity-80">¡Completada!</div>
+              <div className={`p-7 text-center ${celebration.failed ? 'bg-gradient-to-br from-red-500 to-red-700' : 'bg-gradient-to-br from-[#58CC02] to-[#FFC800]'} text-slate-900`}>
+                <div className="text-sm font-extrabold uppercase tracking-widest opacity-80">
+                  {celebration.failed ? '¡Fallaste!' : '¡Completada!'}
+                </div>
                 <div className="mt-1 text-2xl font-black">{celebration.title}</div>
 
                 {(() => {
@@ -2983,49 +2990,56 @@ export default function App() {
                   )
                 })()}
 
-                <div className="mt-2 text-sm font-bold">+{celebration.xpDelta} XP</div>
+                {!celebration.failed && <div className="mt-2 text-sm font-bold">+{celebration.xpDelta} XP</div>}
                 <div className="mt-1 text-xs font-black">Score: {correctAnswered}/{totalAnswered}</div>
+                {celebration.failed && <div className="mt-2 text-sm font-bold">Necesitas al menos 1 estrella para avanzar</div>}
               </div>
               <div className="space-y-3 p-6">
                 <button
+                  className={`w-full rounded-2xl py-4 text-lg font-black uppercase tracking-widest transition-all ${celebration.failed ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] text-slate-900 hover:brightness-110 active:border-b-0 active:translate-y-1'}`}
                   onClick={() => {
-                    if (!lesson) return
-                    const currentLesson = lesson
-                    const currentWorld = currentLesson.subject || 'esp'
-                    const currentOrder = currentLesson.order || 0
-
-                    // Find next lesson in same world
-                    const nextLesson = lessons
-                      .filter((l) => l.subject === currentWorld)
-                      .find((l) => (l.order || 0) > currentOrder)
-
-                    if (nextLesson) {
-                      setLessonId(nextLesson.id)
+                    if (celebration.failed) {
+                      // Si falló, salir al menú
                       setCelebration(null)
-                      // Reset question state for new lesson
+                      setLessonId('')
+                      setQuestions([])
                       setResults({})
                       setIdx(0)
-                      setFeedback(null)
-                      setAnswerText('')
-                      setOrderSelected([])
-                      setMatchLeft(null)
-                      setMatchMap({})
-                      setMatchRightsUsed(new Set())
+                      setTab('mode')
                     } else {
-                      // No more lessons in this world
-                      setCelebration(null)
+                      // Si pasó, ir a la siguiente lección
+                      if (!lesson) return
+                      const currentLesson = lesson
+                      const currentWorld = currentLesson.subject || 'esp'
+                      const currentOrder = currentLesson.order || 0
+                      const nextLesson = lessons
+                        .filter((l) => l.subject === currentWorld)
+                        .find((l) => (l.order || 0) > currentOrder)
+                      if (nextLesson) {
+                        setLessonId(nextLesson.id)
+                        setCelebration(null)
+                        setResults({})
+                        setIdx(0)
+                        setFeedback(null)
+                        setAnswerText('')
+                        setOrderSelected([])
+                        setMatchLeft(null)
+                        setMatchMap({})
+                        setMatchRightsUsed(new Set())
+                      } else {
+                        setCelebration(null)
+                      }
                     }
                   }}
-                  className="w-full rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] py-4 text-lg font-black uppercase tracking-widest text-slate-900 transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
                 >
-                  Continuar
+                  {celebration.failed ? 'Salir' : 'Continuar'}
                 </button>
 
+                {!celebration.failed && (
                 <button
                   onClick={async () => {
                     if (!user) return
                     await resetLessonProgress({ userId: user.id, lessonId })
-                    // reset UI state to replay
                     setCelebration(null)
                     setResults({})
                     setIdx(0)
@@ -3034,7 +3048,8 @@ export default function App() {
                     setOrderSelected([])
                     setMatchLeft(null)
                     setMatchMap({})
-                    // reload attempts/progress quickly
+                    setMatchRightsUsed(new Set())
+                    isAnsweringRef.current = false
                     const pm = await loadProgressMap(user.id)
                     setProgressMap(pm)
                     setTab('play')
@@ -3043,6 +3058,31 @@ export default function App() {
                 >
                   Reintentar
                 </button>
+                )}
+
+                {celebration.failed && (
+                <button
+                  onClick={async () => {
+                    if (!user) return
+                    await resetLessonProgress({ userId: user.id, lessonId })
+                    setCelebration(null)
+                    setResults({})
+                    setIdx(0)
+                    setFeedback(null)
+                    setAnswerText('')
+                    setOrderSelected([])
+                    setMatchLeft(null)
+                    setMatchMap({})
+                    setMatchRightsUsed(new Set())
+                    isAnsweringRef.current = false
+                    const pm = await loadProgressMap(user.id)
+                    setProgressMap(pm)
+                  }}
+                  className="w-full rounded-2xl border-b-4 border-[#d07a00] bg-gradient-to-b from-[#FFC800] to-[#FF9600] py-3 text-sm font-black text-slate-900 hover:brightness-110 active:border-b-0 active:translate-y-1"
+                >
+                  Reintentar
+                </button>
+                )}
               </div>
             </div>
           </div>
