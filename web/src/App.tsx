@@ -791,21 +791,24 @@ export default function App() {
 
   // Load questions + attempts whenever lesson changes
   useEffect(() => {
-    console.log('[DEBUG] Load questions useEffect triggered:', { user: !!user, lessonId, tab })
+    console.log('[DEBUG] Load questions useEffect triggered:', { user: !!user, lessonId, tab, isAnswering: isAnsweringRef.current })
     if (!user || !lessonId || tab !== 'play') return
+
+    // Si estamos respondiendo, NO recargar nada
+    if (isAnsweringRef.current) {
+      console.log('[DEBUG] Skipping load - answering in progress')
+      return
+    }
 
     let cancelled = false
     ;(async () => {
-      // Solo limpiar si no estamos respondiendo
-      if (!isAnsweringRef.current) {
-        setError(null)
-        setStatus('Cargando preguntas…')
-        setFeedback(null)
-        setAnswerText('')
-        setOrderSelected([])
-        setMatchLeft(null)
-        setMatchMap({})
-      }
+      setError(null)
+      setStatus('Cargando preguntas…')
+      setFeedback(null)
+      setAnswerText('')
+      setOrderSelected([])
+      setMatchLeft(null)
+      setMatchMap({})
 
       // reset timer
       setTimeLeft(60)
