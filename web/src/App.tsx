@@ -790,6 +790,7 @@ export default function App() {
 
   // Load questions + attempts whenever lesson changes
   useEffect(() => {
+    console.log('[DEBUG] Load questions useEffect triggered:', { user: !!user, lessonId, tab })
     if (!user || !lessonId || tab !== 'play') return
 
     let cancelled = false
@@ -827,14 +828,18 @@ export default function App() {
   }, [user, lessonId, tab])
 
   async function submitAnswerGeneric(answerRaw: any) {
+    console.log('[DEBUG] submitAnswerGeneric called', { alreadyAnswered, questionId: q?.id, answerRaw })
     if (!user || !lessonId || !q) return
     if (alreadyAnswered) {
+      console.log('[DEBUG] Already answered, showing feedback')
       setFeedback('Ya respondiste esta pregunta.')
       return
     }
 
     const { ok } = checkAnswer(q, answerRaw)
+    console.log('[DEBUG] Answer result:', { ok, correctAnswer: (q as any).correctIndex })
     const nextResults = { ...results, [q.id]: ok }
+    console.log('[DEBUG] Setting results:', nextResults)
     setResults(nextResults)
     
     // Mostrar feedback visual con la respuesta correcta
