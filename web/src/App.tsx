@@ -171,6 +171,8 @@ export default function App() {
   const [battleTimerSeconds, setBattleTimerSeconds] = useState<number>(0)
   const [battleConfirmed, setBattleConfirmed] = useState(false)
   const [isTeamLeader, setIsTeamLeader] = useState(false)
+  const [myBattleVote, setMyBattleVote] = useState<number | null>(null)
+  const [showQuestionResults, setShowQuestionResults] = useState(false)
   const [showBattleResults, setShowBattleResults] = useState(false)
   const [battleFinalResults, setBattleFinalResults] = useState<{ teams: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[] } | null>(null)
   const [battleSuddenDeathActive, setBattleSuddenDeathActive] = useState(false) // estamos en ronda de muerte súbita
@@ -2273,6 +2275,9 @@ export default function App() {
                               return memberInfo?.avatar || '👤'
                             })
                           let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+                          // Highlight user's selected option
+                          if (myBattleVote === idx && !battleAnswered) cls = 'bg-[#1CB0F6]/30 ring-2 ring-[#1CB0F6] text-white'
+                          // Show correct/incorrect after answer
                           if (battleAnswered && battleFeedback) {
                             if (idx === battleFeedback.correct) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-white'
                             else if (battleFeedback.selected !== undefined && idx === battleFeedback.selected && !battleFeedback.ok) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
@@ -2312,6 +2317,37 @@ export default function App() {
                         )}
                       </>
                     )}
+                    {showQuestionResults && battleFeedback && (
+                      <div className="mt-4 rounded-2xl bg-slate-800/80 p-4 ring-1 ring-white/10">
+                        <div className="text-center">
+                          <div className="text-2xl">{battleFeedback.ok ? '✅' : '❌'}</div>
+                          <div className={`text-lg font-black ${battleFeedback.ok ? 'text-[#58CC02]' : 'text-rose-400'}`}>
+                            {battleFeedback.ok ? '¡Correcto!' : 'Incorrecto'}
+                          </div>
+                          <div className="mt-2 text-sm text-slate-300">
+                            Respuesta correcta: <span className="font-bold text-[#58CC02]">{['A', 'B', 'C', 'D'][battleFeedback.correct]} - {bq.options?.[battleFeedback.correct]}</span>
+                          </div>
+                          {Object.keys(battleVotes).length > 1 && (
+                            <div className="mt-3 rounded-xl bg-slate-900/50 p-2">
+                              <div className="text-xs text-slate-400 mb-2">Votos del equipo:</div>
+                              <div className="flex flex-wrap justify-center gap-2">
+                                {Object.entries(battleVotes).map(([uid, v]) => {
+                                  const info = friendInfo[uid]
+                                  const isCorrect = v.option === battleFeedback.correct
+                                  return (
+                                    <div key={uid} className={`flex items-center gap-1 rounded-full px-2 py-1 ${isCorrect ? 'bg-[#58CC02]/20 ring-1 ring-[#58CC02]' : 'bg-rose-500/20 ring-1 ring-rose-500'}`}>
+                                      <span>{info?.avatar || '👤'}</span>
+                                      <span className="text-xs">{['A', 'B', 'C', 'D'][v.option]}</span>
+                                      <span className="text-xs">{isCorrect ? '✓' : '✗'}</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {battleAnswered && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
@@ -2324,8 +2360,10 @@ export default function App() {
                           setBattleIdx(battleIdx + 1)
                           setBattleAnswered(false)
                           setBattleFeedback(null)
+    setShowQuestionResults(false)
                           setBattleConfirmed(false)
                           setBattleVotes({})
+    setMyBattleVote(null)
                         }
                       }}>
                         {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Ver Resultados' : 'Siguiente'}
@@ -2367,8 +2405,10 @@ export default function App() {
                                     setBattleIdx(0)
                                     setBattleAnswered(false)
                                     setBattleFeedback(null)
+    setShowQuestionResults(false)
                                     setBattleConfirmed(false)
                                     setBattleVotes({})
+    setMyBattleVote(null)
                                     setBattleQuestions([])
                                     setBattleStatus('countdown')
                                     const subject = battleRoom.subject || 'esp'
