@@ -170,6 +170,8 @@ export default function App() {
   const [battleVotes, setBattleVotes] = useState<Record<string, { option: number; timestamp: number }>>({})
   const [battleTimerSeconds, setBattleTimerSeconds] = useState<number>(0)
   const [battleConfirmed, setBattleConfirmed] = useState(false)
+  const [showBattleResults, setShowBattleResults] = useState(false)
+  const [battleFinalResults, setBattleFinalResults] = useState<{ teams: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[] } | null>(null)
   const [battleSuddenDeathActive, setBattleSuddenDeathActive] = useState(false) // estamos en ronda de muerte súbita
   const [battleSuddenDeathWinner, setBattleSuddenDeathWinner] = useState<string | null>(null) // userId del primero en responder bien
   const [battleSubject, setBattleSubject] = useState('esp')
@@ -238,6 +240,31 @@ export default function App() {
   }
 
   const bq = battleQuestions[battleIdx] || null
+
+  // Calculate final battle results
+  function calculateBattleResults() {
+    if (!battleRoom) return null
+    const teams = battleRoom.teams || {}
+    const scores = battleRoom.scores || {}
+    const teamResults: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[] = []
+    
+    Object.entries(teams).forEach(([teamId, teamData]: [string, any]) => {
+      const members = (teamData.members || []).map((memberId: string) => {
+        const info = friendInfo[memberId]
+        return { id: memberId, avatar: info?.avatar || '👤', displayName: info?.displayName || memberId.slice(0, 6) }
+      })
+      let teamScore = 0
+      members.forEach((m: { id: string }) => {
+        teamScore += scores[m.id]?.correct || 0
+      })
+      const teamName = teamId === 'A' ? 'Team Belas' : teamId === 'B' ? 'Equipo Azul' : teamId === 'C' ? 'Equipo Verde' : 'Equipo Dorado'
+      teamResults.push({ id: teamId, name: teamName, score: teamScore, members })
+    })
+    
+    // Sort by score descending
+    teamResults.sort((a, b) => b.score - a.score)
+    return { teams: teamResults }
+  }
 
   // Emojis básicos (frecuentes)
   const EMOJIS = ['😀', '😂', '🤣', '😍', '😎', '🔥', '🎉', '💪', '👍', '👎', '🏆', '⭐', '💯', '❤️', '😎', '🎯', '🚀', '🌟', '✨', '🎊', '🎪', '🎁', '🎸', '🎮', '🏆', '🥇', '🥈', '🥉', '👏', '🙌', '💪', '🤝', '✌️']
@@ -2237,7 +2264,11 @@ export default function App() {
                     {battleAnswered && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
-                          finishBattle({ roomId: battleRoomId, winnerTeamId: 'A' }).catch(() => {})
+                          // Calculate and show results
+                          const results = calculateBattleResults()
+                          setBattleFinalResults(results)
+                          setShowBattleResults(true)
+                          finishBattle({ roomId: battleRoomId, winnerTeamId: results?.teams[0]?.id || 'A' }).catch(() => {})
                         } else {
                           setBattleIdx(battleIdx + 1)
                           setBattleAnswered(false)
@@ -2246,8 +2277,82 @@ export default function App() {
                           setBattleVotes({})
                         }
                       }}>
-                        {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Terminar' : 'Siguiente'}
+                        {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Ver Resultados' : 'Siguiente'}
                       </button>
+                    )}
+                    {showBattleResults && battleFinalResults && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+                        <div className="w-full max-w-md animate-bounce-in rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20">
+                          <div className="text-center">
+                            <div className="text-2xl font-black text-white">🏆 ¡Fin de la Batalla!</div>
+                            <div className="mt-6 space-y-3">
+                              {battleFinalResults.teams.map((team: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }, idx: number) => (
+                                <div key={team.id} className={`flex items-center gap-3 rounded-2xl p-3 ${idx === 0 ? 'bg-[#FFD700]/20 ring-2 ring-[#FFD700]' : idx === 1 ? 'bg-[#C0C0C0]/20 ring-2 ring-[#C0C0C0]' : idx === 2 ? 'bg-[#CD7F32]/20 ring-2 ring-[#CD7F32]' : 'bg-white/5 ring-1 ring-white/10'}`}>
+                                  <div className="text-3xl">
+                                    {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-bold text-white">{team.name}</div>
+                                    <div className="flex -space-x-1">
+                                      {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }) => (
+                                        <span key={m.id} className="rounded-full bg-slate-800 p-1 text-sm ring-2 ring-slate-900">{m.avatar}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-black text-white">{team.score}</div>
+                                    <div className="text-xs text-slate-400">puntos</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-6 grid grid-cols-2 gap-3">
+                              <button
+                                className="rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
+                                onClick={async () => {
+                                  if (user && battleRoom) {
+                                    setShowBattleResults(false)
+                                    setBattleFinalResults(null)
+                                    setBattleIdx(0)
+                                    setBattleAnswered(false)
+                                    setBattleFeedback(null)
+                                    setBattleConfirmed(false)
+                                    setBattleVotes({})
+                                    setBattleQuestions([])
+                                    setBattleStatus('countdown')
+                                    const subject = battleRoom.subject || 'esp'
+                                    const teamCount = battleRoom.teamCount || 2
+                                    const maxPerTeam = battleRoom.maxPerTeam || 1
+                                    const timerSeconds = battleRoom.timerSeconds || 120
+                                    const questionCount = battleRoom.questionCount || 10
+                                    const suddenDeath = battleRoom.suddenDeath || false
+                                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, teamCount, timerSeconds, questionCount, suddenDeath, visibility: 'open' })
+                                    setBattleRoomId(r.id)
+                                    ;(window as any).__tv_unsubBattle?.()
+                                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
+                                  }
+                                }}
+                              >
+                                🔄 Revancha
+                              </button>
+                              <button
+                                className="rounded-2xl bg-slate-800 py-3 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-700"
+                                onClick={() => {
+                                  setBattleRoomId('')
+                                  setBattleRoom(null)
+                                  setBattleQuestions([])
+                                  setBattleStatus('countdown')
+                                  setShowBattleResults(false)
+                                  setBattleFinalResults(null)
+                                  setTab('home')
+                                }}
+                              >
+                                🌍 Otro Mundo
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
                     {battleSuddenDeathWinner && (
                       <div className="mt-3 rounded-xl bg-[#58CC02]/20 px-3 py-3 text-center ring-1 ring-[#58CC02]">
