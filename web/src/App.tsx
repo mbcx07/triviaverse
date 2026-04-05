@@ -170,6 +170,7 @@ export default function App() {
   const [battleVotes, setBattleVotes] = useState<Record<string, { option: number; timestamp: number }>>({})
   const [battleTimerSeconds, setBattleTimerSeconds] = useState<number>(0)
   const [battleConfirmed, setBattleConfirmed] = useState(false)
+  const [isTeamLeader, setIsTeamLeader] = useState(false)
   const [showBattleResults, setShowBattleResults] = useState(false)
   const [battleFinalResults, setBattleFinalResults] = useState<{ teams: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[] } | null>(null)
   const [battleSuddenDeathActive, setBattleSuddenDeathActive] = useState(false) // estamos en ronda de muerte súbita
@@ -263,7 +264,16 @@ export default function App() {
     
     // Sort by score descending
     teamResults.sort((a, b) => b.score - a.score)
-    return { teams: teamResults }
+    
+    // Check for tie at first place
+    const topScore = teamResults[0]?.score || 0
+    const tiedTeams = teamResults.filter(t => t.score === topScore)
+    
+    return { 
+      teams: teamResults, 
+      hasTie: tiedTeams.length > 1,
+      tiedTeamIds: tiedTeams.map(t => t.id)
+    }
   }
 
   // Emojis básicos (frecuentes)
@@ -635,6 +645,22 @@ export default function App() {
 
   // Battle countdown (3, 2, 1...) when started
   useEffect(() => {
+    if (!battleRoom || !user) {
+      setIsTeamLeader(false)
+      return
+    }
+    // Check if current user is leader of their team
+    const teams = battleRoom.teams || {}
+    const userTeam = Object.entries(teams).find(([, teamData]: [string, any]) => 
+      (teamData as any)?.members?.includes(user.id)
+    )
+    if (userTeam) {
+      const teamData = (teams as any)[userTeam[0]]
+      setIsTeamLeader(teamData?.leader === user.id)
+    }
+  }, [battleRoom, user])
+
+  useEffect(() => {
     if (!battleRoom) return
     const started = battleRoom.countdownStarted
     if (!started) {
@@ -666,6 +692,22 @@ export default function App() {
 
   // Battle timer (configurable via battleRoom.timerSeconds, default 120s)
   // Handles sudden death when timer reaches 0 with tied scores
+  useEffect(() => {
+    if (!battleRoom || !user) {
+      setIsTeamLeader(false)
+      return
+    }
+    // Check if current user is leader of their team
+    const teams = battleRoom.teams || {}
+    const userTeam = Object.entries(teams).find(([, teamData]: [string, any]) => 
+      (teamData as any)?.members?.includes(user.id)
+    )
+    if (userTeam) {
+      const teamData = (teams as any)[userTeam[0]]
+      setIsTeamLeader(teamData?.leader === user.id)
+    }
+  }, [battleRoom, user])
+
   useEffect(() => {
     if (!battleRoom) return
     const status = battleRoom.status
@@ -2257,9 +2299,18 @@ export default function App() {
                       </div>
                     ) : <div className="text-center text-xs text-slate-400">{bq.type || 'cargando...'}</div>}
                     {!battleConfirmed && !battleAnswered && (
-                      <button className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1" onClick={confirmBattleAnswer}>
-                        ✅ Confirmar respuesta
-                      </button>
+                      <>
+                        {isTeamLeader ? (
+                          <button className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1" onClick={confirmBattleAnswer}>
+                            👑 Confirmar respuesta del equipo
+                          </button>
+                        ) : (
+                          <div className="mt-3 rounded-xl bg-slate-800/50 p-3 text-center">
+                            <div className="text-xs text-slate-400">Tu líder debe confirmar la respuesta</div>
+                            <div className="mt-1 text-xs text-slate-500">Los votos se mostrarán arriba</div>
+                          </div>
+                        )}
+                      </>
                     )}
                     {battleAnswered && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
