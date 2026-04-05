@@ -46,6 +46,8 @@ import {
   type User,
 } from './firestore'
 import { checkAnswer } from './lib/questionCheck'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { db, assertFirebaseEnabled } from './lib/firebase-client'
 
 function groupLessonsBySubject(lessons: Lesson[]): Array<{ subject: string; lessons: Lesson[] }> {
   const map = new Map<string, Lesson[]>()
@@ -165,6 +167,9 @@ export default function App() {
   const [battleFeedback, setBattleFeedback] = useState<any>(null)
   const [battleAnswered, setBattleAnswered] = useState(false)
   const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'sudden_death' | 'ended' | 'results'>('countdown')
+  const [battleVotes, setBattleVotes] = useState<Record<string, { option: number; timestamp: number }>>({})
+  const [battleTimerSeconds, setBattleTimerSeconds] = useState<number>(0)
+  const [battleConfirmed, setBattleConfirmed] = useState(false)
   const [battleSuddenDeathActive, setBattleSuddenDeathActive] = useState(false) // estamos en ronda de muerte súbita
   const [battleSuddenDeathWinner, setBattleSuddenDeathWinner] = useState<string | null>(null) // userId del primero en responder bien
   const [battleSubject, setBattleSubject] = useState('esp')
@@ -183,13 +188,32 @@ export default function App() {
   const [dcFeedback, setDcFeedback] = useState<{ correct: boolean; correctIndex: number } | null>(null)
   const [dcSelected, setDcSelected] = useState<number | null>(null)
 
-  // Battle quiz: submit answer and show feedback
-  // In sudden death mode, first correct answer wins
-  async function submitBattleAnswerGeneric(answerRaw: any) {
-    if (!user || !battleRoom || !bq) return
+  // Battle: vote for an answer (can change while timer is active)
+  async function submitBattleVote(option: number) {
+    if (!user || battleConfirmed) return
+    // Register vote locally
+    setBattleVotes((prev) => ({ ...prev, [user.id]: { option, timestamp: Date.now() } }))
+    // Also submit to Firestore for team sync
+    if (battleRoomId) {
+      assertFirebaseEnabled()
+      const ref = doc(db!, 'battleRooms', battleRoomId, 'votes', user.id)
+      await setDoc(ref, { option, timestamp: serverTimestamp() }, { merge: true }).catch(() => {})
+    }
+  }
+
+  // Battle: leader confirms team's answer
+  async function confirmBattleAnswer() {
+    if (!user || !battleRoom || !bq || battleConfirmed) return
+    setBattleConfirmed(true)
+    
+    // Get user's vote
+    const userVote = battleVotes[user.id]
+    if (userVote === undefined) return
+    
     const questionId = bq.id || String(battleIdx)
     const correctIndex = bq.correctIndex ?? bq.answer ?? 0
-    const wasCorrect = String(answerRaw) === String(correctIndex)
+    const wasCorrect = userVote.option === correctIndex
+    
     setBattleResults((prev) => ({ ...prev, [questionId]: wasCorrect }))
     setBattleFeedback(wasCorrect ? { ok: 1 } : { ok: 0, correct: correctIndex })
     setBattleAnswered(true)
@@ -205,7 +229,6 @@ export default function App() {
     // Sudden death: first correct answer wins
     if (battleSuddenDeathActive && wasCorrect && battleRoomId) {
       setBattleSuddenDeathWinner(user.id)
-      // Find user's team
       const userTeam = Object.entries(battleRoom.teams || {}).find(([, teamData]) => 
         (teamData as any)?.members?.includes(user.id)
       )?.[0] || 'A'
@@ -631,6 +654,7 @@ export default function App() {
     const elapsed = Math.floor((now - startedAt.toDate().getTime()) / 1000)
     const remaining = Math.max(0, timerSeconds - elapsed)
     setBattleTimer(remaining)
+          setBattleTimerSeconds(remaining)
     
     // Check for tie when timer reaches 0
     if (remaining <= 0 && !battleSuddenDeathActive) {
@@ -2160,29 +2184,56 @@ export default function App() {
                         <div className="text-xs text-rose-200">¡El primero en responder correctamente gana!</div>
                       </div>
                     ) : null}
-                    <div className="mb-3 text-xs font-bold text-slate-300/80">Pregunta {battleIdx + 1}/{battleQuestions.length || '?'}</div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-xs font-bold text-slate-300/80">Pregunta {battleIdx + 1}/{battleQuestions.length || '?'}</div>
+                      <div className="rounded-xl bg-[#1CB0F6]/20 px-3 py-1 text-sm font-black text-[#1CB0F6]">
+                        ⏱️ {battleTimerSeconds}s
+                      </div>
+                    </div>
                     <div className="mb-4 rounded-2xl bg-white/5 px-4 py-4 text-center text-sm font-black text-white ring-1 ring-white/10">
                       {bq.question || bq.prompt || '¿?'}
                     </div>
                     {bq.type === 'multiple_choice' && Array.isArray(bq.options) ? (
                       <div className="grid grid-cols-1 gap-2">
                         {bq.options.map((opt: string, idx: number) => {
+                          // Get avatars of team members who voted for this option
+                          const voters = Object.entries(battleVotes)
+                            .filter(([, v]) => v.option === idx)
+                            .map(([uid]) => {
+                              const memberInfo = friendInfo[uid]
+                              return memberInfo?.avatar || '👤'
+                            })
                           let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
                           if (battleAnswered && battleFeedback) {
                             if (idx === battleFeedback.correct) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-white'
                             else if (battleFeedback.selected !== undefined && idx === battleFeedback.selected && !battleFeedback.ok) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
                           }
                           return (
-                            <button key={idx} 
-                            className={`rounded-2xl px-4 py-3 text-left text-sm font-black transition-all duration-150 active:scale-95 ${cls} ${!battleAnswered ? 'hover:bg-white/10 cursor-pointer' : 'cursor-not-allowed'}`} 
-                            onPointerUp={() => { if (!battleAnswered) submitBattleAnswerGeneric(idx) }} 
-                            disabled={battleAnswered}>
-                              <span className="mr-2 text-xs opacity-60">{['A', 'B', 'C', 'D'][idx]}</span>{opt}
-                            </button>
+                            <div key={idx} className="relative">
+                              {voters.length > 0 && (
+                                <div className="mb-1 flex -space-x-1">
+                                  {voters.slice(0, 4).map((av, i) => (
+                                    <span key={i} className="rounded-full bg-slate-800 p-1 text-lg ring-2 ring-slate-900">{av}</span>
+                                  ))}
+                                  {voters.length > 4 && <span className="rounded-full bg-slate-700 px-2 text-xs font-bold text-white">+{voters.length - 4}</span>}
+                                </div>
+                              )}
+                              <button 
+                                className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-black transition-all duration-150 active:scale-95 ${cls} ${!battleConfirmed ? 'hover:bg-white/10 cursor-pointer' : 'cursor-not-allowed'}`} 
+                                onPointerUp={() => { if (!battleConfirmed) submitBattleVote(idx) }} 
+                                disabled={battleConfirmed}>
+                                <span className="mr-2 text-xs opacity-60">{['A', 'B', 'C', 'D'][idx]}</span>{opt}
+                              </button>
+                            </div>
                           )
                         })}
                       </div>
                     ) : <div className="text-center text-xs text-slate-400">{bq.type || 'cargando...'}</div>}
+                    {!battleConfirmed && !battleAnswered && (
+                      <button className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1" onClick={confirmBattleAnswer}>
+                        ✅ Confirmar respuesta
+                      </button>
+                    )}
                     {battleAnswered && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
@@ -2191,6 +2242,8 @@ export default function App() {
                           setBattleIdx(battleIdx + 1)
                           setBattleAnswered(false)
                           setBattleFeedback(null)
+                          setBattleConfirmed(false)
+                          setBattleVotes({})
                         }
                       }}>
                         {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Terminar' : 'Siguiente'}
