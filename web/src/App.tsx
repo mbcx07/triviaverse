@@ -146,6 +146,7 @@ export default function App() {
 
   // team config
   const [avatar, setAvatar] = useState('🪐')
+  const AVATARS = ['🪐', '🌟', '⭐', '🌙', '☀️', '🚀', '🛸', '🎮', '🎯', '🏆', '🥇', '👑', '💎', '🔮', '🧠', '🐱', '🦊', '🦁', '🐼', '🦄', '🐙', '🦋', '🌸', '🌺', '🌻', '🧙', '🧛', '🦸', '🥷', '👽', '🤖', '🎃', '👻', '🦖', '🐉', '🔥', '💫', '✨', '🪄', '🎭', '🎪', '🎨']
   const [displayName, setDisplayName] = useState('')
 
   // battles
@@ -177,7 +178,7 @@ export default function App() {
   const [battleSuddenDeath, setBattleSuddenDeath] = useState(true)
 
   // Daily Challenge state
-  const [dailyChallenge, setDailyChallenge] = useState<{ questions: any[]; idx: number; lives: number; completed: boolean; rewardClaimed: boolean } | null>(null)
+  const [dailyChallenge, setDailyChallenge] = useState<{ questions: any[]; idx: number; lives: number; completed: boolean; rewardClaimed: boolean; correctCount: number } | null>(null)
   const [dcAnswered, setDcAnswered] = useState(false)
   const [dcFeedback, setDcFeedback] = useState<{ correct: boolean; correctIndex: number } | null>(null)
   const [dcSelected, setDcSelected] = useState<number | null>(null)
@@ -1234,7 +1235,7 @@ export default function App() {
                 </button>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2">
-                {['🪐', '🚀', '👽', '⭐', '🌙', '🛰️'].map((a) => (
+                {AVATARS.slice(0, 24).map((a) => (
                   <button
                     key={a}
                     className={`rounded-2xl px-3 py-3 text-xl ring-1 ring-white/10 ${avatar === a ? 'bg-[#1CB0F6]/40' : 'bg-white/5 hover:bg-white/10'}`}
@@ -1870,14 +1871,14 @@ export default function App() {
                       if (lessonsQs.length) qs.push(lessonsQs[Math.floor(Math.random() * lessonsQs.length)])
                     } catch { /* skip */ }
                   }
-                  setDailyChallenge({ questions: qs.slice(0, 5), idx: 0, lives: 3, completed: false, rewardClaimed: false })
+                  setDailyChallenge({ questions: qs.slice(0, 3), idx: 0, lives: 3, completed: false, rewardClaimed: false, correctCount: 0 })
                   setDcAnswered(false); setDcFeedback(null); setDcSelected(null)
                 }}
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-black text-slate-900">🏆 RETO DIARIO</div>
-                    <div className="mt-1 text-xs font-bold text-slate-800">5 preguntas · 3 vidas · Bonus XP</div>
+                    <div className="mt-1 text-xs font-bold text-slate-800">3 preguntas · mín 2 correctas · XP</div>
                   </div>
                   <div className="text-3xl">🔥</div>
                 </div>
@@ -1916,7 +1917,7 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-                <div className="mt-1 text-xs text-slate-300">Pregunta {dailyChallenge.idx + 1}/5</div>
+                <div className="mt-1 text-xs text-slate-300">Pregunta {dailyChallenge.idx + 1}/3</div>
                 {dailyChallenge.questions[dailyChallenge.idx] ? (
                   <div className="mt-3">
                     <div className="text-sm font-bold text-white">{dailyChallenge.questions[dailyChallenge.idx].prompt || dailyChallenge.questions[dailyChallenge.idx].question}</div>
@@ -1940,7 +1941,9 @@ export default function App() {
                                 setDcSelected(oi)
                                 setDcFeedback({ correct: oi === correctIndex, correctIndex })
                                 setDcAnswered(true)
-                                if (oi !== correctIndex) {
+                                if (oi === correctIndex) {
+                                  setDailyChallenge((d: any) => ({ ...d, correctCount: (d.correctCount || 0) + 1 }))
+                                } else {
                                   setDailyChallenge((d: any) => ({ ...d, lives: d.lives - 1 }))
                                 }
                               }}
@@ -1956,7 +1959,7 @@ export default function App() {
                         className="mt-3 w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
                         onClick={() => {
                           const next = dailyChallenge.idx + 1
-                          if (next >= 5 || dailyChallenge.lives <= 0) {
+                          if (next >= 3 || dailyChallenge.lives <= 0) {
                             setDailyChallenge((d: any) => ({ ...d, completed: true }))
                           } else {
                             setDailyChallenge((d: any) => ({ ...d, idx: next }))
