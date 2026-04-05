@@ -511,10 +511,10 @@ export type BattleRoom = {
   missionId?: string
   // Teams (dinámico: A, B, C, D)
   teams?: {
-    A?: { teamId: string; members: string[]; name?: string }
-    B?: { teamId: string; members: string[]; name?: string }
-    C?: { teamId: string; members: string[]; name?: string }
-    D?: { teamId: string; members: string[]; name?: string }
+    A?: { teamId: string; members: string[]; name?: string; leader?: string }
+    B?: { teamId: string; members: string[]; name?: string; leader?: string }
+    C?: { teamId: string; members: string[]; name?: string; leader?: string }
+    D?: { teamId: string; members: string[]; name?: string; leader?: string }
   }
   // Host control
   hostUserId?: string
@@ -581,7 +581,7 @@ export async function createBattleRoom(params: {
     suddenDeath,
     missionId: stableMissionId(subject, ref.id),
     teams: {
-      A: { teamId: params.teamId, members: [params.userId] },
+      A: { teamId: params.teamId, members: [params.userId], leader: params.userId },
       // otros equipos se agregan cuando alguien se une
     },
     hostUserId: params.userId,
