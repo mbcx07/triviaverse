@@ -70,9 +70,9 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
             <div className="flex justify-between items-center">
               <div>
                 <div className="font-bold text-white text-lg">Semanal</div>
-                <div className="text-slate-400 text-sm">7 días gratis, luego $40 MXN/semana</div>
+                <div className="text-slate-400 text-sm">7 días gratis, luego $10 MXN/semana</div>
               </div>
-              <div className="text-2xl font-black text-white">$40</div>
+              <div className="text-2xl font-black text-white">$10</div>
             </div>
           </button>
           
@@ -91,11 +91,10 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
             <div className="flex justify-between items-center">
               <div>
                 <div className="font-bold text-white text-lg">Mensual</div>
-                <div className="text-slate-400 text-sm">7 días gratis, luego $120 MXN/mes</div>
+                <div className="text-slate-400 text-sm">7 días gratis, luego $40 MXN/mes</div>
               </div>
-              <div className="text-2xl font-black text-white">$120</div>
+              <div className="text-2xl font-black text-white">$40</div>
             </div>
-            <div className="text-green-400 text-sm mt-1">¡Ahorra $40 vs semanal!</div>
           </button>
         </div>
         

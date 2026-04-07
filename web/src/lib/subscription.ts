@@ -45,12 +45,12 @@ export const PREMIUM_FEATURES = {
 // Pricing (MXN)
 export const PRICING = {
   premium_weekly: {
-    price: 40, // MXN
+    price: 10, // MXN
     currency: 'MXN',
     trialDays: 7,
   },
   premium_monthly: {
-    price: 120, // MXN
+    price: 40, // MXN
     currency: 'MXN',
     trialDays: 7,
   },
