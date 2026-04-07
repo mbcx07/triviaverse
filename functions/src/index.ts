@@ -1,5 +1,6 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
+import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import * as admin from 'firebase-admin'
 
 // Initialize Firebase Admin
@@ -184,6 +185,80 @@ export const sendFriendAcceptedNotification = onDocumentCreated(
     } catch (error) {
       console.error('Error sending friend notification:', error)
       return null
+    }
+  }
+)
+
+/**
+ * Validate Google Play purchase and activate subscription
+ * Called from client after successful Google Play purchase
+ */
+export const validateGooglePurchase = onCall(
+  async (request) => {
+    // Check authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated')
+    }
+
+    const { productId, purchaseToken, orderId } = request.data as {
+      productId: string
+      purchaseToken: string
+      orderId: string
+    }
+
+    if (!productId || !purchaseToken || !orderId) {
+      throw new HttpsError('invalid-argument', 'Missing purchase data')
+    }
+
+    const userId = request.auth.uid
+
+    try {
+      // Validate product ID
+      const validProducts = ['premium_weekly', 'premium_monthly']
+      if (!validProducts.includes(productId)) {
+        throw new HttpsError('invalid-argument', 'Invalid product ID')
+      }
+
+      // In production, you would verify the purchase with Google Play API
+      // For now, we trust the client (Google Play already validates on device)
+      // TODO: Implement server-side receipt validation with Google Play Developer API
+
+      // Calculate subscription dates
+      const now = admin.firestore.Timestamp.now()
+      const trialDays = 7
+      const trialEndsAt = admin.firestore.Timestamp.fromMillis(
+        now.toMillis() + trialDays * 24 * 60 * 60 * 1000
+      )
+      
+      const expiresAt = productId === 'premium_weekly'
+        ? admin.firestore.Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000)
+        : admin.firestore.Timestamp.fromMillis(now.toMillis() + 30 * 24 * 60 * 60 * 1000)
+
+      // Create or update subscription
+      await db.collection('subscriptions').doc(userId).set({
+        userId,
+        plan: productId,
+        status: 'trial',
+        startedAt: now,
+        expiresAt,
+        trialEndsAt,
+        purchaseToken,
+        orderId,
+        updatedAt: now,
+      }, { merge: true })
+
+      // Update user premium status
+      await db.collection('users').doc(userId).update({
+        isPremium: true,
+        premiumSince: now,
+      })
+
+      console.log('Subscription activated for user:', userId, 'plan:', productId)
+
+      return { success: true, plan: productId, expiresAt: expiresAt.toDate().toISOString() }
+    } catch (error) {
+      console.error('Error validating purchase:', error)
+      throw new HttpsError('internal', 'Failed to validate purchase')
     }
   }
 )

@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 import { getAuth, type Auth } from 'firebase/auth'
 import { getMessaging, getToken, onMessage, type Messaging, type MessagePayload } from 'firebase/messaging'
+import { getFunctions, type Functions } from 'firebase/functions'
 
 function optionalEnv(name: string): string | undefined {
   const v = (import.meta as any).env?.[name] as string | undefined
@@ -36,6 +37,7 @@ export const firebaseApp = hasFirebase ? initializeApp(firebaseConfig as any) : 
 export const db: Firestore | null = hasFirebase && firebaseApp ? getFirestore(firebaseApp) : null
 export const auth: Auth | null = hasFirebase && firebaseApp ? getAuth(firebaseApp) : null
 export const messaging: Messaging | null = hasFirebase && firebaseApp ? getMessaging(firebaseApp) : null
+export const functions: Functions | null = hasFirebase && firebaseApp ? getFunctions(firebaseApp) : null
 
 export function assertFirebaseEnabled(): void {
   if (!firebaseEnabled || !db) {
