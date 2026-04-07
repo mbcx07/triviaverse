@@ -1,0 +1,26 @@
+{
+  "projectId": "triviverso-twa",
+  "appName": "Triviverso",
+  "packageName": "com.triviverso.app",
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "minSdkVersion": 19,
+  "host": "mbcx07.github.io",
+  "startUrl": "/triviaverse/",
+  "displayMode": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#10b981",
+  "backgroundColor": "#1a0b3b",
+  "iconUrl": "https://mbcx07.github.io/triviaverse/pwa-512x512.png",
+  "webManifestUrl": "https://mbcx07.github.io/triviaverse/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "signingConfig": {
+    "keyAlias": "triviverso",
+    "keyPassword": "triviverso123",
+    "storePassword": "triviverso123"
+  },
+  "features": {
+    "locationDelegation": { "enabled": false },
+    "playBilling": { "enabled": false }
+  }
+}

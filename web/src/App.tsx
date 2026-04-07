@@ -2375,30 +2375,60 @@ export default function App() {
                       </button>
                     )}
                     {showBattleResults && battleFinalResults && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-                        <div className="w-full max-w-md animate-bounce-in rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20">
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 overflow-hidden">
+                        {/* Confetti effect */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          {[...Array(20)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="absolute w-3 h-3 rounded-full"
+                              style={{
+                                left: `${Math.random() * 100}%`,
+                                backgroundColor: ['#FFD700', '#1CB0F6', '#58CC02', '#FF4D4D', '#7C4DFF'][i % 5],
+                                animationDelay: `${Math.random() * 2}s`,
+                              }}
+                            >
+                              <div className="confetti w-full h-full rounded-full" />
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20">
                           <div className="text-center">
-                            <div className="text-2xl font-black text-white">🏆 ¡Fin de la Batalla!</div>
+                            {/* Crown for winner */}
+                            {battleFinalResults.teams[0] && (
+                              <div className="crown-animation text-6xl mb-2">👑</div>
+                            )}
+                            <div className="text-2xl font-black text-white mb-4">🏆 ¡Fin de la Batalla!</div>
+                            
                             <div className="mt-6 space-y-3">
-                              {battleFinalResults.teams.map((team: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }, idx: number) => (
-                                <div key={team.id} className={`flex items-center gap-3 rounded-2xl p-3 ${idx === 0 ? 'bg-[#FFD700]/20 ring-2 ring-[#FFD700]' : idx === 1 ? 'bg-[#C0C0C0]/20 ring-2 ring-[#C0C0C0]' : idx === 2 ? 'bg-[#CD7F32]/20 ring-2 ring-[#CD7F32]' : 'bg-white/5 ring-1 ring-white/10'}`}>
-                                  <div className="text-3xl">
-                                    {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="font-bold text-white">{team.name}</div>
-                                    <div className="flex -space-x-1">
-                                      {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }) => (
-                                        <span key={m.id} className="rounded-full bg-slate-800 p-1 text-sm ring-2 ring-slate-900">{m.avatar}</span>
-                                      ))}
+                              {battleFinalResults.teams.map((team: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }, idx: number) => {
+                                const podiumClass = idx === 0 ? 'podium-1st' : idx === 1 ? 'podium-2nd' : idx === 2 ? 'podium-3rd' : 'podium-4th'
+                                const bgClass = idx === 0 ? 'bg-gradient-to-r from-[#FFD700]/30 to-[#FFA500]/20 ring-2 ring-[#FFD700]' : idx === 1 ? 'bg-[#C0C0C0]/20 ring-2 ring-[#C0C0C0]' : idx === 2 ? 'bg-[#CD7F32]/20 ring-2 ring-[#CD7F32]' : 'bg-white/5 ring-1 ring-white/10'
+                                
+                                return (
+                                  <div
+                                    key={team.id}
+                                    className={`flex items-center gap-3 rounded-2xl p-4 ${bgClass} ${podiumClass}`}
+                                  >
+                                    <div className="text-4xl">
+                                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-bold text-white text-lg">{team.name}</div>
+                                      <div className="flex -space-x-2">
+                                        {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }) => (
+                                          <span key={m.id} className="rounded-full bg-slate-800 p-1.5 text-lg ring-2 ring-slate-900">{m.avatar}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-3xl font-black text-white">{team.score}</div>
+                                      <div className="text-xs text-slate-400">puntos</div>
                                     </div>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="text-2xl font-black text-white">{team.score}</div>
-                                    <div className="text-xs text-slate-400">puntos</div>
-                                  </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
                             <div className="mt-6 grid grid-cols-2 gap-3">
                               <button
