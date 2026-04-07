@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './lib/useAuth'
 import { useFCM } from './lib/useFCM'
 import { getProfileByUid, createProfileFromFirebase } from './lib/auth'
+import { SubscriptionModal } from './components/SubscriptionModal'
 
 
 import {
@@ -145,6 +146,7 @@ export default function App() {
   const [newUserNickname, setNewUserNickname] = useState('')
   const [creatingProfile, setCreatingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [oldPin, setOldPin] = useState('')
   const [newPin, setNewPin] = useState('')
 
@@ -1394,8 +1396,30 @@ export default function App() {
 
               <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano.</div>
             </form>
+
+            {/* Premium Button */}
+            <div className="mt-4">
+              <button
+                className="w-full rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] px-4 py-3 font-black text-slate-900 hover:opacity-90 transition-opacity"
+                onClick={() => setShowPremiumModal(true)}
+              >
+                👑 Premium
+              </button>
+            </div>
           </div>
         ) : null}
+
+        {/* Premium Modal */}
+        {showPremiumModal && (
+          <SubscriptionModal
+            onClose={() => setShowPremiumModal(false)}
+            onPurchase={async (productId) => {
+              console.log('Purchase:', productId)
+              // TODO: Implement actual Google Play Billing
+              setShowPremiumModal(false)
+            }}
+          />
+        )}
 
         {!user ? (
           <div className="rounded-3xl bg-black/25 p-6 ring-1 ring-white/10">
