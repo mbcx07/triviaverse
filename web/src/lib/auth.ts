@@ -253,3 +253,40 @@ function normalize(s: string) {
     .replace(/\p{Diacritic}/gu, '')
     .replace(/\s+/g, ' ')
 }
+
+/**
+ * Saves FCM token to user profile
+ */
+export async function saveUserFCMToken(
+  firebaseUid: string,
+  fcmToken: string
+): Promise<void> {
+  assertFirebaseEnabled()
+  const dbi = db!
+
+  const profile = await getProfileByUid(firebaseUid)
+  if (!profile) throw new Error('Usuario no encontrado.')
+
+  const userRef = doc(dbi, 'users', profile.id)
+  await updateDoc(userRef, {
+    fcmToken,
+    fcmTokenUpdatedAt: serverTimestamp(),
+  })
+}
+
+/**
+ * Removes FCM token from user profile (on logout)
+ */
+export async function removeUserFCMToken(firebaseUid: string): Promise<void> {
+  assertFirebaseEnabled()
+  const dbi = db!
+
+  const profile = await getProfileByUid(firebaseUid)
+  if (!profile) return
+
+  const userRef = doc(dbi, 'users', profile.id)
+  await updateDoc(userRef, {
+    fcmToken: null,
+    fcmTokenUpdatedAt: serverTimestamp(),
+  })
+}

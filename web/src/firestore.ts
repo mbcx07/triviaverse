@@ -982,3 +982,17 @@ export async function leaveBattleRoom(params: { roomId: string; userId: string }
     tx.set(ref, { teams }, { merge: true })
   })
 }
+
+// --- FCM Token Management ---
+
+export async function saveFCMToken(params: { userId: string; fcmToken: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', params.userId)
+  await updateDoc(ref, { fcmToken: params.fcmToken, fcmTokenUpdatedAt: serverTimestamp() })
+}
+
+export async function removeFCMToken(params: { userId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', params.userId)
+  await updateDoc(ref, { fcmToken: null, fcmTokenUpdatedAt: serverTimestamp() })
+}

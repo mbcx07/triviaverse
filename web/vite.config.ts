@@ -43,6 +43,12 @@ export default defineConfig({
           },
         ],
       },
+      workbox: {
+        // Import the FCM service worker
+        additionalManifestEntries: [
+          { url: 'firebase-messaging-sw.js', revision: null },
+        ],
+      },
     }),
   ],
 })
