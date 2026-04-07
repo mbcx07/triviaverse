@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './lib/useAuth'
+import { useFCM } from './lib/useFCM'
 import { getProfileByUid, createProfileFromFirebase } from './lib/auth'
 
 
@@ -139,6 +140,7 @@ export default function App() {
 
   // Firebase Auth
   const { user: firebaseUser, signInWithGoogle } = useAuth()
+  const { requestPermission: requestFCMPermission } = useFCM(firebaseUser)
   const [showCreateProfile, setShowCreateProfile] = useState(false)
   const [newUserNickname, setNewUserNickname] = useState('')
   const [creatingProfile, setCreatingProfile] = useState(false)
@@ -1503,7 +1505,10 @@ export default function App() {
                 className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 font-semibold text-slate-900 hover:bg-slate-100"
                 onClick={async () => {
                   const result = await signInWithGoogle()
-                  if (!result) {
+                  if (result) {
+                    // Request FCM permission after successful login
+                    requestFCMPermission()
+                  } else {
                     setError('No se pudo iniciar sesión con Google.')
                   }
                 }}
