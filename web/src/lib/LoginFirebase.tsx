@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useAuth } from './useAuth'
 import {
   createProfileFromFirebase,
-  migratePinUserToFirebase,
   getProfileByUid,
 } from './auth'
 import type { UserProfile } from './auth'
@@ -13,30 +12,20 @@ interface LoginFirebaseProps {
 
 export function LoginFirebase({ onLogin }: LoginFirebaseProps) {
   const { user, loading, error, signInWithGoogle, clearError } = useAuth()
-  const [mode, setMode] = useState<'choose' | 'new' | 'migrate'>('choose')
   const [nickname, setNickname] = useState('')
-  const [pin, setPin] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   // When Firebase auth completes, get/create profile
-  if (user && !loading && mode !== 'choose') {
+  if (user && !loading && nickname === '' && !submitting) {
     ;(async () => {
       try {
-        let profile: UserProfile | null = null
-
-        if (mode === 'new') {
-          profile = await createProfileFromFirebase(user, nickname)
-        } else if (mode === 'migrate') {
-          profile = await migratePinUserToFirebase(user, nickname, pin)
-        }
-
-        if (profile) {
-          onLogin(profile)
+        const existingProfile = await getProfileByUid(user.uid)
+        if (existingProfile) {
+          onLogin(existingProfile)
         }
       } catch (err: any) {
-        setLocalError(err.message)
-        setSubmitting(false)
+        console.error('Error checking profile:', err)
       }
     })()
   }
@@ -50,35 +39,28 @@ export function LoginFirebase({ onLogin }: LoginFirebaseProps) {
       const existingProfile = await getProfileByUid(result.user.uid)
       if (existingProfile) {
         onLogin(existingProfile)
-      } else {
-        // New user, need to choose nickname
-        setMode('new')
       }
+      // If no profile, show nickname form (handled below)
     }
   }
 
-  const handleNewUser = async () => {
+  const handleCreateProfile = async () => {
+    if (!user) return
     if (!nickname.trim()) {
       setLocalError('Ingresa un nickname.')
       return
     }
     setSubmitting(true)
     setLocalError(null)
-    // The profile will be created when user becomes available
-  }
-
-  const handleMigrate = async () => {
-    if (!nickname.trim()) {
-      setLocalError('Ingresa tu nickname existente.')
-      return
+    try {
+      const profile = await createProfileFromFirebase(user, nickname)
+      if (profile) {
+        onLogin(profile)
+      }
+    } catch (err: any) {
+      setLocalError(err.message)
+      setSubmitting(false)
     }
-    if (!pin.match(/^\d{4}$/)) {
-      setLocalError('El PIN debe ser 4 dígitos.')
-      return
-    }
-    setSubmitting(true)
-    setLocalError(null)
-    // The migration will happen when user becomes available
   }
 
   if (loading) {
@@ -89,19 +71,13 @@ export function LoginFirebase({ onLogin }: LoginFirebaseProps) {
     )
   }
 
-  // Already logged in via Firebase but need to complete profile
-  if (user && (mode === 'new' || mode === 'migrate') && !submitting) {
+  // User authenticated but needs to choose nickname
+  if (user && !submitting) {
     return (
       <div className="rounded-2xl bg-slate-950/30 p-4 ring-1 ring-white/10">
         <div className="mb-4 text-center text-lg font-bold">
-          {mode === 'new' ? 'Elige tu nickname' : 'Vincula tu cuenta'}
+          Elige tu nickname
         </div>
-
-        {mode === 'migrate' && (
-          <div className="mb-3 text-center text-sm text-slate-300">
-            Ingresa tu nickname y PIN existentes para migrar tu progreso.
-          </div>
-        )}
 
         {localError && (
           <div className="mb-3 rounded-xl bg-rose-950/40 p-3 text-sm text-rose-200">
@@ -117,28 +93,15 @@ export function LoginFirebase({ onLogin }: LoginFirebaseProps) {
             onChange={(e) => setNickname(e.target.value)}
             placeholder="TuNombre"
             maxLength={20}
+            autoFocus
           />
         </label>
-
-        {mode === 'migrate' && (
-          <label className="mb-3 block">
-            <div className="mb-1 text-xs text-slate-300">PIN (4 dígitos)</div>
-            <input
-              className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="1234"
-              inputMode="numeric"
-              maxLength={4}
-            />
-          </label>
-        )}
 
         <div className="flex gap-2">
           <button
             className="flex-1 rounded-xl bg-slate-800 px-4 py-2 font-semibold hover:bg-slate-700"
             onClick={() => {
-              setMode('choose')
+              setNickname('')
               setLocalError(null)
             }}
           >
@@ -146,16 +109,16 @@ export function LoginFirebase({ onLogin }: LoginFirebaseProps) {
           </button>
           <button
             className="flex-1 rounded-xl bg-[#1CB0F6] px-4 py-2 font-semibold hover:bg-[#35C6FF]"
-            onClick={mode === 'new' ? handleNewUser : handleMigrate}
+            onClick={handleCreateProfile}
           >
-            {mode === 'new' ? 'Crear perfil' : 'Vincular'}
+            Crear perfil
           </button>
         </div>
       </div>
     )
   }
 
-  // Choose login method
+  // Google Sign-In only
   return (
     <div className="space-y-4">
       {(error || localError) && (
@@ -187,22 +150,6 @@ export function LoginFirebase({ onLogin }: LoginFirebaseProps) {
           />
         </svg>
         <span className="font-semibold">Continuar con Google</span>
-      </button>
-
-      <div className="text-center text-sm text-slate-400">— o —</div>
-
-      <button
-        className="w-full rounded-2xl bg-slate-800 px-4 py-3 font-semibold text-white hover:bg-slate-700"
-        onClick={() => setMode('migrate')}
-      >
-        Migrar cuenta existente (PIN)
-      </button>
-
-      <button
-        className="w-full rounded-2xl bg-slate-800 px-4 py-3 font-semibold text-white hover:bg-slate-700"
-        onClick={() => setMode('new')}
-      >
-        Crear cuenta nueva (Google)
       </button>
     </div>
   )

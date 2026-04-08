@@ -619,8 +619,24 @@ export async function joinBattleRoom(params: { roomId: string; userId: string; t
       if (members.length >= maxPerTeam) {
         throw new Error('Equipo lleno.')
       }
+      
+      // Remover usuario de cualquier otro equipo primero
+      const updatedTeams: any = {}
+      for (const key of ['A', 'B', 'C', 'D'] as const) {
+        const t = teams[key] as any
+        const m = Array.isArray(t?.members) ? t.members.map(String) : []
+        if (m.includes(params.userId) && key !== params.teamKey) {
+          updatedTeams[key] = { 
+            teamId: t?.teamId || `team-${key}`, 
+            members: m.filter(id => id !== params.userId) 
+          }
+        }
+      }
+      
+      // Agregar al nuevo equipo
       members.push(params.userId)
-      tx.set(ref, { teams: { [params.teamKey]: { teamId: params.teamId || `team-${params.teamKey}`, members } } }, { merge: true })
+      updatedTeams[params.teamKey] = { teamId: params.teamId || `team-${params.teamKey}`, members }
+      tx.set(ref, { teams: updatedTeams }, { merge: true })
       return
     }
 
