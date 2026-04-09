@@ -628,7 +628,7 @@ export async function joinBattleRoom(params: { roomId: string; userId: string; t
         if (m.includes(params.userId) && key !== params.teamKey) {
           updatedTeams[key] = { 
             teamId: t?.teamId || `team-${key}`, 
-            members: m.filter(id => id !== params.userId) 
+            members: m.filter((id: string) => id !== params.userId) 
           }
         }
       }
