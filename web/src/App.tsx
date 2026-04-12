@@ -764,8 +764,16 @@ export default function App() {
         const lessonId = `${randomSubject}-${randomLevel}`
         subscribeLessonQuestions(lessonId, (qs) => {
           if (qs.length > 0) {
-            // Add one sudden death question
-            setBattleQuestions(prev => [...prev, qs[Math.floor(Math.random() * qs.length)]])
+            // Filtrar preguntas simples y agregar una de sudden death
+            const filtered = qs.filter(q => {
+              const prompt = (q.prompt || '').toLowerCase()
+              return !prompt.includes('inicia con') && 
+                     !prompt.includes('termina con') && 
+                     !prompt.includes('empieza con') &&
+                     !prompt.includes('comienza con')
+            })
+            const pool = filtered.length > 0 ? filtered : qs
+            setBattleQuestions(prev => [...prev, pool[Math.floor(Math.random() * pool.length)]])
           }
         })
       } else {
@@ -795,7 +803,15 @@ export default function App() {
     if (battleQuestions.length > 0) return // already loaded
     const lessonId = battleRoom.missionId || battleRoom.lessonId || 'mat-1'
     const unsub = subscribeLessonQuestions(lessonId, (qs) => {
-      setBattleQuestions(qs)
+      // Filtrar preguntas simples: "inicia con", "termina con", "empieza con"
+      const filtered = qs.filter(q => {
+        const prompt = (q.prompt || '').toLowerCase()
+        return !prompt.includes('inicia con') && 
+               !prompt.includes('termina con') && 
+               !prompt.includes('empieza con') &&
+               !prompt.includes('comienza con')
+      })
+      setBattleQuestions(filtered.length > 0 ? filtered : qs)
       setBattleIdx(0)
     })
     return unsub
