@@ -226,6 +226,7 @@ export default function App() {
     setBattleResults((prev) => ({ ...prev, [questionId]: wasCorrect }))
     setBattleFeedback(wasCorrect ? { ok: 1 } : { ok: 0, correct: correctIndex })
     setBattleAnswered(true)
+    setShowQuestionResults(true)
     
     // Update local score
     const currentScore = battleRoom.scores?.[user.id]
@@ -2377,7 +2378,7 @@ export default function App() {
                         </div>
                       </div>
                     )}
-                    {battleAnswered && !battleSuddenDeathActive && (
+                    {showQuestionResults && battleFeedback && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
                           // Calculate and show results
@@ -2389,10 +2390,10 @@ export default function App() {
                           setBattleIdx(battleIdx + 1)
                           setBattleAnswered(false)
                           setBattleFeedback(null)
-    setShowQuestionResults(false)
+                          setShowQuestionResults(false)
                           setBattleConfirmed(false)
                           setBattleVotes({})
-    setMyBattleVote(null)
+                          setMyBattleVote(null)
                         }
                       }}>
                         {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Ver Resultados' : 'Siguiente'}
