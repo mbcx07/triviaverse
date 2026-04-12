@@ -581,8 +581,10 @@ export async function createBattleRoom(params: {
     suddenDeath,
     missionId: stableMissionId(subject, ref.id),
     teams: {
-      A: { teamId: params.teamId, members: [params.userId], leader: params.userId },
-      // otros equipos se agregan cuando alguien se une
+      A: { teamId: 'A', members: [params.userId], leader: params.userId },
+      B: { teamId: 'B', members: [], leader: '' },
+      C: teamCount >= 3 ? { teamId: 'C', members: [], leader: '' } : undefined as any,
+      D: teamCount >= 4 ? { teamId: 'D', members: [], leader: '' } : undefined as any,
     },
     hostUserId: params.userId,
     hostTeamId: params.teamId,
