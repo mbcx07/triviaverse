@@ -178,7 +178,7 @@ export default function App() {
   const [myBattleVote, setMyBattleVote] = useState<number | null>(null)
   const [showQuestionResults, setShowQuestionResults] = useState(false)
   const [showBattleResults, setShowBattleResults] = useState(false)
-  const [battleFinalResults, setBattleFinalResults] = useState<{ teams: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[] } | null>(null)
+  const [battleFinalResults, setBattleFinalResults] = useState<{ teams: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[]; hasTie?: boolean; tiedTeamIds?: string[] } | null>(null)
   const [battleSuddenDeathActive, setBattleSuddenDeathActive] = useState(false) // estamos en ronda de muerte súbita
   const [battleSuddenDeathWinner, setBattleSuddenDeathWinner] = useState<string | null>(null) // userId del primero en responder bien
   const [battleSubject, setBattleSubject] = useState('esp')
@@ -2416,56 +2416,126 @@ export default function App() {
                       </button>
                     )}
                     {showBattleResults && battleFinalResults && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 overflow-hidden">
-                        {/* Confetti effect */}
-                        <div className="absolute inset-0 pointer-events-none">
-                          {[...Array(20)].map((_, i) => (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden">
+                        {/* Mario Kart style confetti - more dramatic */}
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                          {[...Array(40)].map((_, i) => (
                             <div
                               key={i}
-                              className="absolute w-3 h-3 rounded-full"
+                              className="absolute"
                               style={{
                                 left: `${Math.random() * 100}%`,
-                                backgroundColor: ['#FFD700', '#1CB0F6', '#58CC02', '#FF4D4D', '#7C4DFF'][i % 5],
-                                animationDelay: `${Math.random() * 2}s`,
+                                top: `-5%`,
+                                animationDelay: `${Math.random() * 3}s`,
+                                animationDuration: `${2 + Math.random() * 2}s`,
                               }}
                             >
-                              <div className="confetti w-full h-full rounded-full" />
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{
+                                  backgroundColor: ['#FFD700', '#1CB0F6', '#58CC02', '#FF4D4D', '#7C4DFF', '#FF69B4', '#00CED1', '#FF6347'][i % 8],
+                                  animation: `confetti-fall ${2 + Math.random() * 2}s ease-in forwards`,
+                                  animationDelay: `${Math.random() * 3}s`,
+                                }}
+                              />
                             </div>
                           ))}
+                          {/* Stars burst for winner */}
+                          {battleFinalResults.teams[0] && (
+                            <>
+                              {[...Array(8)].map((_, i) => (
+                                <div
+                                  key={`star-${i}`}
+                                  className="absolute text-4xl"
+                                  style={{
+                                    left: `${20 + i * 10}%`,
+                                    top: '30%',
+                                    animation: 'star-burst 1s ease-out forwards',
+                                    animationDelay: `${0.5 + i * 0.1}s`,
+                                    opacity: 0,
+                                  }}
+                                >
+                                  ⭐
+                                </div>
+                              ))}
+                            </>
+                          )}
                         </div>
                         
-                        <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20">
+                        <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20 shadow-2xl shadow-[#FFD700]/20">
                           <div className="text-center">
-                            {/* Crown for winner */}
+                            {/* Animated crown for winner - Mario Kart style */}
                             {battleFinalResults.teams[0] && (
-                              <div className="crown-animation text-6xl mb-2">👑</div>
+                              <div className="winner-crown text-7xl mb-1">👑</div>
                             )}
-                            <div className="text-2xl font-black text-white mb-4">🏆 ¡Fin de la Batalla!</div>
+                            <div className="text-2xl font-black text-white mb-4 tracking-wide">
+                              {battleFinalResults.hasTie ? '⚡ ¡EMPATE!' : '🏆 ¡Fin de la Batalla!'}
+                            </div>
                             
+                            {/* Animated ranking - Mario Kart podium style */}
                             <div className="mt-6 space-y-3">
                               {battleFinalResults.teams.map((team: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }, idx: number) => {
-                                const podiumClass = idx === 0 ? 'podium-1st' : idx === 1 ? 'podium-2nd' : idx === 2 ? 'podium-3rd' : 'podium-4th'
-                                const bgClass = idx === 0 ? 'bg-gradient-to-r from-[#FFD700]/30 to-[#FFA500]/20 ring-2 ring-[#FFD700]' : idx === 1 ? 'bg-[#C0C0C0]/20 ring-2 ring-[#C0C0C0]' : idx === 2 ? 'bg-[#CD7F32]/20 ring-2 ring-[#CD7F32]' : 'bg-white/5 ring-1 ring-white/10'
+                                const rankClass = idx === 0 ? 'rank-animation-1' : idx === 1 ? 'rank-animation-2' : idx === 2 ? 'rank-animation-3' : 'rank-animation-4'
+                                const bgClass = idx === 0 
+                                  ? 'bg-gradient-to-r from-[#FFD700]/40 via-[#FFA500]/30 to-[#FFD700]/40 ring-2 ring-[#FFD700] podium-spotlight' 
+                                  : idx === 1 
+                                    ? 'bg-gradient-to-r from-[#C0C0C0]/20 to-[#A8A8A8]/20 ring-2 ring-[#C0C0C0]' 
+                                    : idx === 2 
+                                      ? 'bg-gradient-to-r from-[#CD7F32]/20 to-[#8B4513]/20 ring-2 ring-[#CD7F32]' 
+                                      : 'bg-white/5 ring-1 ring-white/10'
                                 
                                 return (
                                   <div
                                     key={team.id}
-                                    className={`flex items-center gap-3 rounded-2xl p-4 ${bgClass} ${podiumClass}`}
+                                    className={`relative flex items-center gap-3 rounded-2xl p-4 ${bgClass} ${rankClass}`}
                                   >
-                                    <div className="text-4xl">
-                                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}
+                                    {/* Rank position with dramatic styling */}
+                                    <div className="relative">
+                                      <div className={`text-5xl ${idx === 0 ? 'animate-bounce' : ''}`}>
+                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}
+                                      </div>
+                                      {idx === 0 && (
+                                        <div className="absolute -top-1 -right-1 text-xs bg-[#FFD700] text-black rounded-full w-5 h-5 flex items-center justify-center font-black">
+                                          1
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="flex-1">
-                                      <div className="font-bold text-white text-lg">{team.name}</div>
-                                      <div className="flex -space-x-2">
-                                        {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }) => (
-                                          <span key={m.id} className="rounded-full bg-slate-800 p-1.5 text-lg ring-2 ring-slate-900">{m.avatar}</span>
+                                    
+                                    {/* Team info with color accent */}
+                                    <div className="flex-1 min-w-0">
+                                      <div 
+                                        className="font-black text-white text-lg truncate"
+                                        style={{ textShadow: idx === 0 ? '0 0 10px rgba(255,215,0,0.5)' : 'none' }}
+                                      >
+                                        {team.name}
+                                      </div>
+                                      <div className="flex -space-x-2 mt-1">
+                                        {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }, mi: number) => (
+                                          <span 
+                                            key={m.id} 
+                                            className={`rounded-full bg-slate-800 p-1.5 text-lg ring-2 ring-slate-900 ${idx === 0 && mi === 0 ? 'team-avatar-bounce' : ''}`}
+                                            style={{ animationDelay: `${mi * 0.1}s` }}
+                                          >
+                                            {m.avatar}
+                                          </span>
                                         ))}
+                                        {team.members.length > 4 && (
+                                          <span className="rounded-full bg-slate-700 px-2 text-xs font-bold text-white flex items-center">
+                                            +{team.members.length - 4}
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
+                                    
+                                    {/* Score with pop animation for winner */}
                                     <div className="text-right">
-                                      <div className="text-3xl font-black text-white">{team.score}</div>
-                                      <div className="text-xs text-slate-400">puntos</div>
+                                      <div 
+                                        className={`text-4xl font-black ${idx === 0 ? 'text-[#FFD700]' : 'text-white'}`}
+                                        style={{ textShadow: idx === 0 ? '0 0 20px rgba(255,215,0,0.8)' : 'none' }}
+                                      >
+                                        {team.score}
+                                      </div>
+                                      <div className="text-xs text-slate-400 uppercase tracking-wider">pts</div>
                                     </div>
                                   </div>
                                 )

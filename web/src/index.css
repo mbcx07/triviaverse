@@ -175,3 +175,103 @@ button:disabled {
 .star-burst {
   animation: star-burst 1s ease-out forwards;
 }
+
+/* Mario Kart style animations */
+@keyframes rank-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+  60% {
+    transform: translateY(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rank-score-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rank-change {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes countdown-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+@keyframes countdown-burst {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes timer-warning {
+  0%, 100% { color: #FF4D4D; }
+  50% { color: #FFD700; }
+}
+
+@keyframes score-increment {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.2); }
+  100% { transform: translateY(-40px) scale(1); opacity: 0; }
+}
+
+@keyframes podium-spotlight {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes winner-crown {
+  0% { transform: translateY(-100px) rotate(-30deg); opacity: 0; }
+  60% { transform: translateY(10px) rotate(10deg); opacity: 1; }
+  80% { transform: translateY(-5px) rotate(-5deg); }
+  100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+}
+
+@keyframes fireworks {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-200px) scale(0); opacity: 0; }
+}
+
+@keyframes score-bar-grow {
+  0% { width: 0%; }
+  100% { width: var(--score-width, 0%); }
+}
+
+@keyframes team-avatar-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.rank-animation-1 { animation: rank-slide-up 0.6s ease-out forwards; }
+.rank-animation-2 { animation: rank-slide-up 0.6s ease-out 0.15s forwards; opacity: 0; }
+.rank-animation-3 { animation: rank-slide-up 0.6s ease-out 0.3s forwards; opacity: 0; }
+.rank-animation-4 { animation: rank-slide-up 0.6s ease-out 0.45s forwards; opacity: 0; }
+
+.score-pop { animation: rank-score-pop 0.3s ease-out forwards; }
+.rank-change { animation: rank-change 0.5s ease-out forwards; }
+
+.countdown-pulse { animation: countdown-pulse 1s ease-in-out infinite; }
+.countdown-burst { animation: countdown-burst 0.5s ease-out forwards; }
+.timer-warning { animation: timer-warning 0.5s ease-in-out infinite; }
+.score-increment { animation: score-increment 0.8s ease-out forwards; }
+
+.winner-crown { animation: winner-crown 1s ease-out forwards; }
+.podium-spotlight { 
+  background: linear-gradient(90deg, transparent, rgba(255,215,0,0.3), transparent);
+  background-size: 200% 200%;
+  animation: podium-spotlight 2s ease-in-out infinite; 
+}
+
+.score-bar { animation: score-bar-grow 1s ease-out forwards; }
+.team-avatar-bounce { animation: team-avatar-bounce 0.5s ease-in-out infinite; }
