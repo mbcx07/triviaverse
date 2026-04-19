@@ -2094,6 +2094,39 @@ export default function App() {
                           )
                         })}
                       </div>
+                    ) : dailyChallenge.questions[dailyChallenge.idx].type === 'true_false' ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {[['Verdadero', true], ['Falso', false]].map(([label, val], oi) => {
+                          const isSelected = dcSelected === oi
+                          const isCorrect = dailyChallenge.questions[dailyChallenge.idx].answer === val
+                          let cls = 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+                          if (dcAnswered) {
+                            if (isCorrect) cls = 'bg-[#58CC02]/30 ring-[#58CC02] text-[#58CC02]'
+                            else if (isSelected && !isCorrect) cls = 'bg-rose-500/20 ring-rose-500 text-rose-300'
+                          }
+                          return (
+                            <button
+                              key={oi}
+                              className={`rounded-2xl border-b-4 px-4 py-3 text-center text-sm font-black transition-colors ${cls}`}
+                              style={{ borderColor: dcAnswered && isCorrect ? '#46A302' : dcAnswered && isSelected && !isCorrect ? '#be123c' : '#374151' }}
+                              onClick={() => {
+                                if (dcAnswered) return
+                                const correctAnswer = dailyChallenge.questions[dailyChallenge.idx].answer
+                                setDcSelected(oi)
+                                setDcFeedback({ correct: val === correctAnswer, correctIndex: correctAnswer === true ? 0 : 1 })
+                                setDcAnswered(true)
+                                if (val === correctAnswer) {
+                                  setDailyChallenge((d: any) => ({ ...d, correctCount: (d.correctCount || 0) + 1 }))
+                                } else {
+                                  setDailyChallenge((d: any) => ({ ...d, lives: d.lives - 1 }))
+                                }
+                              }}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
                     ) : null}
                     {dcAnswered ? (
                       <button
