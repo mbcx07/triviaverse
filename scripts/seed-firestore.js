@@ -50,13 +50,19 @@ const END = args.to || 100;
 // ─────────────────────────────────────────────────────────────────
 // QUESTION BUILDERS
 // ─────────────────────────────────────────────────────────────────
+let _currentLessonId = '';
+
 function qMC(prompt, options, correctIndex, explanation) {
   const valid = (options || []).filter(o => o !== undefined && String(o).trim() !== '');
   const correct = String(options[correctIndex]);
-  // Randomizar opciones
+  // Deterministic seeded shuffle based on lessonId + prompt
+  let seed = 0;
+  const seedStr = _currentLessonId + prompt;
+  for (let i = 0; i < seedStr.length; i++) seed = ((seed << 5) - seed) + seedStr.charCodeAt(i) | 0;
   const shuffled = [...valid];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const j = seed % (i + 1);
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const newCorrectIndex = shuffled.findIndex(o => String(o) === correct);
@@ -81,19 +87,22 @@ function matQuestions(n) {
   const qs = [];
   const ni = Number(n);
 
-  // Q1: Aritmética — nivel crece con ni
+  // Q1: Aritmética — nivel crece con ni (rangos progresivos)
+  const mathRange = ni <= 10 ? {min:1,max:20} : ni <= 20 ? {min:10,max:50} : ni <= 33 ? {min:20,max:100} : ni <= 50 ? {min:50,max:200} : ni <= 66 ? {min:100,max:500} : {min:200,max:1000};
+  const mathA = mathRange.min + (ni * 7 + 3) % (mathRange.max - mathRange.min + 1);
+  const mathB = mathRange.min + (ni * 13 + 11) % (mathRange.max - mathRange.min + 1);
   if (ni <= 33) {
-    const a = ((ni*7+3)%50)+2, b = ((ni*13+11)%20)+1;
+    const a = mathA, b = ((ni*13+11)%20)+1;
     qs.push(qMC(`¿Cuánto es ${a} + ${b}?`, [String(a+b), String(a+b+2), String(a+b-2), String(a+b+5)], 0, `${a}+${b}=${a+b}`));
     const mult = [2,3,4,5][(ni*3)%4];
     qs.push(qMC(`¿Cuánto es ${a} × ${mult}?`, [String(a*mult), String(a*mult+mult), String(a*mult-mult), String(a*mult+1)], 0, `${a}×${mult}=${a*mult}`));
   } else if (ni <= 66) {
-    const a = ((ni*7)%100)+10, b = ((ni*11)%50)+5;
+    const a = mathA, b = mathB;
     qs.push(qMC(`¿Cuánto es ${a} − ${b}?`, [String(a-b), String(a-b+3), String(a-b-3), String(a+b)], 0, `${a}−${b}=${a-b}`));
     const mult = [2,3,4,5,6,7,8,9,10][(ni*3)%9];
     qs.push(qMC(`¿Cuánto es ${a} × ${mult}?`, [String(a*mult), String(a*mult+mult), String(a*mult-mult), String(a*mult+1)], 0, `${a}×${mult}=${a*mult}`));
   } else {
-    const a = ((ni*7)%500)+100, b = ((ni*11)%200)+50;
+    const a = mathA, b = mathB;
     qs.push(qMC(`¿Cuánto es ${a} + ${b}?`, [String(a+b), String(a+b+1), String(a+b-1), String(a+b+2)], 0, `${a}+${b}=${a+b}`));
     const mult = [6,7,8,9,10,11,12][(ni*5)%7];
     qs.push(qMC(`¿Cuánto es ${a} ÷ ${mult}? (cociente entero)`, [String(Math.floor(a/mult)), String(Math.floor(a/mult)+1), String(Math.floor(a/mult)-1), String(Math.ceil(a/mult))], 0, `${a}÷${mult}=cociente ${Math.floor(a/mult)}, residuo ${a%mult}`));
@@ -201,6 +210,13 @@ function matQuestions(n) {
 // SPANISH — SEP 5º-6º
 // ─────────────────────────────────────────────────────────────────
 const ESP_NOUNS   = ['gato','perro','libro','casa','agua','árbol','sol','luna','pan','luz','mesa','silla','flor','pez','ave','fuego','aire','tierra','ojos','manos','ciudad','escuela','niño','niña','padre','madre','amigo'];
+const ESP_SYNONYMS = {
+  gato:'felino',perro:'canino',libro:'texto',casa:'hogar',agua:'líquido',árbol:'planta',
+  sol:'estrella',luna:'satélite',pan:'alimento',luz:'iluminación',mesa:'tabla',silla:'asiento',
+  flor:'botón',pez:'animal acuático',ave:'pájaro',fuego:'llama',aire:'brisa',tierra:'suelo',
+  ojos:'vista',manos:'extremidades',ciudad:'urbe',escuela:'colegio',niño:'chico',
+  niña:'chica',padre:'progenitor',madre:'progenitora',amigo:'compañero'
+};
 const ESP_VERBS   = ['corre','salta','come','duerme','habla','lee','escribe','canta','baila','trabaja','estudia','vive','siente','piensa','camina','mira','escucha','juega','ama','crece','viaja','cocina','limpia','dibuja','construye','explica'];
 const ESP_ADJS    = ['grande','pequeño','alto','bajo','feliz','triste','bonito','amable','fuerte','nuevo','blanco','negro','rojo','azul','verde','amargo','dulce','ligero','pesado','blando','veloz','valiente','inteligente','generoso','honesto'];
 const ESP_ARTS    = ['el','la','un','una','los','las'];
@@ -228,13 +244,13 @@ function espQuestions(n) {
 
   // Q2: Puntuación y ortografía
   if (ni <= 33) {
-    qs.push(qMC(`¿Qué signo lleva la oración "El perro maulló"?`, ['Punto','Coma','Signo de interrogación','Dos puntos'], 0, `Las oraciones enunciativas (afirman un hecho) terminan con punto (.).`));
-    qs.push(qMC(`"¿Cuándo llegas?" inicia con...`, ['Signo de interrogación (¿)','Exclamación (¡)','Coma (,)','Punto y coma (;)'], 0, `En español, las preguntas usan ¿ al inicio y ? al final.`));
+    qs.push(qMC(`¿Qué tipo de oración es "El perro maulló"?`, ['Enunciativa (afirma un hecho)','Interrogativa (pregunta)','Imperativa (ordena)','Exclamativa (expresa emoción)'], 0, `"El perro maulló" afirma un hecho: es enunciativa y termina con punto.`));
+    qs.push(qMC(`"¿Cuándo llegas?" es una oración...`, ['Interrogativa directa','Enunciativa','Imperativa','Desiderativa'], 0, `Las preguntas con ¿? son interrogativas directas.`));
   } else if (ni <= 66) {
     qs.push(qMC(`"Llegó tarde; por eso no entró." La punto y coma indica...`, ['Causa o consecuencia','Tiempo','Lugar','Contraste'], 0, `Punto y coma + "por eso/pero" indica consecuencia o contraste entre oraciones.`));
     qs.push(qMC(`¿En qué tipo de palabra se coloca tilde diacrítica?`, ['Pronombres (él, tú, mí)','Sustantivos','Adjetivos','Verbos'], 0, `Tilde diacrítica: él/elle, tú/tu, mí/mi, qué/que, cómo/como, etc. Distinguen significado o función.`));
   } else {
-    qs.push(qMC(`"Fue al mercado y compró frutas." ¿Dónde lleva coma?`, ['Después de "mercado"','Antes de "y"','No lleva coma','Antes de "frutas"'], 0, `Se usa coma antes de "y" cuando une oraciones completas: "Fue al mercado, y compró frutas."`));
+    qs.push(qMC(`"Fue al mercado y compró frutas." ¿Dónde lleva coma?`, ['No lleva coma','Después de "mercado"','Antes de "y"','Antes de "frutas"'], 0, `Cuando el verbo tiene el mismo sujeto, no se separa con coma antes de 'y'.`));
     qs.push(qMC(`¿"Periódico" y "periódico" (verbo) son palabras...`, ['Homónimas (igual sonido, distinto significado)','Sinónimas','Antónimas','Agudas'], 0, `"Periódico" (sustantivo: diario) vs "periódico" (verbo pasar): homónimas.`));
   }
 
@@ -277,7 +293,11 @@ function espQuestions(n) {
   // Q6: Vocabulario — sinónimos, antónimos, homónimos
   if (ni <= 33) {
     const syn = ESP_NOUNS[(ni*5)%ESP_NOUNS.length];
-    qs.push(qMC(`Sinónimo de "${syn}"`, [ESP_NOUNS[(ni*5+3)%ESP_NOUNS.length],ESP_VERBS[(ni*5+1)%ESP_VERBS.length],ESP_ADJS[(ni*5+2)%ESP_ADJS.length],ESP_PREPS[(ni*5+4)%ESP_PREPS.length]], 0, `Sinónimo: palabra con significado parecido o igual al original.`));
+    const synCorrect = ESP_SYNONYMS[syn] || syn;
+    const synWrong1 = ESP_ADJS[(ni*5+2)%ESP_ADJS.length];
+    const synWrong2 = ESP_VERBS[(ni*5+1)%ESP_VERBS.length];
+    const synWrong3 = ESP_NOUNS[(ni*5+7)%ESP_NOUNS.length];
+    qs.push(qMC(`Sinónimo de "${syn}"`, [synCorrect,synWrong1,synWrong2,synWrong3], 0, `"${synCorrect}" es sinónimo de "${syn}": tienen significado parecido.`));
     qs.push(qMC(`Antónimo de "subir"`, ['Bajar','Correr','Volar','Saltar'], 0, `Subir ↔ Bajar: antonimos de dirección vertical.`));
   } else if (ni <= 66) {
     qs.push(qMC(`Antónimo de " honesto"`, ['Deshonesto','Amable','Valiente','Feliz'], 0, `Honesto ↔ Deshonesto: antonimos de veracidad.`));
@@ -302,12 +322,16 @@ const CIEN_SYS5 = [
   { sys:'Óseo', organ:'Huesos', func:'Sostener el cuerpo, proteger órganos y producir sangre' },
   { sys:'Muscular', organ:'Músculos', func:'Permitir el movimiento y mantener la postura' },
   { sys:'Inmunológico', organ:'Glóbulos blancos', func:'Defender al cuerpo contra infecciones y enfermedades' },
+  { sys:'Tegumentario', organ:'Piel, cabello y uñas', func:'Proteger al cuerpo del exterior y regular la temperatura' },
+  { sys:'Locomotor', organ:'Huesos y músculos', func:'Permitir el movimiento y desplazamiento del cuerpo' },
 ];
 const CIEN_SYS6 = [
   { sys:'Endocrino', organ:'Glándulas (tiroides, páncreas)', func:'Producir y secretar hormonas que regulan el cuerpo' },
   { sys:'Linfático', organ:'Ganglios y vasos linfáticos', func:'Filtrar linfa y defender contra infecciones' },
   { sys:' Reproductor', organ:'Ovarios / Testículos', func:'Producir hormonas sexuales y permitir la reproducción' },
   { sys:'Respiratorio', organ:'Pulmones y vías respiratorias', func:'Intercambio gaseoso: O₂ entra, CO₂ sale' },
+  { sys:'Tegumentario', organ:'Piel, cabello y uñas', func:'Proteger al cuerpo del exterior y regular la temperatura' },
+  { sys:'Locomotor', organ:'Huesos y músculos', func:'Permitir el movimiento y desplazamiento del cuerpo' },
 ];
 const CIEN_WATER = ['Evaporación','Condensación','Precipitación','Escorrentía / Recolección'];
 const CIEN_STATES = ['Sólido','Líquido','Gaseoso','Plasma'];
@@ -357,6 +381,9 @@ const HIST_PRE = [
   { name:'Zapotecos', yrs:'~500 a.C.-1521 d.C.', loc:'Oaxaca (Monte Albán)', feat:'Sistema de escritura con glifos, tumba real con joyas, sistema de numeración con cero' },
   { name:'Mixtecos', yrs:'~400-1521 d.C.', loc:'Oaxaca y Guerrero', feat:'Códices pictóricos (libros de piel teñida), orfebrería avanzada en oro y plata' },
   { name:'Tarascanos (Purhépechas)', yrs:'~1300-1521 d.C.', loc:'Michoacán', feat:'Metalurgia del cobre y bronce; no tuvieron tlatoani: gobernaba un consejo, a diferencia de los aztecas' },
+  { name:'Teotihuacanos', yrs:'~100 a.C.-650 d.C.', loc:'Valle de México (Teotihuacán)', feat:'Pirámide del Sol y la Luna, ciudad con 100,000+ habitantes, comercio con Mesoamérica' },
+  { name:'Toltecas', yrs:'~900-1150 d.C.', loc:'Tula, Hidalgo', feat:'Guerreros y artesanos; Atlantes de Tula, influencia en arquitectura maya' },
+  { name:'Tlaxcaltecas', yrs:'~1200-1521 d.C.', loc:'Tlaxcala', feat:'Nunca fueron conquistados por los aztecas; aliados de Cortés en 1519' },
 ];
 const HIST_MX = [
   { name:'Guerra de Independencia', yr:1810, hero:'Miguel Hidalgo y Costilla', result:'Inicio del movimiento independentista; Hidalgo proclamó el fin del dominio español' },
@@ -364,7 +391,7 @@ const HIST_MX = [
   { name:'Revolución Mexicana', yr:1910, hero:'Francisco I. Madero', result:'Caída de Porfirio Díaz; surge la Constitución de 1917 con derechos sociales' },
   { name:'Constitución de 1917', yr:1917, hero:'Venustiano Carranza', result:'Carta magna vigente; reconoce derechos sociales: tierra, trabajo, educación y salud' },
   { name:'Tratado de Guadalupe Hidalgo', yr:1848, hero:'José Joaquín de Herrera', result:'México perdió ~50% de su territorio ante Estados Unidos (California, Texas, Nuevo México, Arizona)' },
-  { name:'Leyes de Reforma', yr:1859, hero:'Benito Juárez', result:'Reforma:分离 iglesia y Estado; bienes eclesiásticos transferidos a la nación' },
+  { name:'Leyes de Reforma', yr:1859, hero:'Benito Juárez', result:'Reforma: separó iglesia y Estado; bienes eclesiásticos transferidos a la nación' },
   { name:'Porfiriato', yr:1876, hero:'Porfirio Díaz', result:'Período de 35 años: estabilidad económica, pero sin libertades políticas ni representación popular' },
   { name:'Caída de Tenochtitlán', yr:1521, hero:'Hernán Cortés', result:'Fin del Imperio Azteca; inicio de la colonización española en el centro de México' },
 ];
@@ -417,7 +444,7 @@ function histQuestions(n) {
     ], `${w.feat}. ${w2.feat}.`));
 
     qs.push(qMC('¿Qué civilización construyó las pirámides de Giza?', ['Egipcios','Mayas','Romanos','Griegos'], 0, 'Los egipcios (~siglo XXVI a.C.) construyeron las pirámides de Giza como tumbas para sus faraones.'));
-    qs.push(qTF('La Revolución Industrial (~1760) ocurrió antes que la Revolución Francesa (1789).', false, 'La Revolución Industrial comenzó ~1760 en Gran Bretaña; la Francesa fue en 1789.'));
+    qs.push(qTF('La Revolución Industrial (~1760) ocurrió antes que la Revolución Francesa (1789).', true, 'La Revolución Industrial comenzó ~1760 en Gran Bretaña; la Revolución Francesa fue en 1789. 1760 < 1789, por lo tanto la Industrial sí ocurrió antes.'));
     qs.push(qOrder('Ordena: Antigüedad → Edad Media → Época moderna:', ['Grecia y Roma antiguas','Edad Media (siglos V-XV)','Renacimiento y Edad Moderna (siglos XIV-XVII)'], 'Grecia/Roma → Edad Media → Renacimiento'));
     qs.push(qMC('¿Qué documento proclamó los derechos de libertad, propiedad y resistencia a la opresión?', ['Declaración de los Derechos del Hombre y del Ciudadano (1789)','Carta Magna (1215)','Constitución de EE.UU. (1787)','Tratado de Versalles (1919)'], 0, 'La Declaración de 1789, tras la Revolución Francesa, estableció derechos universales.'));
   }
@@ -467,6 +494,10 @@ const GEO_RIVERS = [
   { r:'Amazonas', km:'6,400 km', cont:'América del Sur', note:'El de mayor volumen de agua' },
   { r:'Yangtsé', km:'6,300 km', cont:'Asia', note:'El más largo de Asia' },
   { r:'Misisipi', km:'3,734 km', cont:'América del Norte', note:'Principal río de Estados Unidos' },
+  { r:'Río Bravo', km:'3,054 km', cont:'América del Norte', note:'Frontera natural entre México y EE.UU.' },
+  { r:'Río Lerma', km:'708 km', cont:'México', note:'Uno de los ríos más largos de México, nace en el Estado de México' },
+  { r:'Río Usumacinta', km:'1,000 km', cont:'México/Guatemala', note:'El río más caudaloso de México' },
+  { r:'Río Grijalva', km:'640 km', cont:'México', note:'Importante río del sureste mexicano' },
 ];
 const GEO_MOUNTS = [
   { m:'Monte Everest', alt:'8,849 m', cont:'Asia', cord:'Himalaya' },
@@ -506,7 +537,19 @@ function geoQuestions(n) {
     ], `${st.cap} capital de ${st.st}. ${st2.cap} capital de ${st2.st}.`));
 
     qs.push(qMC(`¿Qué océano baña la costa occidental de México?`, ['Océano Pacífico','Océano Atlántico','Mar Caribe','Océano Índico'], 0, 'El Océano Pacífico está al oeste de México, desde Baja California hasta Chiapas.'));
-    qs.push(qMC(`¿${st3.st} se encuentra en el hemisferio...`, [st3.zona==='Norte'?'Hemisferio Norte':'Hemisferio Sur','Hemisferio Occidental','Hemisferio Oriental','Hemisferio Sur'], 0, `${st3.st} está en el ${st3.zona==='Norte'?'Hemisferio Norte':'Hemisferio Sur'} (latitud ${st3.zona==='Norte'?'14°-32° N':'14°-20° N'}).`));
+    // Hemisferio — pregunta significativa con países reales
+    const hemiQs = [
+      {q:'¿En qué hemisferio está la mayor parte de Brasil?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está la mayor parte de Rusia?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está Australia?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está Canadá?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está Egipto?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está Argentina?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está Japón?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
+      {q:'¿En qué hemisferio está Sudáfrica?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
+    ];
+    const hemi = hemiQs[ni % hemiQs.length];
+    qs.push(qMC(hemi.q, [hemi.a, ...hemi.w], 0, `${hemi.q.replace('¿','').replace('?','')} = ${hemi.a}.`));
     qs.push(qMC('México tiene un total de entidades federativas igual a:', ['32','31','50','26'], 0, '31 estados + 1 Ciudad de México = 32 entidades federativas.'));
     qs.push(qOrder('Ordena estos estados de norte a sur:', ['Baja California','Zacatecas','Guerrero'], 'Baja California (noroeste) → Zacatecas (centro-norte) → Guerrero (sur)' ));
     qs.push(qTF('La Península de Yucatán tiene costas en el Golfo de México y en el Mar Caribe.', true, 'Yucatán y Quintana Roo en el Caribe; Tabasco y Veracruz en el Golfo.'));
@@ -543,6 +586,9 @@ const CIV_ARTS = [
   { a:'Artículo 9º', t:'Derecho de reunión y asociación con fines políticos y sociales' },
   { a:'Artículo 14', t:'Derecho a la justicia: nadie puede ser privado de su libertad sin el debido proceso' },
   { a:'Artículo 27', t:'Derecho a la propiedad: la tierra y los recursos naturales pertenecen a la nación' },
+  { a:'Artículo 4', t:'Igualdad de género: el hombre y la mujer son iguales ante la ley' },
+  { a:'Artículo 24', t:'Libertad religiosa: toda persona tiene derecho a profesar la creencia que elija' },
+  { a:'Artículo 123', t:'Derechos laborales: jornada de 8 horas, salario mínimo, seguridad social y sindicatos' },
 ];
 const CIV_VALS = [
   { v:'Respeto', ex:'Escuchar las opiniones de otros aunque no se esté de acuerdo', no:'Interrumpir o burlarse de alguien' },
@@ -609,17 +655,24 @@ function civQuestions(n) {
 function genQuestions(n) {
   const ni = Number(n);
   const allFns = [matQuestions, espQuestions, cienQuestions, histQuestions, geoQuestions, civQuestions];
-  const idx1 = ni % allFns.length;
-  const idx2 = (ni + 3) % allFns.length;
-  const qs1 = allFns[idx1](ni);
-  const qs2 = allFns[idx2](ni + 7);
-  return [qs1[0], qs2[0]].filter(Boolean);
+  // Pick 2-3 random subjects, take 2 questions from each
+  const count = 2 + (ni % 2); // 2 or 3 subjects
+  const idxs = [];
+  for (let i = 0; i < count; i++) idxs.push((ni + i * 3) % allFns.length);
+  const qs = [];
+  for (const idx of idxs) {
+    const subjectQs = allFns[idx](ni + idx * 7);
+    if (subjectQs[0]) qs.push(subjectQs[0]);
+    if (subjectQs[1]) qs.push(subjectQs[1]);
+  }
+  return qs.filter(Boolean);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // DISPATCHER
 // ─────────────────────────────────────────────────────────────────
 function lessonPack(key, m) {
+  _currentLessonId = `${key}-${m}`;
   let qs;
   switch (key) {
     case 'mat': qs = matQuestions(m); break;
