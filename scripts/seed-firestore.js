@@ -98,7 +98,8 @@ function matQuestions(n) {
     qs.push(qMC(`¿Cuánto es ${a} × ${mult}?`, [String(a*mult), String(a*mult+mult), String(a*mult-mult), String(a*mult+1)], 0, `${a}×${mult}=${a*mult}`));
   } else if (ni <= 66) {
     const a = mathA, b = mathB;
-    qs.push(qMC(`¿Cuánto es ${a} − ${b}?`, [String(a-b), String(a-b+3), String(a-b-3), String(a+b)], 0, `${a}−${b}=${a-b}`));
+    const subA = Math.max(a, b), subB = Math.min(a, b);
+    qs.push(qMC(`¿Cuánto es ${subA} − ${subB}?`, [String(subA-subB), String(subA-subB+3), String(subA-subB-3), String(subA+subB)], 0, `${subA}−${subB}=${subA-subB}`));
     const mult = [2,3,4,5,6,7,8,9,10][(ni*3)%9];
     qs.push(qMC(`¿Cuánto es ${a} × ${mult}?`, [String(a*mult), String(a*mult+mult), String(a*mult-mult), String(a*mult+1)], 0, `${a}×${mult}=${a*mult}`));
   } else {
@@ -111,29 +112,36 @@ function matQuestions(n) {
   // Q2: Fracciones
   if (ni <= 33) {
     const denoms = [2,3,4,5,6,7,8];
-    const d1 = denoms[(ni*3)%denoms.length], d2 = denoms[(ni*7)%denoms.length];
+    const d1 = denoms[(ni*3)%denoms.length];
+    let d2 = denoms[(ni*7)%denoms.length];
+    if (d1 === d2) d2 = denoms[((ni*7)+1)%denoms.length];
     const v1 = 1/d1, v2 = 1/d2;
     const vals = [`1/${d1}`,`1/${d2}`,`${((ni*5)%3)+2}/${d1}`,`${((ni*11)%4)+2}/${d2}`];
     qs.push(qMC(`¿Cuál es la fracción MAYOR: ${vals[0]} o ${vals[1]}?`, vals[0]===vals[1]?vals:[vals[v1>=v2?0:1],vals[v1>=v2?1:0],vals[2],vals[3]], 0, `Como el numerador es igual (1), el denominador más pequeño da la fracción mayor: 1/${Math.min(d1,d2)} > 1/${Math.max(d1,d2)}`));
   } else if (ni <= 66) {
     const d = [3,4,5,6,7,8,9,10][(ni*5)%8];
-    const n1 = ((ni*3)%(d-1))+1, n2 = ((ni*7)%(d-1))+1;
-    const ans = n1>n2 ? 'Mayor' : n1<n2 ? 'Menor' : 'Igual';
-    qs.push(qMC(`¿${n1}/${d} es mayor, menor o igual a ${n2}/${d}?`, ['Mayor','Menor','Igual'], n1>n2?0:n1<n2?1:2, n1>n2?`${n1}/${d}=${(n1/d).toFixed(2)} > ${(n2/d).toFixed(2)}`:n1<n2?`${n1}/${d}=${(n1/d).toFixed(2)} < ${(n2/d).toFixed(2)}`:`${n1}/${d}=${n2}/${d}=${(n1/d).toFixed(2)}`));
+    let n1 = ((ni*3)%(d-1))+1, n2 = ((ni*7)%(d-1))+1;
+    if (n1 === n2) n2 = n2 < d-1 ? n2+1 : n2-1;
+    if (n1 === n2) { n1 = 1; n2 = 2; }
+    const ans = n1>n2 ? 'Mayor' : 'Menor';
+    qs.push(qMC(`¿${n1}/${d} es mayor, menor o igual a ${n2}/${d}?`, ['Mayor','Menor','Igual'], n1>n2?0:1, n1>n2?`${n1}/${d}=${(n1/d).toFixed(2)} > ${(n2/d).toFixed(2)}`:`${n1}/${d}=${(n1/d).toFixed(2)} < ${(n2/d).toFixed(2)}`));
   } else {
     const d = [3,4,5,6,7,8,9,10,11,12][(ni*3)%10];
     const whole = ((ni*7)%5)+2;
-    const num = whole*d + ((ni*5)%d);
-    const mixed = `${whole} ${num% d}/${d}`;
-    const wrong1 = `${whole+1} ${num%d}/${d}`, wrong2 = `${whole} ${(num%d)+1}/${d}`, wrong3 = `${whole+1} ${(num%d)+1}/${d}`;
-    qs.push(qMC(`¿A qué número mixto equivale ${num}/${d}?`, [mixed, wrong1, wrong2, wrong3], 0, `${num}/${d}=${whole} ${num%d}/${d} porque ${num}=${whole}×${d}+${num%d}`));
+    const remainder = ((ni*5)%(d-1))+1;
+    const num = whole*d + remainder;
+    const mixed = `${whole} ${remainder}/${d}`;
+    const wrong1 = `${whole+1} ${remainder}/${d}`, wrong2 = `${whole} ${remainder+1 < d ? remainder+1 : remainder-1}/${d}`, wrong3 = `${whole+1} ${remainder+1 < d ? remainder+1 : remainder-1}/${d}`;
+    qs.push(qMC(`¿A qué número mixto equivale ${num}/${d}?`, [mixed, wrong1, wrong2, wrong3], 0, `${num}/${d}=${whole} ${remainder}/${d} porque ${num}=${whole}×${d}+${remainder}`));
   }
 
   // Q3: Decimales
   if (ni <= 33) {
-    const d1 = ((ni*5)%9)+1, d2 = ((ni*7)%9)+1;
+    const d1 = ((ni*5)%9)+1;
+    let d2 = ((ni*7)%9)+1;
+    if (d1 === d2) d2 = d2 < 9 ? d2+1 : d2-1;
     const dec1 = d1/10, dec2 = d2/10;
-    qs.push(qMC(`¿Cuál es mayor: ${dec1.toFixed(1)} o ${dec2.toFixed(1)}?`, [dec1>=dec2?dec1.toFixed(1):dec2.toFixed(1), dec1>=dec2?dec2.toFixed(1):dec1.toFixed(1), (dec1+0.2).toFixed(1), (dec2-0.1).toFixed(1)], 0, dec1>=dec2?`${dec1.toFixed(1)} > ${dec2.toFixed(1)}`:`${dec2.toFixed(1)} > ${dec1.toFixed(1)}`));
+    qs.push(qMC(`¿Cuál es mayor: ${dec1.toFixed(1)} o ${dec2.toFixed(1)}?`, [dec1>dec2?dec1.toFixed(1):dec2.toFixed(1), dec1>dec2?dec2.toFixed(1):dec1.toFixed(1), (Math.max(dec1,dec2)+0.2).toFixed(1), (Math.min(dec1,dec2)-0.1).toFixed(1)], 0, dec1>dec2?`${dec1.toFixed(1)} > ${dec2.toFixed(1)}`:`${dec2.toFixed(1)} > ${dec1.toFixed(1)}`));
   } else if (ni <= 66) {
     const d1 = ((ni*5)%9)+1, d2 = ((ni*7)%9)+1;
     const dec1 = d1/10, dec2 = d2/10;
@@ -163,12 +171,18 @@ function matQuestions(n) {
 
   // Q5: Estadística
   if (ni <= 33) {
-    const data = [(ni*3)%5+1,(ni*7)%5+2,(ni*5)%5+3,(ni*2)%5+1,(ni*11)%5+2,(ni*13)%5+3,(ni*17)%5+1];
+    // Generate data with ONE clear mode: one value repeated 3 times, all others exactly 1 time
+    const modeVal = (ni % 5) + 1;
+    let vals = [1,2,3,4,5,6].filter(v => v !== modeVal);
+    const others = vals.slice(0, 4);
+    const data = [modeVal, modeVal, modeVal, ...others];
     const freq = {}; data.forEach(v => freq[v] = (freq[v]||0)+1);
-    const mode = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+    const mode = String(modeVal);
     const modeLabel = `${mode} (se repite ${freq[mode]} veces)`;
-    const opts = [...new Set(data)].slice(0,4).map(v => `${v} (se repite ${freq[v]} veces)`);
-    qs.push(qMC(`Datos: ${data.sort((a,b)=>a-b).join(', ')}. ¿Cuál es la moda?`, opts.length>=4?opts:[...opts, 'No hay moda'], 0, `La moda es el valor con mayor frecuencia: ${modeLabel}.`));
+    const uniqueVals = [...new Set(data)];
+    const opts = uniqueVals.slice(0,4).map(v => `${v} (se repite ${freq[v]} veces)`);
+    if (opts.length < 4) opts.push('No hay moda');
+    qs.push(qMC(`Datos: ${data.sort((a,b)=>a-b).join(', ')}. ¿Cuál es la moda?`, opts, 0, `La moda es el valor con mayor frecuencia: ${modeLabel}.`));
   } else if (ni <= 66) {
     const data = [(ni*3)%15+3,(ni*7)%15+5,(ni*5)%15+2,(ni*2)%15+8,(ni*11)%15+4,(ni*13)%15+6];
     const mean = data.reduce((s,x)=>s+x,0)/data.length;
@@ -271,7 +285,7 @@ function espQuestions(n) {
     qs.push(qMC(`En "La maestra explica la lección", el sujeto es:`, ['La maestra','explica','la lección','La'], 0, `El sujeto es "La maestra": el ser que realiza la acción de explicar.`));
     qs.push(qMC(`En "Los niños juegan en el parque", ¿dónde termina el sujeto?`, ['Antes de "juegan"','Después de "juegan"','En "en el parque"','No hay sujeto'], 0, `El sujeto "Los niños" termina justo antes del verbo "juegan".`));
   } else if (ni <= 66) {
-    qs.push(qMC(`"Nosotros estudiamos en la biblioteca." El sujeto es...`, ['Compuesto (plural)','Simple (singular)','Impersonal','Tácito'], 0, `"Nosotros" es pronombre personal de 1ª persona plural: sujeto compuesto.`));
+    qs.push(qMC(`"Nosotros estudiamos en la biblioteca." El sujeto es...`, ['Simple (plural)','Compuesto (dos núcleos)','Impersonal','Tácito'], 0, `"Nosotros" es un solo núcleo del sujeto: sujeto simple (en plural).`));
     qs.push(qMC(`¿Qué tipo de predicado tiene "El viento mueve las hojas"?`, ['Verbal','Nominal','Impersonal','Inverso'], 0, `El núcleo es el verbo "mueve": predicado verbal.`));
   } else {
     qs.push(qMC(`"Es necesario leer todos los días." El sujeto es...`, ['Tácito (no expresado)','"Es necesario"','"Leer todos los días"','"Todos los días"'], 0, `Las oraciones impersonales con "es + adjetivo" no tienen sujeto: se sobrentiende "algo".`));
@@ -298,9 +312,9 @@ function espQuestions(n) {
     const synWrong2 = ESP_VERBS[(ni*5+1)%ESP_VERBS.length];
     const synWrong3 = ESP_NOUNS[(ni*5+7)%ESP_NOUNS.length];
     qs.push(qMC(`Sinónimo de "${syn}"`, [synCorrect,synWrong1,synWrong2,synWrong3], 0, `"${synCorrect}" es sinónimo de "${syn}": tienen significado parecido.`));
-    qs.push(qMC(`Antónimo de "subir"`, ['Bajar','Correr','Volar','Saltar'], 0, `Subir ↔ Bajar: antonimos de dirección vertical.`));
+    qs.push(qMC(`Antónimo de "subir"`, ['Bajar','Correr','Volar','Saltar'], 0, `Subir ↔ Bajar: antónimos de dirección vertical.`));
   } else if (ni <= 66) {
-    qs.push(qMC(`Antónimo de " honesto"`, ['Deshonesto','Amable','Valiente','Feliz'], 0, `Honesto ↔ Deshonesto: antonimos de veracidad.`));
+    qs.push(qMC(`Antónimo de "honesto"`, ['Deshonesto','Amable','Valiente','Feliz'], 0, `Honesto ↔ Deshonesto: antónimos de veracidad.`));
     qs.push(qMC(`"Valla" (cerca) y "Vaya" (de ir) son...`, ['Homónimas','Sinónimas','Antónimas','Parónimas'], 0, `Se escriben diferente pero suenan igual: homónimas (parónimas si se consideran ambos aspectos).`));
   } else {
     qs.push(qMC(`"Cazar" y "casar" son...`, ['Parónimas (suenan parecido, diferentes)','Homónimas (suenan igual)','Sinónimas','Antónimas'], 0, `Parónimas: suenan parecido pero tienen escritura y significado diferentes.`));
@@ -328,7 +342,7 @@ const CIEN_SYS5 = [
 const CIEN_SYS6 = [
   { sys:'Endocrino', organ:'Glándulas (tiroides, páncreas)', func:'Producir y secretar hormonas que regulan el cuerpo' },
   { sys:'Linfático', organ:'Ganglios y vasos linfáticos', func:'Filtrar linfa y defender contra infecciones' },
-  { sys:' Reproductor', organ:'Ovarios / Testículos', func:'Producir hormonas sexuales y permitir la reproducción' },
+  { sys:'Reproductor', organ:'Ovarios / Testículos', func:'Producir hormonas sexuales y permitir la reproducción' },
   { sys:'Respiratorio', organ:'Pulmones y vías respiratorias', func:'Intercambio gaseoso: O₂ entra, CO₂ sale' },
   { sys:'Tegumentario', organ:'Piel, cabello y uñas', func:'Proteger al cuerpo del exterior y regular la temperatura' },
   { sys:'Locomotor', organ:'Huesos y músculos', func:'Permitir el movimiento y desplazamiento del cuerpo' },
@@ -347,7 +361,8 @@ function cienQuestions(n) {
     const t2 = CIEN_SYS5[(ni+3) % CIEN_SYS5.length];
 
     qs.push(qMC(`El sistema ${t1.sys} tiene como función:`, [t1.func,'Producir sonido','Generar luz','Almacenar agua'], 0, `El sistema ${t1.sys} sirve para: ${t1.func}.`));
-    qs.push(qMC(`¿Qué órgano pertenece al sistema ${t2.sys}?`, [t2.organ,'Pulmones','Estómago','Huesos'], 0, `${t2.organ} es parte del sistema ${t2.sys}.`));
+    const organDistractors = ['Corazón','Riñones','Cerebro y nervios','Glóbulos blancos'].filter(o => o !== t2.organ);
+    qs.push(qMC(`¿Qué órgano pertenece al sistema ${t2.sys}?`, [t2.organ, organDistractors[0], organDistractors[1], organDistractors[2]], 0, `${t2.organ} es parte del sistema ${t2.sys}.`));
     qs.push(qMatch('Relaciona sistema con su función:', [
       { left: t1.sys, right: t1.func },
       { left: t2.sys, right: t2.func },
@@ -359,7 +374,7 @@ function cienQuestions(n) {
     qs.push(qMC(`Un ecosistema con alta biodiversidad, lluvias todo el año y árboles de más de 20 m es una:`, ['Selva húmeda tropical','Pradera','Desierto','Tundra'], 0, 'La selva tropical tiene la mayor biodiversidad del planeta: clima cálido y húmedo todo el año.'));
   } else {
     const t6 = CIEN_SYS6[ni % CIEN_SYS6.length];
-    qs.push(qMC(`El sistema ${t6.sys.trim()} se encarga de:`, [t6.func.split(' ').slice(0,5).join(' '),'Bombear sangre','Digerir alimentos','Mover los huesos'], 0, `El sistema ${t6.sys.trim()}: ${t6.func}.`));
+    qs.push(qMC(`El sistema ${t6.sys.trim()} se encarga de:`, [t6.func,'Bombear sangre','Digerir alimentos','Mover los huesos'], 0, `El sistema ${t6.sys.trim()}: ${t6.func}.`));
     qs.push(qMC('¿Cuál es la velocidad aproximada de la luz?', ['300,000 km/s','300 km/s','30,000 km/s','3,000,000 km/s'], 0, 'La luz viaja a ~300,000 km por segundo en el vacío.'));
     qs.push(qMC('¿Qué fuerza hace que un auto en movimiento se detenga si no se frena?', ['Fricción (roce)','Gravedad','Inercia','Magnetismo'], 0, 'La fricción es la fuerza de roce entre superficies que se opone al movimiento y lo frena.'));
     qs.push(qOrder('Ordena estados de la materia de MENOS a MÁS energía cinética:', ['Sólido','Líquido','Gas','Plasma'], 'Sólido (partículas fijas) → Líquido (fluyen) → Gas (se expanden) → Plasma (ionizado)'));
@@ -526,11 +541,13 @@ function geoQuestions(n) {
     const st3 = GEO_ST[(ni+16) % GEO_ST.length];
 
     qs.push(qMC(`¿Cuál es la capital del estado de ${st.st}?`, [st.cap,'Ciudad de México','Guadalajara','Monterrey'], 0, `La capital de ${st.st} es ${st.cap}.`));
-    const geoZones = ['Norte','Centro','Sur','Este','Oeste'];
+    const geoZones = ['Norte','Centro','Sur','Este','Oeste','Sureste','Noroeste','Noreste','Golfo'];
     const geoZoneCorrect = st.zona;
-    const geoZoneOptions = geoZones.filter(z => z !== geoZoneCorrect).slice(0,3);
-    geoZoneOptions.splice((ni*3)%3, 0, geoZoneCorrect);
-    qs.push(qMC(`¿${st.st} se encuentra en qué zona de México?`, geoZoneOptions, geoZoneOptions.indexOf(geoZoneCorrect), `${st.st} está en la zona ${geoZoneCorrect} de México.`));
+    const geoZoneOptions = geoZones.filter(z => z !== geoZoneCorrect);
+    // Pick 3 distractors deterministically
+    const sel = []; for (let i = 0; i < 3; i++) sel.push(geoZoneOptions[(ni*3+i*5) % geoZoneOptions.length]);
+    sel.splice((ni*3)%3, 0, geoZoneCorrect);
+    qs.push(qMC(`¿${st.st} se encuentra en qué zona de México?`, sel, sel.indexOf(geoZoneCorrect), `${st.st} está en la zona ${geoZoneCorrect} de México.`));
     qs.push(qMatch('Relaciona estado con su capital:', [
       { left: st.st, right: st.cap },
       { left: st2.st, right: st2.cap },
