@@ -130,7 +130,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [nickname, setNickname] = useState('')
   const [pin, setPin] = useState('')
-  const [teamCode, setTeamCode] = useState('')
+  const [teamCode, _setTeamCode] = useState('')
 
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -412,7 +412,9 @@ export default function App() {
     })
   }
 
-  async function onLogin(e: React.FormEvent) {
+  // @ts-ignore Legacy login (Google Sign-In only now)
+  // eslint-disable-next-line
+  const onLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setStatus('Entrando...')
@@ -1498,52 +1500,10 @@ export default function App() {
             {!showCreateProfile && (
             <div className="mt-6 rounded-2xl bg-slate-950/30 p-4 ring-1 ring-white/10">
               <div className="text-sm font-bold">Entrar</div>
-              <div className="mt-1 text-xs text-slate-300/80">Nickname + PIN (4 dígitos)</div>
-
-              <form className="mt-4 space-y-3" onSubmit={onLogin}>
-              <label className="block">
-                <div className="mb-1 text-xs text-slate-300">Nickname</div>
-                <input
-                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="usuario"
-                  autoComplete="username"
-                />
-              </label>
-
-              <label className="block">
-                <div className="mb-1 text-xs text-slate-300">PIN (4 dígitos)</div>
-                <input
-                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  placeholder="1234"
-                  inputMode="numeric"
-                  autoComplete="current-password"
-                />
-              </label>
-
-              <label className="block">
-                <div className="mb-1 text-xs text-slate-300">Código de equipo (opcional, para Batallas)</div>
-                <input
-                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
-                  value={teamCode}
-                  onChange={(e) => setTeamCode(e.target.value)}
-                  placeholder="familia123"
-                />
-                <div className="mt-1 text-[11px] text-slate-400">Úsalo para jugar con tu familia como equipo.</div>
-              </label>
-
-              <button className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500">Entrar</button>
-
-              <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano (permitido para este prototipo).</div>
-            </form>
-
-              <div className="mt-4 text-center text-xs text-slate-400">— o —</div>
+              <div className="mt-1 text-xs text-slate-300/80">Inicia sesión con tu cuenta de Google</div>
 
               <button
-                className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 font-semibold text-slate-900 hover:bg-slate-100"
+                className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 font-semibold text-slate-900 hover:bg-slate-100"
                 onClick={async () => {
                   const result = await signInWithGoogle()
                   if (result) {
