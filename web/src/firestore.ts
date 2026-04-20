@@ -1016,3 +1016,25 @@ export async function removeFCMToken(params: { userId: string }) {
   const ref = doc(dbi, 'users', params.userId)
   await updateDoc(ref, { fcmToken: null, fcmTokenUpdatedAt: serverTimestamp() })
 }
+
+// Vote for team leader in a battle room
+export async function voteTeamLeader(params: { roomId: string; userId: string; teamKey: string; candidateId: string }) {
+  const dbi = ensureDb()
+  // Store vote in a subcollection
+  const voteRef = doc(dbi, 'battleRooms', params.roomId, 'leaderVotes', params.userId)
+  await setDoc(voteRef, { teamKey: params.teamKey, candidateId: params.candidateId, timestamp: serverTimestamp() }, { merge: true })
+}
+
+// Subscribe to leader votes for a battle room
+export function subscribeLeaderVotes(roomId: string, callback: (votes: Record<string, { teamKey: string; candidateId: string }>) => void) {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'battleRooms', roomId, 'leaderVotes')
+  return onSnapshot(ref, (qs) => {
+    const votes: Record<string, { teamKey: string; candidateId: string }> = {}
+    qs.docs.forEach((d) => {
+      const data = d.data()
+      votes[d.id] = { teamKey: data.teamKey, candidateId: data.candidateId }
+    })
+    callback(votes)
+  })
+}

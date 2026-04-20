@@ -43,6 +43,8 @@ import {
   pingActive,
   updateProfile,
   getUserPublic,
+  voteTeamLeader,
+  subscribeLeaderVotes,
   type Lesson,
   type Question,
   type User,
@@ -176,6 +178,7 @@ export default function App() {
   const [battleConfirmed, setBattleConfirmed] = useState(false)
   const [isTeamLeader, setIsTeamLeader] = useState(false)
   const [myBattleVote, setMyBattleVote] = useState<number | null>(null)
+  const [leaderVotes, setLeaderVotes] = useState<Record<string, { teamKey: string; candidateId: string }>>({})
   const [showQuestionResults, setShowQuestionResults] = useState(false)
   const [showBattleResults, setShowBattleResults] = useState(false)
   const [battleFinalResults, setBattleFinalResults] = useState<{ teams: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }[]; hasTie?: boolean; tiedTeamIds?: string[] } | null>(null)
@@ -647,6 +650,7 @@ export default function App() {
     })
     ;(window as any).__tv_unsubBattle = subscribeBattleRoom(roomId, (rr) => setBattleRoom(rr))
     ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(roomId, { kind: 'global' }, (m: any) => setBattleMsgs(m))
+    ;(window as any).__tv_unsubLeaderVotes = subscribeLeaderVotes(roomId, (v) => setLeaderVotes(v))
     
     // Clean URL
     window.history.replaceState({}, '', window.location.pathname)
@@ -2991,6 +2995,49 @@ export default function App() {
                           )
                         })}
                       </div>
+                    </div>
+                  ) : null}
+
+                  {/* Votar líder de equipo */}
+                  {battleRoom.status === 'open' ? (
+                    <div className="mt-4 rounded-2xl bg-black/20 p-3 ring-1 ring-white/10">
+                      <div className="text-xs font-extrabold uppercase tracking-widest text-slate-200/80 mb-2">🗳️ Votar líder de equipo</div>
+                      {(() => {
+                        const myTeamKey: string | undefined = Object.entries(battleRoom.teams || {}).find(([, td]: [string, any]) => (td?.members || []).includes(user?.id || ''))?.[0]
+                        const myTeamMembers: string[] = myTeamKey ? (battleRoom.teams as any)?.[myTeamKey]?.members || [] : []
+                        const myVote = leaderVotes[user?.id || '']
+                        const votesInTeam = Object.entries(leaderVotes).filter(([, v]) => v.teamKey === myTeamKey)
+                        // Count votes per candidate
+                        const voteCounts: Record<string, number> = {}
+                        votesInTeam.forEach(([, v]) => { voteCounts[v.candidateId] = (voteCounts[v.candidateId] || 0) + 1 })
+                        const leaderCandidate = Object.entries(voteCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
+                        return (
+                          <div className="grid grid-cols-2 gap-2">
+                            {myTeamMembers.map((uid) => {
+                              const isMe = user?.id === uid
+                              const voteCount = voteCounts[uid] || 0
+                              const isCurrentLeader = leaderCandidate === uid
+                              const iVotedForThis = myVote?.candidateId === uid
+                              return (
+                                <button
+                                  key={uid}
+                                  className={`rounded-xl p-2 text-center text-xs ring-1 transition-all ${iVotedForThis ? 'ring-[#FFC800] bg-[#FFC800]/10' : 'ring-white/10 hover:ring-white/30 hover:bg-white/5'} ${isCurrentLeader ? 'ring-2 ring-[#FFC800]' : ''}`}
+                                  onClick={async () => {
+                                    if (!user || !battleRoomId || !myTeamKey) return
+                                    await voteTeamLeader({ roomId: battleRoomId, userId: user.id, teamKey: myTeamKey, candidateId: uid })
+                                  }}
+                                >
+                                  <div className="flex items-center justify-center gap-1">
+                                    {isCurrentLeader ? '👑' : ''}
+                                    <span className={`font-black ${isCurrentLeader ? 'text-[#FFC800]' : 'text-white'}`}>{isMe ? 'Tú' : `User-${uid.slice(0, 6)}`}</span>
+                                  </div>
+                                  <div className="mt-1 text-slate-400">{voteCount} voto{voteCount !== 1 ? 's' : ''}</div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
                     </div>
                   ) : null}
 
