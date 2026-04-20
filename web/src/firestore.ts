@@ -570,6 +570,13 @@ export async function createBattleRoom(params: {
   const suddenDeath = params.suddenDeath !== false // true por defecto
   const visibility = params.visibility || 'open'
 
+  const teamsObj: Record<string, { teamId: string; members: string[]; leader: string }> = {
+    A: { teamId: 'A', members: [params.userId], leader: params.userId },
+    B: { teamId: 'B', members: [], leader: '' },
+  }
+  if (teamCount >= 3) teamsObj.C = { teamId: 'C', members: [], leader: '' }
+  if (teamCount >= 4) teamsObj.D = { teamId: 'D', members: [], leader: '' }
+
   const data: BattleRoom = {
     id: ref.id,
     status: 'open',
@@ -580,12 +587,7 @@ export async function createBattleRoom(params: {
     questionCount,
     suddenDeath,
     missionId: stableMissionId(subject, ref.id),
-    teams: {
-      A: { teamId: 'A', members: [params.userId], leader: params.userId },
-      B: { teamId: 'B', members: [], leader: '' },
-      C: teamCount >= 3 ? { teamId: 'C', members: [], leader: '' } : undefined as any,
-      D: teamCount >= 4 ? { teamId: 'D', members: [], leader: '' } : undefined as any,
-    },
+    teams: teamsObj,
     hostUserId: params.userId,
     hostTeamId: params.teamId,
     chatPhase: 'lobby',
