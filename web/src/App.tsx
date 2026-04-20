@@ -2126,6 +2126,10 @@ export default function App() {
                       setWorld(g.subject)
                       setRoutePage(0)
                       setLessonId(g.lessons[0]?.id || '')
+                      // Scroll to route map after a brief delay
+                      setTimeout(() => {
+                        document.getElementById('route-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -2171,7 +2175,7 @@ export default function App() {
 
             {/* Route map */}
             {world ? (
-              <div className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+              <div id="route-map" className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm font-bold">Ruta · {subjectTitle(world)}</div>
                   <button
