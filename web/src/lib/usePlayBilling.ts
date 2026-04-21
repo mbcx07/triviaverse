@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Purchases, type PurchasesOffering, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
 
-const REVENUECAT_API_KEY = '' // Will be set from environment or hardcoded for Android
+const REVENUECAT_API_KEY = 'test_NPMTNJalvQbbWEXECQWoIlVgXyC'
 
 export interface PurchasePlan {
   id: string
