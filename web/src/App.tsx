@@ -50,7 +50,7 @@ import {
   type User,
 } from './firestore'
 import { checkAnswer } from './lib/questionCheck'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db, assertFirebaseEnabled } from './lib/firebase-client'
 
 function groupLessonsBySubject(lessons: Lesson[]): Array<{ subject: string; lessons: Lesson[] }> {
@@ -1437,9 +1437,50 @@ export default function App() {
           <SubscriptionModal
             onClose={() => setShowPremiumModal(false)}
             onPurchase={async (productId) => {
-              console.log('Purchase:', productId)
-              // TODO: Implement actual Google Play Billing
+              // On native Android: use RevenueCat Play Billing
+              const isNative = !!(window as any).Capacitor?.isNativePlatform?.()
+              if (isNative) {
+                try {
+                  const { Purchases } = await import('@revenuecat/purchases-capacitor')
+                  const { current } = await Purchases.getOfferings()
+                  if (current) {
+                    const pkg = current.availablePackages.find((p: any) => p.product.identifier === productId || p.identifier === productId)
+                    if (pkg) {
+                      await Purchases.purchasePackage({ aPackage: pkg })
+                      // Update user premium status in Firestore
+                      if (user) {
+                        const ref = doc(db!, 'users', user.id)
+                        await updateDoc(ref, { premium: true, premiumSince: serverTimestamp() })
+                      }
+                    }
+                  }
+                } catch (err: any) {
+                  if (!err?.userCancelled) {
+                    setError('Error al procesar la compra: ' + (err.message || err))
+                  }
+                  return
+                }
+              } else {
+                // Web: just log (no Play Billing on web)
+                console.log('Purchase (web):', productId)
+              }
               setShowPremiumModal(false)
+            }}
+            onRestore={async () => {
+              const isNative = !!(window as any).Capacitor?.isNativePlatform?.()
+              if (isNative) {
+                try {
+                  const { Purchases } = await import('@revenuecat/purchases-capacitor')
+                  const { customerInfo } = await Purchases.restorePurchases()
+                  const hasActive = Object.keys(customerInfo.entitlements.active).length > 0
+                  if (hasActive && user) {
+                    const ref = doc(db!, 'users', user.id)
+                    await updateDoc(ref, { premium: true })
+                  }
+                  return hasActive
+                } catch { return false }
+              }
+              return false
             }}
           />
         )}

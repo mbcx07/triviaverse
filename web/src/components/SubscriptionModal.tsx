@@ -3,15 +3,16 @@ import { useState } from 'react'
 interface SubscriptionModalProps {
   onClose: () => void
   onPurchase: (productId: string) => Promise<void>
+  onRestore?: () => Promise<boolean>
 }
 
-export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProps) {
+export function SubscriptionModal({ onClose, onPurchase, onRestore }: SubscriptionModalProps) {
   const [loading, setLoading] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<'premium_weekly' | 'premium_monthly' | null>(null)
-  
+  const [selectedPlan, setSelectedPlan] = useState<'premium_weekly' | 'premium_monthly' | 'premium_lifetime' | null>(null)
+
   const handlePurchase = async () => {
     if (!selectedPlan) return
-    
+
     setLoading(true)
     try {
       await onPurchase(selectedPlan)
@@ -23,7 +24,24 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
       setLoading(false)
     }
   }
-  
+
+  const handleRestore = async () => {
+    if (!onRestore) return
+    setLoading(true)
+    try {
+      const restored = await onRestore()
+      if (restored) {
+        onClose()
+      } else {
+        alert('No se encontraron compras previas.')
+      }
+    } catch (error) {
+      console.error('Restore failed:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20">
@@ -33,7 +51,7 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
           <h2 className="text-2xl font-black text-white">Triviverso Premium</h2>
           <p className="text-slate-400 mt-2">Desbloquea todo el contenido</p>
         </div>
-        
+
         {/* Features */}
         <div className="bg-white/5 rounded-2xl p-4 mb-6">
           <h3 className="font-bold text-white mb-3">Beneficios Premium:</h3>
@@ -55,9 +73,9 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
             </li>
           </ul>
         </div>
-        
+
         {/* Plans */}
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-4">
           {/* Weekly */}
           <button
             onClick={() => setSelectedPlan('premium_weekly')}
@@ -75,7 +93,7 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
               <div className="text-2xl font-black text-white">$10</div>
             </div>
           </button>
-          
+
           {/* Monthly - Best Value */}
           <button
             onClick={() => setSelectedPlan('premium_monthly')}
@@ -96,13 +114,36 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
               <div className="text-2xl font-black text-white">$40</div>
             </div>
           </button>
+
+          {/* Lifetime */}
+          <button
+            onClick={() => setSelectedPlan('premium_lifetime')}
+            className={`w-full rounded-2xl p-4 text-left transition-all relative ${
+              selectedPlan === 'premium_lifetime'
+                ? 'bg-gradient-to-r from-[#7C4DFF]/30 to-[#E040FB]/20 ring-2 ring-[#7C4DFF]'
+                : 'bg-white/5 ring-1 ring-white/10 hover:bg-white/10'
+            }`}
+          >
+            <div className="absolute -top-2 left-4 bg-[#7C4DFF] text-white text-xs font-bold px-2 py-1 rounded-full">
+              PAGO ÚNICO
+            </div>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="font-bold text-white text-lg">Definitivo</div>
+                <div className="text-slate-400 text-sm">Pago único, acceso para siempre</div>
+              </div>
+              <div className="text-2xl font-black text-white">$549</div>
+            </div>
+          </button>
         </div>
-        
+
         {/* Trial notice */}
-        <div className="text-center text-slate-400 text-sm mb-4">
-          🎁 <span className="text-white font-bold">7 días gratis</span> — Cancela cuando quieras
-        </div>
-        
+        {selectedPlan !== 'premium_lifetime' && selectedPlan !== null && (
+          <div className="text-center text-slate-400 text-sm mb-4">
+            🎁 <span className="text-white font-bold">7 días gratis</span> — Cancela cuando quieras
+          </div>
+        )}
+
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -123,7 +164,18 @@ export function SubscriptionModal({ onClose, onPurchase }: SubscriptionModalProp
             {loading ? 'Procesando...' : 'Suscribirse'}
           </button>
         </div>
-        
+
+        {/* Restore */}
+        {onRestore && (
+          <button
+            onClick={handleRestore}
+            disabled={loading}
+            className="w-full mt-3 text-center text-xs text-slate-500 hover:text-slate-300 underline"
+          >
+            Restaurar compras previas
+          </button>
+        )}
+
         {/* Terms */}
         <div className="text-center text-xs text-slate-500 mt-4">
           Al suscribirte, aceptas los términos de Google Play.
