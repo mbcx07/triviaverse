@@ -1087,6 +1087,7 @@ export default function App() {
       setOrderSelected([])
       setMatchLeft(null)
       setMatchMap({})
+      setMatchRightsUsed(new Set())
       setLessonAnswered(false)
       setLessonSelectedChoice(null)
       return
@@ -1097,6 +1098,7 @@ export default function App() {
     setOrderSelected([])
     setMatchLeft(null)
     setMatchMap({})
+    setMatchRightsUsed(new Set())
     setLessonAnswered(false)
     setLessonSelectedChoice(null)
     setIdx(idx + 1)
