@@ -2308,32 +2308,97 @@ export default function App() {
             ===== */}
             {battleRoom && battleRoom.status === 'started' ? (
               <div className="rounded-3xl bg-slate-950/40 p-4 ring-1 ring-white/10">
+                {/* Header: Timer + Subject + HURRY UP warning */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="text-xs font-bold text-slate-300/80">⏱️</div>
-                    <div className={`text-2xl font-black ${battleTimer <= 30 ? 'text-rose-400' : 'text-white'}`}>
+                    <div className={`text-2xl font-black transition-colors duration-300 ${battleTimer <= 10 ? 'timer-warning text-lg' : battleTimer <= 30 ? 'text-rose-400' : 'text-white'}`}>
                       {Math.floor(battleTimer / 60)}:{(battleTimer % 60).toString().padStart(2, '0')}
                     </div>
+                    {battleTimer <= 10 && battleTimer > 0 && !battleAnswered && (
+                      <div className="countdown-pulse rounded-full bg-rose-500/30 px-2 py-0.5 text-[10px] font-black text-rose-300">
+                        ⚡ ¡APÚRATE!
+                      </div>
+                    )}
                   </div>
                   <div className="text-xs font-bold text-slate-300/80">
-                    Misión: <span className="font-black text-white">{battleRoom.missionId || battleRoom.subject || 'cargando...'}</span>
+                    🏁 <span className="font-black text-white">{battleRoom.missionId || subjectTitle(battleRoom.subject || 'esp')}</span>
                   </div>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  {['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map((teamKey) => {
-                    const teamData = (battleRoom.teams as any)?.[teamKey]
-                    const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => acc + (teamData?.members?.includes(uid) ? (s.correct || 0) : 0), 0)
-                    const teamColors: Record<string, string> = { A: '#1CB0F6', B: '#FF4D4D', C: '#58CC02', D: '#7C4DFF' }
-                    return (
-                      <div key={teamKey} className="rounded-2xl bg-black/20 px-3 py-2">
-                        <div className="text-xs font-bold" style={{ color: teamColors[teamKey] || '#9CA3AF' }}>Equipo {teamData?.teamId || teamKey}</div>
-                        <div className="mt-1 text-2xl font-black text-white">
-                          {teamScore}
-                          <span className="text-sm text-slate-400"> pts</span>
+                
+                {/* 🏎️ MARIO KART LIVE RANKING PODIUM */}
+                <div className="mt-4 space-y-2">
+                  {(() => {
+                    const teamColors: Record<string, string> = { A: '#FF4B4B', B: '#4B9DFF', C: '#4BFF7A', D: '#FFB84B' }
+                    const teamNames: Record<string, string> = { A: 'Rojos 🔴', B: 'Azules 🔵', C: 'Verdes 🟢', D: 'Naranjas 🟠' }
+                    const rankEmojis = ['🥇', '🥈', '🥉', '4️⃣']
+                    // Build ranked teams array
+                    const ranked = ['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map(teamKey => {
+                      const teamData = (battleRoom.teams as any)?.[teamKey]
+                      const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => acc + (teamData?.members?.includes(uid) ? ((s as any).correct || 0) : 0), 0)
+                      return { key: teamKey, data: teamData, score: teamScore }
+                    }).sort((a, b) => b.score - a.score)
+                    const maxScore = Math.max(ranked[0]?.score || 1, 1)
+                    return ranked.map((team, ri) => {
+                      const isFirst = ri === 0
+                      const isMyTeam = team.data?.members?.includes(user?.id)
+                      const members = (team.data?.members || []) as string[]
+                      const bgClass = isFirst
+                        ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FFA500]/15 to-[#FFD700]/20 ring-2 ring-[#FFD700]/50'
+                        : ri === 1
+                          ? 'bg-gradient-to-r from-[#C0C0C0]/10 to-[#A8A8A8]/10 ring-1 ring-[#C0C0C0]/40'
+                          : ri === 2
+                            ? 'bg-gradient-to-r from-[#CD7F32]/10 to-[#8B4513]/10 ring-1 ring-[#CD7F32]/30'
+                            : 'bg-white/5 ring-1 ring-white/10'
+                      return (
+                        <div key={team.key} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-500 ${bgClass} ${isMyTeam ? 'ring-2 ring-white/40' : ''}`} style={isFirst ? {boxShadow: '0 0 30px rgba(255,215,0,0.15)'} : {}}>
+                          {/* Race position */}
+                          <div className={`text-xl font-black w-8 text-center ${isFirst ? 'scale-125' : ''}`}>
+                            {rankEmojis[ri]}
+                          </div>
+                          {/* Team name + members */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs font-black text-white truncate" style={{color: teamColors[team.key]}}>
+                                {teamNames[team.key] || `Equipo ${team.key}`}
+                              </div>
+                              {isMyTeam && <span className="text-[10px] bg-white/20 rounded-full px-1.5 py-0.5 text-white/80">TÚ</span>}
+                            </div>
+                            {/* Member avatars */}
+                            <div className="flex -space-x-1.5 mt-0.5">
+                              {members.slice(0, 5).map((mid: string, mi: number) => {
+                                const info = friendInfo[mid]
+                                return (
+                                  <span key={mid} className={`rounded-full bg-slate-800 p-0.5 text-sm ring-1 ring-slate-900 ${isFirst && mi === 0 ? 'team-avatar-bounce' : ''}`}>
+                                    {info?.avatar || '👤'}
+                                  </span>
+                                )
+                              })}
+                              {members.length > 5 && <span className="text-[10px] text-slate-400 self-center ml-1">+{members.length - 5}</span>}
+                            </div>
+                          </div>
+                          {/* Score with animated bar */}
+                          <div className="text-right min-w-[54px]">
+                            <div className={`text-xl font-black ${isFirst ? 'text-[#FFD700]' : 'text-white'}`}>
+                              {team.score}
+                            </div>
+                            <div className="text-[10px] text-slate-500 uppercase">pts</div>
+                            {/* Score progress bar */}
+                            <div className="mt-0.5 h-1 w-full rounded-full bg-slate-800 overflow-hidden">
+                              <div 
+                                className="score-bar h-full rounded-full transition-all duration-700"
+                                style={{
+                                  '--score-width': `${(team.score / maxScore) * 100}%`,
+                                  backgroundColor: teamColors[team.key],
+                                  width: `${(team.score / maxScore) * 100}%`
+                                } as React.CSSProperties}
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                  })()}
                 </div>
                 {bq ? (
                   <div className="mt-4">
@@ -2406,18 +2471,29 @@ export default function App() {
                       </>
                     )}
                     {showQuestionResults && battleFeedback && (
-                      <div className="mt-4 rounded-2xl bg-slate-800/80 p-4 ring-1 ring-white/10">
+                      <div className="mt-4 rounded-2xl bg-gradient-to-b from-slate-800/90 to-slate-900/90 p-4 ring-1 ring-white/10 backdrop-blur">
                         <div className="text-center">
-                          <div className="text-2xl">{battleFeedback.ok ? '✅' : '❌'}</div>
-                          <div className={`text-lg font-black ${battleFeedback.ok ? 'text-[#58CC02]' : 'text-rose-400'}`}>
-                            {battleFeedback.ok ? '¡Correcto!' : 'Incorrecto'}
+                          {/* Dramatic result icon with animation */}
+                          <div className={`text-5xl mb-1 ${battleFeedback.ok ? 'animate-bounce' : 'incorrect-answer'}`}>
+                            {battleFeedback.ok ? '🌟' : '💥'}
                           </div>
-                          <div className="mt-2 text-sm text-slate-300">
+                          <div className={`text-xl font-black ${battleFeedback.ok ? 'text-[#FFD700]' : 'text-rose-400'}`} style={battleFeedback.ok ? {textShadow: '0 0 15px rgba(255,215,0,0.6)'} : {}}>
+                            {battleFeedback.ok ? '⭐ ¡CORRECTO! +1' : '❌ ¡INCORRECTO!'}
+                          </div>
+                          {/* Floating +1 star effect for correct answers */}
+                          {battleFeedback.ok && (
+                            <div className="flex justify-center gap-1 mt-1">
+                              {[...Array(3)].map((_, i) => (
+                                <span key={i} className="text-lg score-increment" style={{animationDelay: `${i * 0.15}s`}}>⭐</span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-2 text-xs text-slate-300">
                             Respuesta correcta: <span className="font-bold text-[#58CC02]">{['A', 'B', 'C', 'D'][battleFeedback.correct]} - {bq.options?.[battleFeedback.correct]}</span>
                           </div>
                           {Object.keys(battleVotes).length > 1 && (
-                            <div className="mt-3 rounded-xl bg-slate-900/50 p-2">
-                              <div className="text-xs text-slate-400 mb-2">Votos del equipo:</div>
+                            <div className="mt-3 rounded-xl bg-slate-950/60 p-2">
+                              <div className="text-[10px] text-slate-400 mb-1.5">Votos del equipo:</div>
                               <div className="flex flex-wrap justify-center gap-2">
                                 {Object.entries(battleVotes).map(([uid, v]) => {
                                   const info = friendInfo[uid]
@@ -2425,8 +2501,8 @@ export default function App() {
                                   return (
                                     <div key={uid} className={`flex items-center gap-1 rounded-full px-2 py-1 ${isCorrect ? 'bg-[#58CC02]/20 ring-1 ring-[#58CC02]' : 'bg-rose-500/20 ring-1 ring-rose-500'}`}>
                                       <span>{info?.avatar || '👤'}</span>
-                                      <span className="text-xs">{['A', 'B', 'C', 'D'][v.option]}</span>
-                                      <span className="text-xs">{isCorrect ? '✓' : '✗'}</span>
+                                      <span className="text-[10px]">{['A', 'B', 'C', 'D'][v.option]}</span>
+                                      <span className="text-[10px]">{isCorrect ? '✓' : '✗'}</span>
                                     </div>
                                   )
                                 })}
@@ -2439,23 +2515,59 @@ export default function App() {
                     {showQuestionResults && battleFeedback && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
-                          // Calculate and show results
+                          // Calculate and show results with dramatic finish
                           const results = calculateBattleResults()
                           setBattleFinalResults(results)
                           setShowBattleResults(true)
                           finishBattle({ roomId: battleRoomId, winnerTeamId: results?.teams[0]?.id || 'A' }).catch(() => {})
                         } else {
-                          setBattleIdx(battleIdx + 1)
-                          setBattleAnswered(false)
-                          setBattleFeedback(null)
-                          setShowQuestionResults(false)
-                          setBattleConfirmed(false)
-                          setBattleVotes({})
-                          setMyBattleVote(null)
+                          // 🏎️ MARIO KART TRANSITION: 3s countdown before next question
+                          setBattleStatus('countdown')
+                          setBattleCountdown(3)
+                          let cd = 3
+                          const iv = setInterval(() => {
+                            cd--
+                            setBattleCountdown(cd)
+                            if (cd <= 0) {
+                              clearInterval(iv)
+                              setBattleCountdown(null)
+                              setBattleStatus('match')
+                              setBattleIdx(battleIdx + 1)
+                              setBattleAnswered(false)
+                              setBattleFeedback(null)
+                              setShowQuestionResults(false)
+                              setBattleConfirmed(false)
+                              setBattleVotes({})
+                              setMyBattleVote(null)
+                            }
+                          }, 1000)
                         }
                       }}>
-                        {battleIdx + 1 >= (battleQuestions.length || 0) ? 'Ver Resultados' : 'Siguiente'}
+                        {battleIdx + 1 >= (battleQuestions.length || 0) ? '🏆 Ver Resultados Finales' : '🏁 Siguiente Pregunta'}
                       </button>
+                    )}
+                    {/* 🏎️ Transition countdown screen */}
+                    {battleStatus === 'countdown' && battleCountdown !== null && battleCountdown > 0 && (
+                      <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-[#FFD700]/30 text-center">
+                        <div className="text-sm text-slate-400 mb-2">🏁 Preparando siguiente pregunta...</div>
+                        <div className="countdown-burst text-6xl font-black text-[#FFD700]" style={{textShadow: '0 0 30px rgba(255,215,0,0.8)'}}>
+                          {battleCountdown}
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">¡Prepárate!</div>
+                        {/* Mini ranking during transition */}
+                        <div className="mt-3 flex justify-center gap-4 text-xs text-slate-400">
+                          {(() => {
+                            const ranked = ['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map(teamKey => {
+                              const teamData = (battleRoom.teams as any)?.[teamKey]
+                              const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => acc + (teamData?.members?.includes(uid) ? ((s as any).correct || 0) : 0), 0)
+                              return { key: teamKey, score: teamScore }
+                            }).sort((a, b) => b.score - a.score)
+                            return ranked.slice(0, 3).map((t, i) => (
+                              <span key={t.key}>{['🥇','🥈','🥉'][i]} {t.score}pts</span>
+                            ))
+                          })()}
+                        </div>
+                      </div>
                     )}
                     {showBattleResults && battleFinalResults && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden">
@@ -2518,6 +2630,8 @@ export default function App() {
                             <div className="mt-6 space-y-3">
                               {battleFinalResults.teams.map((team: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }, idx: number) => {
                                 const rankClass = idx === 0 ? 'rank-animation-1' : idx === 1 ? 'rank-animation-2' : idx === 2 ? 'rank-animation-3' : 'rank-animation-4'
+                                const maxScore = battleFinalResults.teams[0]?.score || 1
+                                const barPercent = maxScore > 0 ? (team.score / maxScore) * 100 : 0
                                 const bgClass = idx === 0 
                                   ? 'bg-gradient-to-r from-[#FFD700]/40 via-[#FFA500]/30 to-[#FFD700]/40 ring-2 ring-[#FFD700] podium-spotlight' 
                                   : idx === 1 
@@ -2543,7 +2657,7 @@ export default function App() {
                                       )}
                                     </div>
                                     
-                                    {/* Team info with color accent */}
+                                    {/* Team info with color accent + animated score bar */}
                                     <div className="flex-1 min-w-0">
                                       <div 
                                         className="font-black text-white text-lg truncate"
@@ -2551,7 +2665,17 @@ export default function App() {
                                       >
                                         {team.name}
                                       </div>
-                                      <div className="flex -space-x-2 mt-1">
+                                      {/* Animated score comparison bar */}
+                                      <div className="mt-1.5 h-2 w-full rounded-full bg-slate-800 overflow-hidden ring-1 ring-white/5">
+                                        <div 
+                                          className="score-bar h-full rounded-full"
+                                          style={{ 
+                                            width: `${barPercent}%`,
+                                            backgroundColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7C4DFF'
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="flex -space-x-2 mt-1.5">
                                         {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }, mi: number) => (
                                           <span 
                                             key={m.id} 
