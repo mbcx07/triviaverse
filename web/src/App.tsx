@@ -817,7 +817,21 @@ export default function App() {
                !prompt.includes('empieza con') &&
                !prompt.includes('comienza con')
       })
-      setBattleQuestions(filtered.length > 0 ? filtered : qs)
+      // 🎲 Shuffle options para que las respuestas no siempre estén en la misma posición
+      const shuffled = (filtered.length > 0 ? filtered : qs).map(q => {
+        if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
+        const opts = [...(q as any).options]
+        const correctIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
+        const correctOpt = opts[correctIdx]
+        // Fisher-Yates shuffle
+        for (let i = opts.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [opts[i], opts[j]] = [opts[j], opts[i]]
+        }
+        const newCorrectIdx = opts.indexOf(correctOpt)
+        return { ...q, options: opts, correctIndex: newCorrectIdx, answer: newCorrectIdx }
+      })
+      setBattleQuestions(shuffled)
       setBattleIdx(0)
     })
     return unsub
@@ -938,9 +952,23 @@ export default function App() {
 
       try {
         const qs = await listQuestions(lessonId)
+        // 🎲 Shuffle options para que las respuestas no siempre estén en la misma posición
+        const shuffledQs = qs.map(q => {
+          if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
+          const opts = [...(q as any).options]
+          const correctIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
+          const correctOpt = opts[correctIdx]
+          // Fisher-Yates shuffle
+          for (let i = opts.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [opts[i], opts[j]] = [opts[j], opts[i]]
+          }
+          const newCorrectIdx = opts.indexOf(correctOpt)
+          return { ...q, options: opts, correctIndex: newCorrectIdx }
+        })
 
         if (cancelled) return
-        setQuestions(qs)
+        setQuestions(shuffledQs)
         setResults({})  // Empezar desde cero (reintento)
         setIdx(0)  // Primera pregunta
         setMatchRightsUsed(new Set())
