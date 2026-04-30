@@ -670,9 +670,8 @@ export default function App() {
       (teamData as any)?.members?.includes(user.id)
     )
     if (userTeam) {
-      const teamData = (teams as any)[userTeam[0]]
-      // Si el equipo no tiene líder asignado, el primer miembro actúa como líder
-      setIsTeamLeader(teamData?.leader === user.id || (!teamData?.leader && (teamData?.members || []).indexOf(user.id) === 0))
+      // FIX: Cualquier miembro puede confirmar respuestas
+      setIsTeamLeader(true)
     }
   }, [battleRoom, user])
 
@@ -694,7 +693,6 @@ export default function App() {
         setTimeout(async () => {
           setBattleCountdown(null)
           setBattleStatus('match')
-          // Transition battleRoom.status from 'open' → 'started' (idempotent, first caller wins)
           if (battleRoom?.id) {
             await startBattleMatch({ roomId: battleRoom.id }).catch(() => {})
           }
@@ -722,9 +720,8 @@ export default function App() {
       (teamData as any)?.members?.includes(user.id)
     )
     if (userTeam) {
-      const teamData = (teams as any)[userTeam[0]]
-      // Si el equipo no tiene líder asignado, el primer miembro actúa como líder
-      setIsTeamLeader(teamData?.leader === user.id || (!teamData?.leader && (teamData?.members || []).indexOf(user.id) === 0))
+      // FIX: Cualquier miembro puede confirmar respuestas
+      setIsTeamLeader(true)
     }
   }, [battleRoom, user])
 
