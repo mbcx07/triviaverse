@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/mbcx07/triviaverse#readme",
   "dependencies": {
+    "canvas": "^3.2.3",
     "firebase-admin": "^13.7.0"
   }
 }
