@@ -798,39 +798,60 @@ export default function App() {
     return () => clearInterval(t)
   }, [battleRoom?.status, battleStatus, questionStartedAt, battleSuddenDeathActive, battleRoom])
 
-  // Load battle questions once battle is starting (status becomes 'started', battleStatus becomes 'match')
+  // 🎲 Load battle questions: random levels from the subject, respecting questionCount
+  // This replaces the old approach that only loaded from a single deterministic lesson
   useEffect(() => {
     if (battleStatus !== 'match') return
     if (battleRoom?.status !== 'started') return
     if (battleQuestions.length > 0) return // already loaded
-    const lessonId = battleRoom.missionId || battleRoom.lessonId || 'mat-1'
-    const unsub = subscribeLessonQuestions(lessonId, (qs) => {
-      // Filtrar preguntas simples: "inicia con", "termina con", "empieza con"
-      const filtered = qs.filter(q => {
-        const prompt = (q.prompt || '').toLowerCase()
-        return !prompt.includes('inicia con') && 
-               !prompt.includes('termina con') && 
-               !prompt.includes('empieza con') &&
-               !prompt.includes('comienza con')
-      })
-      // 🎲 Shuffle options para que las respuestas no siempre estén en la misma posición
-      const shuffled = (filtered.length > 0 ? filtered : qs).map(q => {
-        if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
-        const opts = [...(q as any).options]
-        const correctIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
-        const correctOpt = opts[correctIdx]
-        // Fisher-Yates shuffle
-        for (let i = opts.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [opts[i], opts[j]] = [opts[j], opts[i]]
+    
+    const subject = battleRoom.subject || 'esp'
+    const questionCount = Math.max(1, battleRoom.questionCount || 10)
+    
+    const filterBad = (q: any) => {
+      const p = (q.prompt || '').toLowerCase()
+      return !p.includes('inicia con') && !p.includes('termina con') && !p.includes('empieza con') && !p.includes('comienza con')
+    }
+    const shuffleOpts = (q: any) => {
+      if (!Array.isArray(q.options) || q.options.length === 0) return q
+      const opts = [...(q as any).options]
+      const cIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
+      const cOpt = opts[cIdx]
+      for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]] }
+      return { ...q, options: opts, correctIndex: opts.indexOf(cOpt) }
+    }
+    
+    // Pick unique random levels
+    const used = new Set<number>()
+    const lessonIds: string[] = []
+    while (lessonIds.length < questionCount) {
+      const n = Math.floor(Math.random() * 50) + 1  // 5° levels (1-50)
+      if (!used.has(n)) { used.add(n); lessonIds.push(`${subject}-${n}`) }
+    }
+    
+    let done = 0
+    const temp: any[] = new Array(questionCount)
+    const unsubs: Array<() => void> = []
+    
+    lessonIds.forEach((lid, slot) => {
+      const unsub = subscribeLessonQuestions(lid, (qs) => {
+        done++
+        const good = qs.filter(filterBad)
+        const pool = good.length > 0 ? good : qs
+        temp[slot] = pool[Math.floor(Math.random() * pool.length)]
+        if (done >= questionCount) {
+          // All loaded, shuffle final order and trim if some failed
+          const out = temp.filter(Boolean).map(shuffleOpts)
+          for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]] }
+          setBattleQuestions(out.slice(0, questionCount))
+          setBattleIdx(0)
+          unsubs.forEach(fn => fn())
         }
-        const newCorrectIdx = opts.indexOf(correctOpt)
-        return { ...q, options: opts, correctIndex: newCorrectIdx, answer: newCorrectIdx }
       })
-      setBattleQuestions(shuffled)
-      setBattleIdx(0)
+      unsubs.push(unsub)
     })
-    return unsub
+    
+    return () => unsubs.forEach(fn => fn())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [battleStatus, battleRoom?.id, battleRoom?.status])
 
@@ -2559,11 +2580,36 @@ export default function App() {
                     {showQuestionResults && battleFeedback && !battleSuddenDeathActive && (
                       <button className="mt-3 w-full rounded-2xl bg-[#1CB0F6] py-3 text-sm font-black text-white" onClick={() => {
                         if (battleIdx + 1 >= (battleQuestions.length || 0)) {
-                          // Calculate and show results with dramatic finish
+                          // 🏁 All questions done → check for tie + sudden death
                           const results = calculateBattleResults()
-                          setBattleFinalResults(results)
-                          setShowBattleResults(true)
-                          finishBattle({ roomId: battleRoomId, winnerTeamId: results?.teams[0]?.id || 'A' }).catch(() => {})
+                          if (results?.hasTie && battleRoom?.suddenDeath) {
+                            // ⚡ EMPATE + Sudden Death activado → entrar en muerte súbita
+                            setBattleSuddenDeathActive(true)
+                            setBattleStatus('sudden_death')
+                            // Load one random question as tiebreaker
+                            const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
+                            const rSubj = subjects[Math.floor(Math.random() * subjects.length)]
+                            const rLevel = Math.floor(Math.random() * 50) + 1
+                            subscribeLessonQuestions(`${rSubj}-${rLevel}`, (qs) => {
+                              const pool = qs.filter((q: any) => {
+                                const p = (q.prompt || '').toLowerCase()
+                                return !p.includes('inicia con') && !p.includes('termina con') && !p.includes('empieza con') && !p.includes('comienza con')
+                              })
+                              const picked = (pool.length > 0 ? pool : qs)[Math.floor(Math.random() * (pool.length > 0 ? pool.length : qs.length))]
+                              setBattleQuestions(prev => [...prev, picked])
+                            })
+                            setShowQuestionResults(false)
+                            setBattleAnswered(false)
+                            setBattleFeedback(null)
+                            setBattleConfirmed(false)
+                            setBattleVotes({})
+                            setMyBattleVote(null)
+                          } else {
+                            // Normal finish (no tie or sudden death disabled)
+                            setBattleFinalResults(results)
+                            setShowBattleResults(true)
+                            finishBattle({ roomId: battleRoomId, winnerTeamId: results?.teams[0]?.id || 'A' }).catch(() => {})
+                          }
                         } else {
                           // 🏎️ MARIO KART TRANSITION: 3s countdown before next question
                           setBattleStatus('countdown')
