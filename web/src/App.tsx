@@ -2356,12 +2356,17 @@ export default function App() {
                     // Build ranked teams array con scores combinados (Firestore + estado local)
                     const ranked = ['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map(teamKey => {
                       const teamData = (battleRoom.teams as any)?.[teamKey]
-                      const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => {
+                      // Sumar scores de Firestore para todos los miembros
+                      let teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => {
                         if (!teamData?.members?.includes(uid)) return acc
-                        // Si es el usuario actual, usar el score local (más actualizado)
-                        if (uid === user?.id) return acc + myBattleScore.correct
+                        // Para el usuario actual, usar score local; para otros, usar Firestore
+                        if (uid === user?.id) return acc // se suma abajo con myBattleScore
                         return acc + ((s as any).correct || 0)
                       }, 0)
+                      // Sumar el score local del usuario actual si está en este equipo
+                      if (user?.id && teamData?.members?.includes(user.id)) {
+                        teamScore += myBattleScore.correct
+                      }
                       return { key: teamKey, data: teamData, score: teamScore }
                     }).sort((a, b) => b.score - a.score)
                     const maxScore = Math.max(ranked[0]?.score || 1, 1)
