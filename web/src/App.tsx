@@ -669,7 +669,8 @@ export default function App() {
     )
     if (userTeam) {
       const teamData = (teams as any)[userTeam[0]]
-      setIsTeamLeader(teamData?.leader === user.id)
+      // Si el equipo no tiene líder asignado, el primer miembro actúa como líder
+      setIsTeamLeader(teamData?.leader === user.id || (!teamData?.leader && (teamData?.members || []).indexOf(user.id) === 0))
     }
   }, [battleRoom, user])
 
@@ -720,7 +721,8 @@ export default function App() {
     )
     if (userTeam) {
       const teamData = (teams as any)[userTeam[0]]
-      setIsTeamLeader(teamData?.leader === user.id)
+      // Si el equipo no tiene líder asignado, el primer miembro actúa como líder
+      setIsTeamLeader(teamData?.leader === user.id || (!teamData?.leader && (teamData?.members || []).indexOf(user.id) === 0))
     }
   }, [battleRoom, user])
 
@@ -731,6 +733,7 @@ export default function App() {
     }
   }, [battleStatus, battleRoom?.status])
 
+  // ⏱️ Per-question timer (local state, resets each question)
   useEffect(() => {
     if (!battleRoom) return
     const status = battleRoom.status
@@ -745,58 +748,12 @@ export default function App() {
       const remaining = Math.max(0, timerSeconds - elapsed)
       setBattleTimer(remaining)
       setBattleTimerSeconds(remaining)
-      
-      // When timer reaches 0, check for tie → sudden death
-      if (remaining <= 0 && !battleSuddenDeathActive && battleStatus === 'match') {
-        // Calculate team scores
-        const teams = battleRoom.teams || {}
-        const scores = battleRoom.scores || {}
-        const teamScores: Record<string, number> = {}
-        
-        for (const [teamKey, teamData] of Object.entries(teams)) {
-          const members = (teamData as any)?.members || []
-          let teamTotal = 0
-          for (const uid of members) {
-            teamTotal += (scores[uid] as any)?.correct || 0
-          }
-          teamScores[teamKey] = teamTotal
-        }
-        
-        const scoreValues = Object.values(teamScores)
-        const maxScore = Math.max(...scoreValues.map(Number))
-        const teamsWithMax = Object.entries(teamScores).filter(([, s]) => s === maxScore)
-        
-        if (teamsWithMax.length > 1 && battleRoom.suddenDeath) {
-          setBattleSuddenDeathActive(true)
-          setBattleStatus('sudden_death')
-          const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
-          const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
-          const randomLevel = Math.floor(Math.random() * 100) + 1
-          const lessonId = `${randomSubject}-${randomLevel}`
-          subscribeLessonQuestions(lessonId, (qs) => {
-            if (qs.length > 0) {
-              const filtered = qs.filter(q => {
-                const prompt = (q.prompt || '').toLowerCase()
-                return !prompt.includes('inicia con') && 
-                       !prompt.includes('termina con') && 
-                       !prompt.includes('empieza con') &&
-                       !prompt.includes('comienza con')
-              })
-              const pool = filtered.length > 0 ? filtered : qs
-              setBattleQuestions(prev => [...prev, pool[Math.floor(Math.random() * pool.length)]])
-            }
-          })
-        } else {
-          const winnerTeamId = teamsWithMax.length === 1 ? teamsWithMax[0][0] : null
-          finishBattle({ roomId: battleRoom.id, winnerTeamId }).catch(() => {})
-        }
-      }
     }
     
     updateTimer()
     const t = setInterval(updateTimer, 1000)
     return () => clearInterval(t)
-  }, [battleRoom?.status, battleStatus, questionStartedAt, battleSuddenDeathActive, battleRoom])
+  }, [battleRoom?.status, battleStatus, questionStartedAt])
 
   // 🎲 Load battle questions: random levels from the subject, respecting questionCount
   // This replaces the old approach that only loaded from a single deterministic lesson
