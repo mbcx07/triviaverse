@@ -1915,7 +1915,16 @@ export default function App() {
                     Comprobar
                   </button>
                 </div>
-              ) : qType === 'match_pairs' ? (
+              ) : qType === 'match_pairs' ? (() => {
+                  // Asignar colores por índice de par para que el par emparejado comparta color
+                  const PAIR_COLORS = ['#7C4DFF', '#FF4B4B', '#4B9DFF', '#58CC02', '#FFB84B', '#FF69B4', '#00CED1', '#FF9600']
+                  // Mapa inverso: right -> left, para encontrar qué left va con cada right ya emparejado
+                  const rightToLeft: Record<string, string> = {}
+                  for (const [left, right] of Object.entries(matchMap)) { rightToLeft[right] = left }
+                  // Mapa left -> índice de color
+                  const leftColorIdx: Record<string, number> = {}
+                  matchPairs.forEach((p, i) => { leftColorIdx[p.left] = i })
+                  return (
                 <div className="mt-4 space-y-3">
                   <div className="text-xs text-slate-300/80">Toca un concepto (izquierda) y luego su pareja (derecha).</div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1923,12 +1932,15 @@ export default function App() {
                       {matchPairs.map((p, i) => {
                         const isActive = matchLeft === p.left
                         const chosen = matchMap[p.left]
+                        const colorIdx = leftColorIdx[p.left] ?? i
+                        const pairColor = PAIR_COLORS[colorIdx % PAIR_COLORS.length]
                         return (
                           <button
                             key={i}
                             disabled={alreadyAnswered}
-                            className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-60 ${
-                              isActive ? 'bg-[#7C4DFF]/50' : 'bg-slate-950/40 hover:bg-slate-950/60'
+                            style={chosen ? { boxShadow: `0 0 0 2px ${pairColor}` } : {}}
+                            className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-60 transition-all ${
+                              isActive ? 'bg-[#7C4DFF]/40 ring-[#7C4DFF]' : chosen ? 'bg-slate-900/60' : 'bg-slate-950/40 hover:bg-slate-950/60'
                             }`}
                             onClick={() => {
                               if (alreadyAnswered) return
@@ -1936,7 +1948,7 @@ export default function App() {
                             }}
                           >
                             {p.left}
-                            {chosen ? <div className="mt-1 text-xs text-slate-200/80">→ {chosen}</div> : null}
+                            {chosen ? <div className="mt-1 text-xs font-bold" style={{color: pairColor}}>→ {chosen}</div> : null}
                           </button>
                         )
                       })}
@@ -1944,12 +1956,17 @@ export default function App() {
                     <div className="space-y-2">
                       {matchRights.map((r, i) => {
                         const used = matchRightsUsed.has(i)
+                        // Encontrar qué left está emparejado con este right
+                        const pairedLeft = rightToLeft[r]
+                        const colorIdx = pairedLeft ? (leftColorIdx[pairedLeft] ?? 0) : 0
+                        const pairColor = PAIR_COLORS[colorIdx % PAIR_COLORS.length]
                         return (
                           <button
                             key={i}
                             disabled={alreadyAnswered || !matchLeft || used}
-                            className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-50 ${
-                              used ? 'bg-slate-800/30' : 'bg-slate-950/40 hover:bg-slate-950/60'
+                            style={used && pairedLeft ? { boxShadow: `0 0 0 2px ${pairColor}`, borderColor: pairColor } : {}}
+                            className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 disabled:opacity-50 transition-all ${
+                              used ? 'ring-2' : 'bg-slate-950/40 hover:bg-slate-950/60'
                             }`}
                             onClick={() => {
                               if (alreadyAnswered) return
@@ -1974,7 +1991,8 @@ export default function App() {
                     Comprobar
                   </button>
                 </div>
-              ) : (
+                  )
+                })() : (
                 <form className="mt-4 space-y-3" onSubmit={submitTextAnswer}>
                   <input
                     className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6] disabled:opacity-60"
