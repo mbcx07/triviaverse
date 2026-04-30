@@ -703,6 +703,9 @@ export default function App() {
     return () => clearInterval(t)
   }, [battleRoom?.countdownStarted, battleRoom?.countdownFrom])
 
+  // ⏱️ Per-question timer (local state, resets each question)
+  const [questionStartedAt, setQuestionStartedAt] = useState<number>(0)
+
   // Battle timer (configurable via battleRoom.timerSeconds, default 120s)
   // Handles sudden death when timer reaches 0 with tied scores
   useEffect(() => {
@@ -721,86 +724,79 @@ export default function App() {
     }
   }, [battleRoom, user])
 
+  // ⏱️ Start per-question timer when battleStatus becomes 'match'
+  useEffect(() => {
+    if (battleStatus === 'match' && battleRoom?.status === 'started') {
+      setQuestionStartedAt(Date.now())
+    }
+  }, [battleStatus, battleRoom?.status])
+
   useEffect(() => {
     if (!battleRoom) return
     const status = battleRoom.status
-    if (status !== 'started') {
-      setBattleTimer(0)
+    if (status !== 'started' || battleStatus !== 'match' || !questionStartedAt) {
+      if (status !== 'started') setBattleTimer(0)
       return
     }
-    // startedAt timestamp
-    const startedAt = battleRoom.startedAt
-    if (!startedAt) return
-    const timerSeconds = battleRoom.timerSeconds || 120
-    const now = Date.now()
-    const elapsed = Math.floor((now - startedAt.toDate().getTime()) / 1000)
-    const remaining = Math.max(0, timerSeconds - elapsed)
-    setBattleTimer(remaining)
-          setBattleTimerSeconds(remaining)
     
-    // Check for tie when timer reaches 0
-    if (remaining <= 0 && !battleSuddenDeathActive) {
-      // Calculate team scores
-      const teams = battleRoom.teams || {}
-      const scores = battleRoom.scores || {}
-      const teamScores: Record<string, number> = {}
+    const timerSeconds = battleRoom.timerSeconds || 120
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - questionStartedAt) / 1000)
+      const remaining = Math.max(0, timerSeconds - elapsed)
+      setBattleTimer(remaining)
+      setBattleTimerSeconds(remaining)
       
-      for (const [teamKey, teamData] of Object.entries(teams)) {
-        const members = (teamData as any)?.members || []
-        let teamTotal = 0
-        for (const uid of members) {
-          teamTotal += (scores[uid] as any)?.correct || 0
-        }
-        teamScores[teamKey] = teamTotal
-      }
-      
-      // Find max score and check for tie
-      const scoreValues = Object.values(teamScores)
-      const maxScore = Math.max(...scoreValues.map(Number))
-      const teamsWithMax = Object.entries(teamScores).filter(([, s]) => s === maxScore)
-      
-      if (teamsWithMax.length > 1 && battleRoom.suddenDeath) {
-        // TIE with sudden death enabled -> enter sudden death mode
-        setBattleSuddenDeathActive(true)
-        setBattleStatus('sudden_death')
-        // Load a random question for sudden death
-        const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
-        const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
-        const randomLevel = Math.floor(Math.random() * 100) + 1
-        const lessonId = `${randomSubject}-${randomLevel}`
-        subscribeLessonQuestions(lessonId, (qs) => {
-          if (qs.length > 0) {
-            // Filtrar preguntas simples y agregar una de sudden death
-            const filtered = qs.filter(q => {
-              const prompt = (q.prompt || '').toLowerCase()
-              return !prompt.includes('inicia con') && 
-                     !prompt.includes('termina con') && 
-                     !prompt.includes('empieza con') &&
-                     !prompt.includes('comienza con')
-            })
-            const pool = filtered.length > 0 ? filtered : qs
-            setBattleQuestions(prev => [...prev, pool[Math.floor(Math.random() * pool.length)]])
+      // When timer reaches 0, check for tie → sudden death
+      if (remaining <= 0 && !battleSuddenDeathActive && battleStatus === 'match') {
+        // Calculate team scores
+        const teams = battleRoom.teams || {}
+        const scores = battleRoom.scores || {}
+        const teamScores: Record<string, number> = {}
+        
+        for (const [teamKey, teamData] of Object.entries(teams)) {
+          const members = (teamData as any)?.members || []
+          let teamTotal = 0
+          for (const uid of members) {
+            teamTotal += (scores[uid] as any)?.correct || 0
           }
-        })
-      } else {
-        // No tie or sudden death disabled -> finish battle
-        const winnerTeamId = teamsWithMax.length === 1 ? teamsWithMax[0][0] : null
-        finishBattle({ roomId: battleRoom.id, winnerTeamId }).catch(() => {})
+          teamScores[teamKey] = teamTotal
+        }
+        
+        const scoreValues = Object.values(teamScores)
+        const maxScore = Math.max(...scoreValues.map(Number))
+        const teamsWithMax = Object.entries(teamScores).filter(([, s]) => s === maxScore)
+        
+        if (teamsWithMax.length > 1 && battleRoom.suddenDeath) {
+          setBattleSuddenDeathActive(true)
+          setBattleStatus('sudden_death')
+          const subjects = ['mat', 'esp', 'cien', 'hist', 'geo', 'civ']
+          const randomSubject = subjects[Math.floor(Math.random() * subjects.length)]
+          const randomLevel = Math.floor(Math.random() * 100) + 1
+          const lessonId = `${randomSubject}-${randomLevel}`
+          subscribeLessonQuestions(lessonId, (qs) => {
+            if (qs.length > 0) {
+              const filtered = qs.filter(q => {
+                const prompt = (q.prompt || '').toLowerCase()
+                return !prompt.includes('inicia con') && 
+                       !prompt.includes('termina con') && 
+                       !prompt.includes('empieza con') &&
+                       !prompt.includes('comienza con')
+              })
+              const pool = filtered.length > 0 ? filtered : qs
+              setBattleQuestions(prev => [...prev, pool[Math.floor(Math.random() * pool.length)]])
+            }
+          })
+        } else {
+          const winnerTeamId = teamsWithMax.length === 1 ? teamsWithMax[0][0] : null
+          finishBattle({ roomId: battleRoom.id, winnerTeamId }).catch(() => {})
+        }
       }
     }
     
-    const t = setInterval(() => {
-      const now2 = Date.now()
-      const elapsed2 = Math.floor((now2 - startedAt.toDate().getTime()) / 1000)
-      const remaining2 = Math.max(0, timerSeconds - elapsed2)
-      setBattleTimer(remaining2)
-      if (remaining2 <= 0 && !battleSuddenDeathActive) {
-        clearInterval(t)
-        // Same tie check as above (already handled in first check)
-      }
-    }, 1000)
+    updateTimer()
+    const t = setInterval(updateTimer, 1000)
     return () => clearInterval(t)
-  }, [battleRoom?.status, battleRoom?.startedAt, battleRoom?.timerSeconds, battleSuddenDeathActive])
+  }, [battleRoom?.status, battleStatus, questionStartedAt, battleSuddenDeathActive, battleRoom])
 
   // Load battle questions once battle is starting (status becomes 'started', battleStatus becomes 'match')
   useEffect(() => {
