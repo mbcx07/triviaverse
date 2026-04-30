@@ -170,6 +170,7 @@ export default function App() {
   const [battleQuestions, setBattleQuestions] = useState<any[]>([])
   const [battleIdx, setBattleIdx] = useState(0)
   const [_battleResults, setBattleResults] = useState<Record<string, boolean>>({})
+  const [myBattleScore, setMyBattleScore] = useState<{ correct: number; answered: number }>({ correct: 0, answered: 0 })
   const [battleFeedback, setBattleFeedback] = useState<any>(null)
   const [battleAnswered, setBattleAnswered] = useState(false)
   const [battleStatus, setBattleStatus] = useState<'countdown' | 'match' | 'sudden_death' | 'ended' | 'results'>('countdown')
@@ -231,10 +232,11 @@ export default function App() {
     setBattleAnswered(true)
     setShowQuestionResults(true)
     
-    // Update local score
-    const currentScore = battleRoom.scores?.[user.id]
-    const newCorrect = (currentScore?.correct || 0) + (wasCorrect ? 1 : 0)
-    const newAnswered = (currentScore?.answered || 0) + 1
+    // Acumular score localmente (no depende de battleRoom.scores que puede estar stale)
+    const newCorrect = myBattleScore.correct + (wasCorrect ? 1 : 0)
+    const newAnswered = myBattleScore.answered + 1
+    setMyBattleScore({ correct: newCorrect, answered: newAnswered })
+    
     if (battleRoomId) {
       await submitBattleScore({ roomId: battleRoomId, userId: user.id, correct: newCorrect, answered: newAnswered }).catch(() => {})
     }
@@ -2354,10 +2356,15 @@ export default function App() {
                     const teamColors: Record<string, string> = { A: '#FF4B4B', B: '#4B9DFF', C: '#4BFF7A', D: '#FFB84B' }
                     const teamNames: Record<string, string> = { A: 'Rojos 🔴', B: 'Azules 🔵', C: 'Verdes 🟢', D: 'Naranjas 🟠' }
                     const rankEmojis = ['🥇', '🥈', '🥉', '4️⃣']
-                    // Build ranked teams array
+                    // Build ranked teams array con scores combinados (Firestore + estado local)
                     const ranked = ['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map(teamKey => {
                       const teamData = (battleRoom.teams as any)?.[teamKey]
-                      const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => acc + (teamData?.members?.includes(uid) ? ((s as any).correct || 0) : 0), 0)
+                      const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => {
+                        if (!teamData?.members?.includes(uid)) return acc
+                        // Si es el usuario actual, usar el score local (más actualizado)
+                        if (uid === user?.id) return acc + myBattleScore.correct
+                        return acc + ((s as any).correct || 0)
+                      }, 0)
                       return { key: teamKey, data: teamData, score: teamScore }
                     }).sort((a, b) => b.score - a.score)
                     const maxScore = Math.max(ranked[0]?.score || 1, 1)
@@ -2555,12 +2562,15 @@ export default function App() {
                               const picked = (pool.length > 0 ? pool : qs)[Math.floor(Math.random() * (pool.length > 0 ? pool.length : qs.length))]
                               setBattleQuestions(prev => [...prev, picked])
                             })
+                            // Resetear estados y avanzar al idx de la pregunta de muerte súbita
+                            setBattleIdx(battleQuestions.length) // la nueva pregunta está al final
                             setShowQuestionResults(false)
                             setBattleAnswered(false)
                             setBattleFeedback(null)
                             setBattleConfirmed(false)
                             setBattleVotes({})
                             setMyBattleVote(null)
+                            // La UI de sudden_death se mostrará en el siguiente render
                           } else {
                             // Normal finish (no tie or sudden death disabled)
                             setBattleFinalResults(results)
