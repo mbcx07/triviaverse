@@ -2580,53 +2580,20 @@ export default function App() {
                             finishBattle({ roomId: battleRoomId, winnerTeamId: results?.teams[0]?.id || 'A' }).catch(() => {})
                           }
                         } else {
-                          // 🏎️ MARIO KART TRANSITION: 3s countdown before next question
-                          setBattleStatus('countdown')
-                          setBattleCountdown(3)
-                          let cd = 3
-                          const iv = setInterval(() => {
-                            cd--
-                            setBattleCountdown(cd)
-                            if (cd <= 0) {
-                              clearInterval(iv)
-                              setBattleCountdown(null)
-                              setBattleStatus('match')
-                              setBattleIdx(battleIdx + 1)
-                              setBattleAnswered(false)
-                              setBattleFeedback(null)
-                              setShowQuestionResults(false)
-                              setBattleConfirmed(false)
-                              setBattleVotes({})
-                              setMyBattleVote(null)
-                            }
-                          }, 1000)
+                          // 🏎️ Quick transition: reset states + advance immediately
+                          setBattleIdx(battleIdx + 1)
+                          setBattleAnswered(false)
+                          setBattleFeedback(null)
+                          setShowQuestionResults(false)
+                          setBattleConfirmed(false)
+                          setBattleVotes({})
+                          setMyBattleVote(null)
+                          // Force timer reset immediately (don't wait for useEffect)
+                          setQuestionStartedAt(Date.now())
                         }
                       }}>
                         {battleIdx + 1 >= (battleQuestions.length || 0) ? '🏆 Ver Resultados Finales' : '🏁 Siguiente Pregunta'}
                       </button>
-                    )}
-                    {/* 🏎️ Transition countdown screen */}
-                    {battleStatus === 'countdown' && battleCountdown !== null && battleCountdown > 0 && (
-                      <div className="mt-4 rounded-2xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-[#FFD700]/30 text-center">
-                        <div className="text-sm text-slate-400 mb-2">🏁 Preparando siguiente pregunta...</div>
-                        <div className="countdown-burst text-6xl font-black text-[#FFD700]" style={{textShadow: '0 0 30px rgba(255,215,0,0.8)'}}>
-                          {battleCountdown}
-                        </div>
-                        <div className="mt-2 text-xs text-slate-500">¡Prepárate!</div>
-                        {/* Mini ranking during transition */}
-                        <div className="mt-3 flex justify-center gap-4 text-xs text-slate-400">
-                          {(() => {
-                            const ranked = ['A', 'B', 'C', 'D'].slice(0, battleRoom.teamCount || 2).map(teamKey => {
-                              const teamData = (battleRoom.teams as any)?.[teamKey]
-                              const teamScore = Object.entries(battleRoom.scores || {}).reduce((acc: number, [uid, s]: any) => acc + (teamData?.members?.includes(uid) ? ((s as any).correct || 0) : 0), 0)
-                              return { key: teamKey, score: teamScore }
-                            }).sort((a, b) => b.score - a.score)
-                            return ranked.slice(0, 3).map((t, i) => (
-                              <span key={t.key}>{['🥇','🥈','🥉'][i]} {t.score}pts</span>
-                            ))
-                          })()}
-                        </div>
-                      </div>
                     )}
                     {showBattleResults && battleFinalResults && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden">
