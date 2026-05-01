@@ -3355,7 +3355,7 @@ export default function App() {
                         setBattleRoomId(''); setBattleRoom(null); setBattleQuestions([])
                         setBattleStatus('countdown'); setShowBattleResults(false); setBattleFinalResults(null)
                         setTab('home')
-                      }}>🌍 Otro Mundo</button>
+                      }}>🌍 Salir</button>
                     </div>
                   </div>
                 </div>
