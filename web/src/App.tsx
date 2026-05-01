@@ -2580,9 +2580,14 @@ export default function App() {
                             // La UI de sudden_death se mostrará en el siguiente render
                           } else {
                             // Normal finish (no tie or sudden death disabled)
+                            // Primero mostrar resultados, luego guardar en Firestore
+                            const winnerTeamId = results?.teams[0]?.id || null
                             setBattleFinalResults(results)
                             setShowBattleResults(true)
-                            finishBattle({ roomId: battleRoomId, winnerTeamId: results?.teams[0]?.id || 'A' }).catch(() => {})
+                            // Usar setTimeout para que React termine de pintar antes de actualizar Firestore
+                            setTimeout(() => {
+                              finishBattle({ roomId: battleRoomId, winnerTeamId }).catch(() => {})
+                            }, 500)
                           }
                         } else {
                           // 🏎️ Quick transition: reset states + advance immediately
