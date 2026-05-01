@@ -3484,67 +3484,7 @@ export default function App() {
 
             {/* Battle in progress — ya manejado arriba en el condicional principal */}
 
-            {/* Post-match results */}
-            {battleRoom && battleRoom.status === 'finished' ? (
-              <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white/95 text-slate-900 shadow-2xl ring-1 ring-white/20">
-                  <div className="bg-gradient-to-br from-[#FF9600] to-[#FFC800] p-6 text-center">
-                    <div className="text-4xl">🏆</div>
-                    <div className="mt-2 text-lg font-black">¡Batalla terminada!</div>
-                    <div className="mt-1 text-sm font-bold">
-                      {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0) === Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0) ? '¡EMPATE!' : 'Equipo ' + battleRoom.winnerTeamId + ' gana'}
-                      {' — '}
-                      {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
-                      {' a '}
-                      {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
-                    </div>
-                  </div>
-                  <div className="space-y-3 p-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="rounded-2xl bg-slate-100 px-3 py-3 text-center">
-                        <div className="text-xs font-bold text-slate-500">Equipo {battleRoom.teams.A?.teamId || 'A'}</div>
-                        <div className="mt-2 text-3xl font-black">
-                          {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.A?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
-                        </div>
-                      </div>
-                      <div className="rounded-2xl bg-slate-100 px-3 py-3 text-center">
-                        <div className="text-xs font-bold text-slate-500">Equipo {battleRoom.teams.B?.teamId || 'B'}</div>
-                        <div className="mt-2 text-3xl font-black">
-                          {Object.entries(battleRoom.scores || {}).reduce((a, [uid, s]: any) => a + ((battleRoom.teams.B?.members?.includes(uid)) ? (s.correct || 0) : 0), 0)}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-sm font-black uppercase tracking-widest text-white active:border-b-0 active:translate-y-1"
-                      onClick={async () => {
-                        if (!user || !battleRoomId) return
-                        const maxPerTeam = Number(battleRoom?.maxPerTeam || 4)
-                        const subject = battleRoom?.subject || 'esp'
-                        const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: battleRoom.visibility || 'open' })
-                        setBattleRoomId(r.id)
-                        setBattleRoom(null)
-                        ;(window as any).__tv_unsubBattle?.()
-                        ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                        ;(window as any).__tv_unsubBattleMsgs?.()
-                        ;(window as any).__tv_unsubBattleMsgs = subscribeBattleMessages(r.id, { kind: 'global' }, (m: any) => setBattleMsgs(m))
-                      }}
-                    >
-                      Revancha
-                    </button>
-                    <button
-                      className="w-full rounded-2xl bg-slate-900 px-3 py-3 text-sm font-black text-white"
-                      onClick={() => {
-                        setBattleRoomId(''); setBattleRoom(null)
-                        ;(window as any).__tv_unsubBattle?.()
-                        ;(window as any).__tv_unsubBattleMsgs?.()
-                      }}
-                    >
-                      Salir al menú
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+            {/* La pantalla de resultados se muestra con showBattleResults arriba */}
           </div>
         ) : null}
 
