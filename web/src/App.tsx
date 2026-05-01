@@ -2580,14 +2580,12 @@ export default function App() {
                             // La UI de sudden_death se mostrará en el siguiente render
                           } else {
                             // Normal finish (no tie or sudden death disabled)
-                            // Primero mostrar resultados, luego guardar en Firestore
+                            // Mostrar resultados con datos locales (no llamar finishBattle aún)
                             const winnerTeamId = results?.teams[0]?.id || null
                             setBattleFinalResults(results)
                             setShowBattleResults(true)
-                            // Usar setTimeout para que React termine de pintar antes de actualizar Firestore
-                            setTimeout(() => {
-                              finishBattle({ roomId: battleRoomId, winnerTeamId }).catch(() => {})
-                            }, 500)
+                            // finishBattle se llama en background sin afectar la UI
+                            finishBattle({ roomId: battleRoomId, winnerTeamId }).catch(() => {})
                           }
                         } else {
                           // 🏎️ Quick transition: reset states + advance immediately
@@ -2604,194 +2602,6 @@ export default function App() {
                       }}>
                         {battleIdx + 1 >= (battleQuestions.length || 0) ? '🏆 Ver Resultados Finales' : '🏁 Siguiente Pregunta'}
                       </button>
-                    )}
-                    {showBattleResults && battleFinalResults && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden">
-                        {/* Mario Kart style confetti - more dramatic */}
-                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                          {[...Array(40)].map((_, i) => (
-                            <div
-                              key={i}
-                              className="absolute"
-                              style={{
-                                left: `${Math.random() * 100}%`,
-                                top: `-5%`,
-                                animationDelay: `${Math.random() * 3}s`,
-                                animationDuration: `${2 + Math.random() * 2}s`,
-                              }}
-                            >
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{
-                                  backgroundColor: ['#FFD700', '#1CB0F6', '#58CC02', '#FF4D4D', '#7C4DFF', '#FF69B4', '#00CED1', '#FF6347'][i % 8],
-                                  animation: `confetti-fall ${2 + Math.random() * 2}s ease-in forwards`,
-                                  animationDelay: `${Math.random() * 3}s`,
-                                }}
-                              />
-                            </div>
-                          ))}
-                          {/* Stars burst for winner */}
-                          {battleFinalResults.teams[0] && (
-                            <>
-                              {[...Array(8)].map((_, i) => (
-                                <div
-                                  key={`star-${i}`}
-                                  className="absolute text-4xl"
-                                  style={{
-                                    left: `${20 + i * 10}%`,
-                                    top: '30%',
-                                    animation: 'star-burst 1s ease-out forwards',
-                                    animationDelay: `${0.5 + i * 0.1}s`,
-                                    opacity: 0,
-                                  }}
-                                >
-                                  ⭐
-                                </div>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                        
-                        <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20 shadow-2xl shadow-[#FFD700]/20">
-                          <div className="text-center">
-                            {/* Animated crown for winner - Mario Kart style */}
-                            {battleFinalResults.teams[0] && (
-                              <div className="winner-crown text-7xl mb-1">👑</div>
-                            )}
-                            <div className="text-2xl font-black text-white mb-4 tracking-wide">
-                              {battleFinalResults.hasTie ? '⚡ ¡EMPATE!' : '🏆 ¡Fin de la Batalla!'}
-                            </div>
-                            
-                            {/* Animated ranking - Mario Kart podium style */}
-                            <div className="mt-6 space-y-3">
-                              {battleFinalResults.teams.map((team: { id: string; name: string; score: number; members: { id: string; avatar: string; displayName: string }[] }, idx: number) => {
-                                const rankClass = idx === 0 ? 'rank-animation-1' : idx === 1 ? 'rank-animation-2' : idx === 2 ? 'rank-animation-3' : 'rank-animation-4'
-                                const maxScore = battleFinalResults.teams[0]?.score || 1
-                                const barPercent = maxScore > 0 ? (team.score / maxScore) * 100 : 0
-                                const bgClass = idx === 0 
-                                  ? 'bg-gradient-to-r from-[#FFD700]/40 via-[#FFA500]/30 to-[#FFD700]/40 ring-2 ring-[#FFD700] podium-spotlight' 
-                                  : idx === 1 
-                                    ? 'bg-gradient-to-r from-[#C0C0C0]/20 to-[#A8A8A8]/20 ring-2 ring-[#C0C0C0]' 
-                                    : idx === 2 
-                                      ? 'bg-gradient-to-r from-[#CD7F32]/20 to-[#8B4513]/20 ring-2 ring-[#CD7F32]' 
-                                      : 'bg-white/5 ring-1 ring-white/10'
-                                
-                                return (
-                                  <div
-                                    key={team.id}
-                                    className={`relative flex items-center gap-3 rounded-2xl p-4 ${bgClass} ${rankClass}`}
-                                  >
-                                    {/* Rank position with dramatic styling */}
-                                    <div className="relative">
-                                      <div className={`text-5xl ${idx === 0 ? 'animate-bounce' : ''}`}>
-                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}
-                                      </div>
-                                      {idx === 0 && (
-                                        <div className="absolute -top-1 -right-1 text-xs bg-[#FFD700] text-black rounded-full w-5 h-5 flex items-center justify-center font-black">
-                                          1
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    {/* Team info with color accent + animated score bar */}
-                                    <div className="flex-1 min-w-0">
-                                      <div 
-                                        className="font-black text-white text-lg truncate"
-                                        style={{ textShadow: idx === 0 ? '0 0 10px rgba(255,215,0,0.5)' : 'none' }}
-                                      >
-                                        {team.name}
-                                      </div>
-                                      {/* Animated score comparison bar */}
-                                      <div className="mt-1.5 h-2 w-full rounded-full bg-slate-800 overflow-hidden ring-1 ring-white/5">
-                                        <div 
-                                          className="score-bar h-full rounded-full"
-                                          style={{ 
-                                            width: `${barPercent}%`,
-                                            backgroundColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7C4DFF'
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="flex -space-x-2 mt-1.5">
-                                        {team.members.slice(0, 4).map((m: { id: string; avatar: string; displayName: string }, mi: number) => (
-                                          <span 
-                                            key={m.id} 
-                                            className={`rounded-full bg-slate-800 p-1.5 text-lg ring-2 ring-slate-900 ${idx === 0 && mi === 0 ? 'team-avatar-bounce' : ''}`}
-                                            style={{ animationDelay: `${mi * 0.1}s` }}
-                                          >
-                                            {m.avatar}
-                                          </span>
-                                        ))}
-                                        {team.members.length > 4 && (
-                                          <span className="rounded-full bg-slate-700 px-2 text-xs font-bold text-white flex items-center">
-                                            +{team.members.length - 4}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Score with pop animation for winner */}
-                                    <div className="text-right">
-                                      <div 
-                                        className={`text-4xl font-black ${idx === 0 ? 'text-[#FFD700]' : 'text-white'}`}
-                                        style={{ textShadow: idx === 0 ? '0 0 20px rgba(255,215,0,0.8)' : 'none' }}
-                                      >
-                                        {team.score}
-                                      </div>
-                                      <div className="text-xs text-slate-400 uppercase tracking-wider">pts</div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                            <div className="mt-6 grid grid-cols-2 gap-3">
-                              <button
-                                className="rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1"
-                                onClick={async () => {
-                                  if (user && battleRoom) {
-                                    setShowBattleResults(false)
-                                    setBattleFinalResults(null)
-                                    setBattleIdx(0)
-                                    setBattleAnswered(false)
-                                    setBattleFeedback(null)
-    setShowQuestionResults(false)
-                                    setBattleConfirmed(false)
-                                    setBattleVotes({})
-    setMyBattleVote(null)
-                                    setBattleQuestions([])
-                                    setBattleStatus('countdown')
-                                    const subject = battleRoom.subject || 'esp'
-                                    const teamCount = battleRoom.teamCount || 2
-                                    const maxPerTeam = battleRoom.maxPerTeam || 1
-                                    const timerSeconds = battleRoom.timerSeconds || 120
-                                    const questionCount = battleRoom.questionCount || 10
-                                    const suddenDeath = battleRoom.suddenDeath || false
-                                    const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, teamCount, timerSeconds, questionCount, suddenDeath, visibility: 'open' })
-                                    setBattleRoomId(r.id)
-                                    ;(window as any).__tv_unsubBattle?.()
-                                    ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
-                                  }
-                                }}
-                              >
-                                🔄 Revancha
-                              </button>
-                              <button
-                                className="rounded-2xl bg-slate-800 py-3 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-700"
-                                onClick={() => {
-                                  setBattleRoomId('')
-                                  setBattleRoom(null)
-                                  setBattleQuestions([])
-                                  setBattleStatus('countdown')
-                                  setShowBattleResults(false)
-                                  setBattleFinalResults(null)
-                                  setTab('home')
-                                }}
-                              >
-                                🌍 Otro Mundo
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
                     )}
                     {battleSuddenDeathWinner && (
                       <div className="mt-3 rounded-xl bg-[#58CC02]/20 px-3 py-3 text-center ring-1 ring-[#58CC02]">
@@ -3489,7 +3299,68 @@ export default function App() {
 
             {/* Battle in progress — ya manejado arriba en el condicional principal */}
 
-            {/* La pantalla de resultados se muestra con showBattleResults arriba */}
+            {/* Pantalla de resultados (fuera del condicional status=started para que no desaparezca) */}
+            {showBattleResults && battleFinalResults && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  {[...Array(40)].map((_, i) => (
+                    <div key={i} className="absolute" style={{ left: `${Math.random() * 100}%`, top: `-5%`, animationDelay: `${Math.random() * 3}s`, animationDuration: `${2 + Math.random() * 2}s` }}>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: ['#FFD700', '#1CB0F6', '#58CC02', '#FF4D4D', '#7C4DFF', '#FF69B4', '#00CED1', '#FF6347'][i % 8], animation: `confetti-fall ${2 + Math.random() * 2}s ease-in forwards`, animationDelay: `${Math.random() * 3}s` }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 ring-2 ring-white/20 shadow-2xl shadow-[#FFD700]/20">
+                  <div className="text-center">
+                    {battleFinalResults.teams[0] && <div className="winner-crown text-7xl mb-1">👑</div>}
+                    <div className="text-2xl font-black text-white mb-4 tracking-wide">
+                      {battleFinalResults.hasTie ? '⚡ ¡EMPATE!' : '🏆 ¡Fin de la Batalla!'}
+                    </div>
+                    <div className="mt-6 space-y-3">
+                      {battleFinalResults.teams.map((team: any, idx: number) => {
+                        const maxScore = battleFinalResults!.teams[0]?.score || 1
+                        const barPercent = maxScore > 0 ? (team.score / maxScore) * 100 : 0
+                        const bgClass = idx === 0 ? 'bg-gradient-to-r from-[#FFD700]/40 via-[#FFA500]/30 to-[#FFD700]/40 ring-2 ring-[#FFD700]' : idx === 1 ? 'bg-gradient-to-r from-[#C0C0C0]/20 to-[#A8A8A8]/20 ring-2 ring-[#C0C0C0]' : idx === 2 ? 'bg-gradient-to-r from-[#CD7F32]/20 to-[#8B4513]/20 ring-2 ring-[#CD7F32]' : 'bg-white/5 ring-1 ring-white/10'
+                        return (
+                          <div key={team.id} className={`relative flex items-center gap-3 rounded-2xl p-4 ${bgClass}`}>
+                            <div className="text-5xl">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🎖️'}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-black text-white text-lg truncate">{team.name}</div>
+                              <div className="mt-1.5 h-2 w-full rounded-full bg-slate-800 overflow-hidden ring-1 ring-white/5">
+                                <div className="score-bar h-full rounded-full" style={{ width: `${barPercent}%`, backgroundColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7C4DFF' }} />
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-4xl font-black ${idx === 0 ? 'text-[#FFD700]' : 'text-white'}`}>{team.score}</div>
+                              <div className="text-xs text-slate-400 uppercase tracking-wider">pts</div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                      <button className="rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-3 text-sm font-black text-white active:border-b-0 active:translate-y-1" onClick={async () => {
+                        if (user && battleRoom) {
+                          setShowBattleResults(false); setBattleFinalResults(null)
+                          setBattleIdx(0); setBattleAnswered(false); setBattleFeedback(null)
+                          setShowQuestionResults(false); setBattleConfirmed(false); setBattleVotes({}); setMyBattleVote(null)
+                          setBattleQuestions([]); setBattleStatus('countdown')
+                          const subject = battleRoom.subject || 'esp'
+                          const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam: battleRoom.maxPerTeam || 1, teamCount: battleRoom.teamCount || 2, timerSeconds: battleRoom.timerSeconds || 120, questionCount: battleRoom.questionCount || 10, suddenDeath: battleRoom.suddenDeath || false, visibility: 'open' })
+                          setBattleRoomId(r.id)
+                          ;(window as any).__tv_unsubBattle?.()
+                          ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr: any) => setBattleRoom(rr))
+                        }
+                      }}>🔄 Revancha</button>
+                      <button className="rounded-2xl bg-slate-800 py-3 text-sm font-black text-white ring-1 ring-white/10 hover:bg-slate-700" onClick={() => {
+                        setBattleRoomId(''); setBattleRoom(null); setBattleQuestions([])
+                        setBattleStatus('countdown'); setShowBattleResults(false); setBattleFinalResults(null)
+                        setTab('home')
+                      }}>🌍 Otro Mundo</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : null}
 
