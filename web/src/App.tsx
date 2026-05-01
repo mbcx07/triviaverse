@@ -268,7 +268,12 @@ export default function App() {
       })
       let teamScore = 0
       members.forEach((m: { id: string }) => {
-        teamScore += scores[m.id]?.correct || 0
+        // Usar myBattleScore para el usuario actual, Firestore para los demás
+        if (m.id === user?.id) {
+          teamScore += myBattleScore.correct
+        } else {
+          teamScore += scores[m.id]?.correct || 0
+        }
       })
       const teamName = teamId === 'A' ? 'Team Belas' : teamId === 'B' ? 'Equipo Azul' : teamId === 'C' ? 'Equipo Verde' : 'Equipo Dorado'
       teamResults.push({ id: teamId, name: teamName, score: teamScore, members })
