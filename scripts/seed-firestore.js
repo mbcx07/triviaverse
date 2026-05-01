@@ -1,4 +1,4 @@
-/* Seed Firestore for Triviverso (SEP MX 5º-6º) - v4
+﻿/* Seed Firestore for Triviverso (SEP MX 5º-6º) - v4
    Usage:
      node scripts/seed-firestore.js --sa "C:\\secrets\\triviverso.json" --project triviverso
 */
@@ -258,7 +258,7 @@ function espQuestions(n) {
 
   // Q2: Puntuación y ortografía
   if (ni <= 33) {
-    qs.push(qMC(`¿Qué tipo de oración es "El perro maulló"?`, ['Enunciativa (afirma un hecho)','Interrogativa (pregunta)','Imperativa (ordena)','Exclamativa (expresa emoción)'], 0, `"El perro maulló" afirma un hecho: es enunciativa y termina con punto.`));
+    qs.push(qMC(`¿Qué tipo de oración es "El perro ladró"?`, ['Enunciativa (afirma un hecho)','Interrogativa (pregunta)','Imperativa (ordena)','Exclamativa (expresa emoción)'], 0, `"El perro ladró" afirma un hecho: es enunciativa y termina con punto.`));
     qs.push(qMC(`"¿Cuándo llegas?" es una oración...`, ['Interrogativa directa','Enunciativa','Imperativa','Desiderativa'], 0, `Las preguntas con ¿? son interrogativas directas.`));
   } else if (ni <= 66) {
     qs.push(qMC(`"Llegó tarde; por eso no entró." La punto y coma indica...`, ['Causa o consecuencia','Tiempo','Lugar','Contraste'], 0, `Punto y coma + "por eso/pero" indica consecuencia o contraste entre oraciones.`));
