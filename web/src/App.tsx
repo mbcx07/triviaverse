@@ -1303,51 +1303,51 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0b3b] via-[#2a1158] to-[#070B2A] text-slate-100">
-      <div className="mx-auto max-w-md lg:max-w-4xl p-4">
-        <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
+      <div className="mx-auto max-w-md md:max-w-5xl p-4">
+        <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur md:px-6 md:py-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
             <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-auto object-contain" alt="Triviverso" />
-            <div className="text-lg font-extrabold tracking-tight">Triviverso</div>
+            <div className="text-lg md:text-2xl font-extrabold tracking-tight">Triviverso</div>
           </div>
           {user ? (
-            <div className="flex items-center gap-2 text-sm text-slate-300">
+            <div className="flex items-center gap-2 text-sm md:text-base text-slate-300">
               {/* Desktop nav */}
-              <div className="hidden sm:flex items-center gap-2">
-                <div className="hidden md:block">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
+              <div className="hidden sm:flex items-center gap-2 md:gap-3">
+                <div className="hidden md:block text-base">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
 
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Nivel {level}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">XP {xpTotal}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs ring-1 ring-white/10">Racha {user.streakCount ?? 0}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">Nivel {level}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">XP {xpTotal}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">Racha {user.streakCount ?? 0}</div>
 
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('home')}
                 >
                   Mundos
                 </button>
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('play')}
                 >
                   Jugar
                 </button>
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('league')}
                 >
                   Liga
                 </button>
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('trophies')}
                 >
                   Trofeos
                 </button>
 
-                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
+                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs md:text-sm hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
                   Config
                 </button>
-                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700" onClick={logout}>
+                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs md:text-sm hover:bg-slate-700" onClick={logout}>
                   Salir
                 </button>
               </div>
@@ -1630,25 +1630,25 @@ export default function App() {
             )}
           </div>
         ) : tab === 'mode' ? (
-          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-            <div className="text-lg font-extrabold">Elige modo</div>
-            <div className="mt-1 text-xs text-slate-300/80">Individual o Batallas (prototipo).</div>
+          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
+            <div className="text-lg md:text-2xl font-extrabold">Elige modo</div>
+            <div className="mt-1 text-xs md:text-sm text-slate-300/80">Individual o Batallas (prototipo).</div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <button
-                className="rounded-3xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                className="rounded-3xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 md:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
                 onClick={() => setTab('home')}
               >
-                <div className="text-sm opacity-90">Individual</div>
-                <div className="mt-1 text-xl">Mundos & Misiones</div>
+                <div className="text-sm md:text-base opacity-90">Individual</div>
+                <div className="mt-1 text-xl md:text-3xl">Mundos & Misiones</div>
               </button>
 
               <button
-                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 md:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
                 onClick={() => setTab('battle')}
               >
-                <div className="text-sm opacity-90">Batallas</div>
-                <div className="mt-1 text-xl">Compite con otros</div>
+                <div className="text-sm md:text-base opacity-90">Batallas</div>
+                <div className="mt-1 text-xl md:text-3xl">Compite con otros</div>
               </button>
             </div>
           </div>
@@ -1810,8 +1810,8 @@ export default function App() {
           /* ===== MODO INDIVIDUAL - Quiz o World picker ===== */
           tab === 'play' && lessonId ? (
             /* ===== QUIZ INDIVIDUAL - Cuando estás jugando una lección ===== */
-            <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
-              <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
+              <div className="flex flex-col gap-2 text-xs md:text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="flex items-center gap-2">
                   <div>
                     {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
@@ -1833,7 +1833,7 @@ export default function App() {
                 </div>
               ) : null}
 
-              <div className="mt-2 text-lg font-semibold">{q?.prompt || '—'}</div>
+              <div className="mt-2 text-lg md:text-2xl font-semibold">{q?.prompt || '—'}</div>
 
               {timerOn ? (
                 <div className="mt-2 flex items-center justify-between rounded-2xl bg-slate-950/30 px-3 py-2 text-xs font-black text-slate-200 ring-1 ring-white/10">
@@ -1843,7 +1843,7 @@ export default function App() {
               ) : null}
 
               {qType === 'multiple_choice' ? (
-                <div className="mt-4 grid grid-cols-1 gap-2">
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                   {((q as any).options || []).map((opt: string, i: number) => {
                     const isCorrectAnswer = (q as any).correctIndex ?? (q as any).answer ?? 0
                     const isSelected = alreadyAnswered && i === (q as any)._selectedAnswer
@@ -1854,7 +1854,7 @@ export default function App() {
                       key={i}
                       type="button"
                       disabled={alreadyAnswered}
-                      className={`group relative overflow-hidden rounded-2xl px-4 py-4 text-left text-sm font-bold transition-all duration-300 transform active:scale-95 ${alreadyAnswered ? 'scale-105 ring-2' : 'ring-1 ring-white/20'} ${alreadyAnswered ? (isCorrect ? 'ring-green-500 bg-[#58CC02] text-white' : isWrong ? 'ring-red-500 bg-red-500 text-white' : 'ring-white/20 bg-slate-800/50 opacity-50') : 'bg-slate-800 hover:bg-slate-700 hover:ring-white/40 hover:scale-[1.02]'}`}
+                      className={`group relative overflow-hidden rounded-2xl px-4 py-4 md:px-5 md:py-5 text-left text-sm md:text-base font-bold transition-all duration-300 transform active:scale-95 ${alreadyAnswered ? 'scale-105 ring-2' : 'ring-1 ring-white/20'} ${alreadyAnswered ? (isCorrect ? 'ring-green-500 bg-[#58CC02] text-white' : isWrong ? 'ring-red-500 bg-red-500 text-white' : 'ring-white/20 bg-slate-800/50 opacity-50') : 'bg-slate-800 hover:bg-slate-700 hover:ring-white/40 hover:scale-[1.02]'}`}
                       onClick={() => {
                         if (!alreadyAnswered) {
                           (q as any)._selectedAnswer = i
@@ -2237,13 +2237,13 @@ export default function App() {
             )}
 
             {/* World picker */}
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
               {subjectGroups.filter((g) => g.subject !== 'gen' && !g.subject.startsWith('exam')).map((g) => {
                 const active = world === g.subject
                 return (
                   <button
                     key={g.subject}
-                    className={`rounded-3xl bg-slate-950/40 p-4 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
+                    className={`rounded-3xl bg-slate-950/40 p-4 md:p-5 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
                     onClick={() => {
                       setWorld(g.subject)
                       setRoutePage(0)
@@ -2260,14 +2260,14 @@ export default function App() {
                         {subjectIcon(g.subject)}
                       </div>
                     </div>
-                    <div className="mt-2 text-base font-extrabold">{subjectTitle(g.subject)}</div>
-                    <div className="mt-2 text-xs text-slate-300/70">{g.lessons.length} lecciones</div>
+                    <div className="mt-2 text-base md:text-lg font-extrabold">{subjectTitle(g.subject)}</div>
+                    <div className="mt-2 text-xs md:text-sm text-slate-300/70">{g.lessons.length} lecciones</div>
                   </button>
                 )
               })}
               {/* Mundo Sorpresa - Portal aleatorio */}
               <button
-                className="rounded-3xl bg-gradient-to-br from-[#7C4DFF] via-[#1CB0F6] to-[#FFC800] p-4 text-left ring-1 ring-white/20 hover:opacity-90"
+                className="rounded-3xl bg-gradient-to-br from-[#7C4DFF] via-[#1CB0F6] to-[#FFC800] p-4 md:p-5 text-left ring-1 ring-white/20 hover:opacity-90"
                 onClick={() => {
                   const picked = pickRandomUnlockedLesson()
                   if (!picked) {
@@ -2290,21 +2290,21 @@ export default function App() {
                   <div className="text-xs text-white/80">Portal</div>
                   <div className="rounded-2xl bg-black/30 px-2 py-1 text-lg">🌀</div>
                 </div>
-                <div className="mt-2 text-base font-extrabold text-white">Mundo Sorpresa</div>
-                <div className="mt-2 text-xs text-white/70">Misión aleatoria</div>
+                <div className="mt-2 text-base md:text-lg font-extrabold text-white">Mundo Sorpresa</div>
+                <div className="mt-2 text-xs md:text-sm text-white/70">Misión aleatoria</div>
               </button>
 
               {/* Examen Final - Botón dorado especial */}
               <button
-                className="rounded-3xl bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF8C00] p-4 text-left ring-2 ring-[#FFD700]/50 hover:opacity-90 animate-pulse-slow"
+                className="rounded-3xl bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF8C00] p-4 md:p-5 text-left ring-2 ring-[#FFD700]/50 hover:opacity-90 animate-pulse-slow"
                 onClick={() => setExamWorld(true)}
               >
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-white/90 font-black uppercase tracking-wider">Examen</div>
                   <div className="rounded-2xl bg-black/30 px-2 py-1 text-lg">🏆</div>
                 </div>
-                <div className="mt-2 text-base font-extrabold text-white">Examen Final</div>
-                <div className="mt-2 text-xs text-white/80">6 temas · 60 misiones</div>
+                <div className="mt-2 text-base md:text-lg font-extrabold text-white">Examen Final</div>
+                <div className="mt-2 text-xs md:text-sm text-white/80">6 temas · 60 misiones</div>
               </button>
             </div>
 
