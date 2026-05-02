@@ -1284,11 +1284,13 @@ export default function App() {
     setTimeout(() => {
       setPortalOpen(false)
       setWorld(String(picked.subject || 'general'))
+      setQuestions([])  // Limpiar preguntas previas
       setLessonId(picked.id)
       setTab('play')
       setFeedback(null)
       setError(null)
       setStatus(null)
+      isAnsweringRef.current = false
     }, 650)
   }
 
@@ -3578,6 +3580,7 @@ export default function App() {
                         .find((l) => (l.order || 0) > currentOrder)
                       if (nextLesson) {
                         setLessonId(nextLesson.id)
+                        setQuestions([])  // Limpiar preguntas viejas
                         setCelebration(null)
                         setResults({})
                         setIdx(0)
@@ -3587,6 +3590,7 @@ export default function App() {
                         setMatchLeft(null)
                         setMatchMap({})
                         setMatchRightsUsed(new Set())
+                        isAnsweringRef.current = false  // Resetear flag de respuesta
                       } else {
                         setCelebration(null)
                       }
@@ -3700,9 +3704,11 @@ export default function App() {
                     }
                     // Luego limpiar estado local y cargar preguntas frescas
                     setResults({})
+                    setQuestions([])  // Limpiar preguntas viejas
                     setLessonId(startModalLesson.id)
                     setTab('play')
                     setStartModalLesson(null)
+                    isAnsweringRef.current = false
                   }}
                   className="w-full rounded-2xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] py-4 text-lg font-black uppercase tracking-widest text-white transition-all hover:brightness-110 active:border-b-0 active:translate-y-1"
                 >
