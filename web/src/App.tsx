@@ -83,6 +83,20 @@ function subjectTitle(key: string): string {
       return 'Cívica y Ética'
     case 'gen':
       return 'Mundo Sorpresa'
+    case 'exam1':
+      return 'Signos de Puntuación'
+    case 'exam2':
+      return 'Géneros Narrativos'
+    case 'exam3':
+      return 'Ecosistemas'
+    case 'exam4':
+      return 'Fenómenos Naturales'
+    case 'exam5':
+      return 'Historia de México'
+    case 'exam6':
+      return 'Valores y Emociones'
+    case 'examen-final':
+      return 'Examen Final'
     default:
       return 'Lecciones'
   }
@@ -102,6 +116,18 @@ function subjectIcon(key: string): string {
       return '🧭'
     case 'civ':
       return '🤝'
+    case 'exam1':
+      return '✍️'
+    case 'exam2':
+      return '📖'
+    case 'exam3':
+      return '🌵'
+    case 'exam4':
+      return '🌋'
+    case 'exam5':
+      return '🇲🇽'
+    case 'exam6':
+      return '💜'
     default:
       return '⭐'
   }
@@ -121,6 +147,18 @@ function subjectGradient(key: string): string {
       return 'from-[#1CB0F6] to-[#FFC800]'
     case 'civ':
       return 'from-[#7C4DFF] to-[#FF9600]'
+    case 'exam1':
+      return 'from-[#FF6B6B] to-[#FFC800]'
+    case 'exam2':
+      return 'from-[#4ECDC4] to-[#1CB0F6]'
+    case 'exam3':
+      return 'from-[#58CC02] to-[#FFC800]'
+    case 'exam4':
+      return 'from-[#FF4D4D] to-[#FF9600]'
+    case 'exam5':
+      return 'from-[#006847] to-[#CE1126]'
+    case 'exam6':
+      return 'from-[#7C4DFF] to-[#FF69B4]'
     default:
       return 'from-[#1CB0F6] to-[#7C4DFF]'
   }
@@ -128,6 +166,16 @@ function subjectGradient(key: string): string {
 
 export default function App() {
   const baseUrl = (import.meta as any).env?.BASE_URL || '/'
+  
+  // Examen Final - submundos constantes
+  const EXAM_SUBJECTS = [
+    { key: 'exam1', title: 'Signos de Puntuación' },
+    { key: 'exam2', title: 'Géneros Narrativos' },
+    { key: 'exam3', title: 'Ecosistemas' },
+    { key: 'exam4', title: 'Fenómenos Naturales' },
+    { key: 'exam5', title: 'Historia de México' },
+    { key: 'exam6', title: 'Valores y Emociones' },
+  ]
 
   const [user, setUser] = useState<User | null>(null)
   const [nickname, setNickname] = useState('')
@@ -368,6 +416,7 @@ export default function App() {
 
   // Worlds (subjects). When null, user is on the world picker.
   const [world, setWorld] = useState<string | null>(null)
+  const [examWorld, setExamWorld] = useState<boolean>(false) // true = showing exam sub-worlds
 
   const [leagueScope, _setLeagueScope] = useState<'team' | 'global'>('team')
   const [_leaders, setLeaders] = useState<Array<{ id: string; nickname: string; xpWeek: number }>>([])
@@ -2187,7 +2236,7 @@ export default function App() {
 
             {/* World picker */}
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {subjectGroups.filter((g) => g.subject !== 'gen').map((g) => {
+              {subjectGroups.filter((g) => g.subject !== 'gen' && !g.subject.startsWith('exam')).map((g) => {
                 const active = world === g.subject
                 return (
                   <button
@@ -2242,10 +2291,65 @@ export default function App() {
                 <div className="mt-2 text-base font-extrabold text-white">Mundo Sorpresa</div>
                 <div className="mt-2 text-xs text-white/70">Misión aleatoria</div>
               </button>
+
+              {/* Examen Final - Botón dorado especial */}
+              <button
+                className="rounded-3xl bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF8C00] p-4 text-left ring-2 ring-[#FFD700]/50 hover:opacity-90 animate-pulse-slow"
+                onClick={() => setExamWorld(true)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/90 font-black uppercase tracking-wider">Examen</div>
+                  <div className="rounded-2xl bg-black/30 px-2 py-1 text-lg">🏆</div>
+                </div>
+                <div className="mt-2 text-base font-extrabold text-white">Examen Final</div>
+                <div className="mt-2 text-xs text-white/80">6 temas · 60 misiones</div>
+              </button>
             </div>
 
+            {/* ===== EXAMEN FINAL - Submundos ===== */}
+            {examWorld ? (
+              <div id="route-map" className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold">🏆 Examen Final</div>
+                  <button
+                    className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold hover:bg-slate-700"
+                    onClick={() => setExamWorld(false)}
+                  >
+                    ← Volver
+                  </button>
+                </div>
+                <div className="mt-3 text-xs text-slate-300/70">Elige un tema para empezar. Cada tema tiene 10 misiones progresivas.</div>
+                
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {EXAM_SUBJECTS.map((es) => {
+                    const allLessons = lessons.filter(l => l.subject === es.key)
+                    const completedCount = allLessons.filter(l => isLessonCompleted(l.id)).length
+                    return (
+                      <button
+                        key={es.key}
+                        className={`rounded-2xl p-3 text-left ring-1 ring-white/10 hover:opacity-90 bg-gradient-to-br ${subjectGradient(es.key)}`}
+                        onClick={() => {
+                          setExamWorld(false)
+                          setWorld(es.key)
+                          setRoutePage(0)
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{subjectIcon(es.key)}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-extrabold text-white/90">{es.title}</div>
+                            <div className="text-[10px] text-white/70">{completedCount}/{allLessons.length || 10} misiones</div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+
             {/* Route map */}
-            {world ? (
+            {world && !examWorld ? (
               <div id="route-map" className="mt-6 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm font-bold">Ruta · {subjectTitle(world)}</div>
@@ -2258,13 +2362,13 @@ export default function App() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((p) => (
+                  {(world?.startsWith('exam') ? [0] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).map((p) => (
                     <button
                       key={p}
                       className={`rounded-xl px-3 py-2 text-xs font-black ring-1 ring-white/10 ${routePage === p ? 'bg-[#1CB0F6]/70' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}
                       onClick={() => setRoutePage(p)}
                     >
-                      {p * 10 + 1}-{Math.min(p * 10 + 10, 100)}
+                      {p * 10 + 1}-{Math.min(p * 10 + 10, world?.startsWith('exam') ? 10 : 100)}
                     </button>
                   ))}
                 </div>
