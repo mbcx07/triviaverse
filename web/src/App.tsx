@@ -1385,71 +1385,49 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0b3b] via-[#2a1158] to-[#070B2A] text-slate-100">
       <div className="mx-auto max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl p-4">
-        <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur md:px-6 md:py-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
-            <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-auto object-contain" alt="Triviverso" />
-            <div className="text-lg md:text-2xl font-extrabold tracking-tight">Triviverso</div>
+        <header className="sticky top-0 z-50 -mx-4 mb-2 border-b border-white/10 bg-black/20 px-4 py-2 backdrop-blur md:px-6 md:py-3">
+          {/* Row 1: Logo + stats */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
+              <img src={`${baseUrl}logo-transparent.png`} className="h-7 md:h-8 w-auto object-contain" alt="Triviverso" />
+              <div className="text-base md:text-xl font-extrabold tracking-tight">Triviverso</div>
+            </div>
+            {user ? (
+              <>
+                {/* Desktop stats row */}
+                <div className="hidden sm:flex items-center gap-1.5 md:gap-2 text-slate-300 text-xs md:text-sm">
+                  <div className="hidden lg:block text-sm">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
+                  <div className="rounded-lg bg-slate-950/40 px-2 py-1 ring-1 ring-white/10">Nv {level}</div>
+                  <div className="rounded-lg bg-slate-950/40 px-2 py-1 ring-1 ring-white/10">XP {xpTotal}</div>
+                  <div className="rounded-lg bg-slate-950/40 px-2 py-1 ring-1 ring-white/10">🔥 {user.streakCount ?? 0}</div>
+                </div>
+                {/* Mobile compact stats */}
+                <div className="flex sm:hidden items-center gap-1.5">
+                  <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-[11px] ring-1 ring-white/10">Nv {level}</div>
+                  <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-[11px] ring-1 ring-white/10">XP {xpTotal}</div>
+                </div>
+              </>
+            ) : null}
           </div>
+          {/* Row 2: Navigation buttons (sm+) */}
           {user ? (
-            <div className="flex items-center gap-2 text-sm md:text-base text-slate-300">
-              {/* Desktop nav */}
-              <div className="hidden sm:flex items-center gap-2 md:gap-3">
-                <div className="hidden md:block text-base">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
-
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">Nivel {level}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">XP {xpTotal}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">Racha {user.streakCount ?? 0}</div>
-
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                  onClick={() => setTab('home')}
-                >
-                  Mundos
-                </button>
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                  onClick={() => setTab('play')}
-                >
-                  Jugar
-                </button>
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
-                  onClick={() => setTab('league')}
-                >
-                  Liga
-                </button>
-                <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
-                  onClick={() => setTab('trophies')}
-                >
-                  Trofeos
-                </button>
-
-                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs md:text-sm hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
-                  Config
-                </button>
-                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs md:text-sm hover:bg-slate-700" onClick={logout}>
-                  Salir
-                </button>
-              </div>
-
-              {/* Mobile compact */}
-              <div className="flex sm:hidden items-center gap-2">
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-[11px] ring-1 ring-white/10">Nv {level}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-[11px] ring-1 ring-white/10">XP {xpTotal}</div>
-                <button
-                  className="rounded-lg bg-slate-800 px-3 py-2 text-[11px] font-bold hover:bg-slate-700"
-                  onClick={() => setMenuOpen(true)}
-                >
-                  Menú
-                </button>
-              </div>
+            <div className="hidden sm:flex items-center gap-1 md:gap-1.5 mt-2 flex-wrap">
+              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('home')}>🏠 Mundos</button>
+              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('play')}>🎮 Jugar</button>
+              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('league')}>🏆 Liga</button>
+              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('trophies')}>🏅 Trofeos</button>
+              <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setSettingsOpen(true)}>⚙️</button>
+              <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={logout}>🚪</button>
             </div>
           ) : (
-            <div className="text-sm text-slate-400">
-              <div className="mb-1 text-xs text-slate-500"></div>
-            </div>
+            <div className="text-xs text-slate-500"></div>
           )}
+          {/* Mobile menu button */}
+          {user ? (
+            <div className="flex sm:hidden justify-end mt-1">
+              <button className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setMenuOpen(true)}>☰ Menú</button>
+            </div>
+          ) : null}
         </header>
 
         {user ? (
@@ -2417,7 +2395,7 @@ export default function App() {
             )}
 
             {/* World picker */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
               {subjectGroups.filter((g) => g.subject !== 'gen' && !g.subject.startsWith('exam')).map((g) => {
                 const active = world === g.subject
                 return (
