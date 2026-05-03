@@ -1314,51 +1314,51 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0b3b] via-[#2a1158] to-[#070B2A] text-slate-100">
-      <div className="mx-auto max-w-md md:max-w-5xl p-4">
-        <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur md:px-6 md:py-4">
+      <div className="mx-auto max-w-full sm:max-w-md lg:max-w-5xl p-4">
+        <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur lg:px-6 lg:py-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
             <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-auto object-contain" alt="Triviverso" />
-            <div className="text-lg md:text-2xl font-extrabold tracking-tight">Triviverso</div>
+            <div className="text-lg lg:text-2xl font-extrabold tracking-tight">Triviverso</div>
           </div>
           {user ? (
-            <div className="flex items-center gap-2 text-sm md:text-base text-slate-300">
+            <div className="flex items-center gap-2 text-sm lg:text-base text-slate-300">
               {/* Desktop nav */}
-              <div className="hidden sm:flex items-center gap-2 md:gap-3">
-                <div className="hidden md:block text-base">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
+              <div className="hidden sm:flex items-center gap-2 lg:gap-3">
+                <div className="hidden lg:block text-base">{user.avatar || '🪐'} {user.displayName || user.nickname}</div>
 
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">Nivel {level}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">XP {xpTotal}</div>
-                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs md:text-sm ring-1 ring-white/10">Racha {user.streakCount ?? 0}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10">Nivel {level}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10">XP {xpTotal}</div>
+                <div className="rounded-lg bg-slate-950/40 px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10">Racha {user.streakCount ?? 0}</div>
 
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10 ${tab === 'home' ? 'bg-[#1CB0F6]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('home')}
                 >
                   Mundos
                 </button>
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('play')}
                 >
                   Jugar
                 </button>
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('league')}
                 >
                   Liga
                 </button>
                 <button
-                  className={`rounded-lg px-2 py-1 text-xs md:text-sm ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
+                  className={`rounded-lg px-2 py-1 text-xs lg:text-sm ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`}
                   onClick={() => setTab('trophies')}
                 >
                   Trofeos
                 </button>
 
-                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs md:text-sm hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
+                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs lg:text-sm hover:bg-slate-700" onClick={() => setSettingsOpen(true)}>
                   Config
                 </button>
-                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs md:text-sm hover:bg-slate-700" onClick={logout}>
+                <button className="rounded-lg bg-slate-800 px-2 py-1 text-xs lg:text-sm hover:bg-slate-700" onClick={logout}>
                   Salir
                 </button>
               </div>
@@ -1641,35 +1641,35 @@ export default function App() {
             )}
           </div>
         ) : tab === 'mode' ? (
-          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
-            <div className="text-lg md:text-2xl font-extrabold">Elige modo</div>
-            <div className="mt-1 text-xs md:text-sm text-slate-300/80">Individual o Batallas (prototipo).</div>
+          <div className="rounded-3xl bg-black/25 p-4 lg:p-6 ring-1 ring-white/10">
+            <div className="text-lg lg:text-2xl font-extrabold">Elige modo</div>
+            <div className="mt-1 text-xs lg:text-sm text-slate-300/80">Individual o Batallas (prototipo).</div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
               <button
-                className="rounded-3xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 md:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                className="rounded-3xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 lg:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
                 onClick={() => setTab('home')}
               >
-                <div className="text-sm md:text-base opacity-90">Individual</div>
-                <div className="mt-1 text-xl md:text-3xl">Mundos & Misiones</div>
+                <div className="text-sm lg:text-base opacity-90">Individual</div>
+                <div className="mt-1 text-xl lg:text-3xl">Mundos & Misiones</div>
               </button>
 
               <button
-                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 md:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                className="rounded-3xl border-b-4 border-[#5a35c7] bg-gradient-to-b from-[#7C4DFF] to-[#1CB0F6] p-4 lg:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
                 onClick={() => setTab('battle')}
               >
-                <div className="text-sm md:text-base opacity-90">Batallas</div>
-                <div className="mt-1 text-xl md:text-3xl">Compite con otros</div>
+                <div className="text-sm lg:text-base opacity-90">Batallas</div>
+                <div className="mt-1 text-xl lg:text-3xl">Compite con otros</div>
               </button>
             </div>
           </div>
         ) : tab === 'league' ? (
           /* ===== LIGA SEMANAL ===== */
-          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
+          <div className="rounded-3xl bg-black/25 p-4 lg:p-6 ring-1 ring-white/10">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-lg md:text-2xl font-extrabold">🏆 Liga Semanal</div>
-                <div className="mt-1 text-xs md:text-sm text-slate-300/80">
+                <div className="text-lg lg:text-2xl font-extrabold">🏆 Liga Semanal</div>
+                <div className="mt-1 text-xs lg:text-sm text-slate-300/80">
                   Semana {String(new Date().getFullYear())}-W{String(Math.ceil(new Date().getDate() / 7)).padStart(2, '0')} · Top 10 jugadores
                 </div>
               </div>
@@ -1685,7 +1685,7 @@ export default function App() {
                   <div className="flex items-center gap-3">
                     <div className="text-2xl">{user.avatar || '🪐'}</div>
                     <div>
-                      <div className="text-sm md:text-base font-extrabold">{user.displayName || user.nickname}</div>
+                      <div className="text-sm lg:text-base font-extrabold">{user.displayName || user.nickname}</div>
                       <div className="text-xs text-slate-300/70">
                         Posición #{leagueRows.findIndex(r => r.id === user.id) + 1 || '—'} · {leagueRows.find(r => r.id === user.id)?.xpWeek || 0} XP esta semana
                       </div>
@@ -1700,34 +1700,34 @@ export default function App() {
 
             {/* Podio Top 3 */}
             {leagueRows.length >= 3 ? (
-              <div className="mt-6 flex items-end justify-center gap-2 md:gap-4">
+              <div className="mt-6 flex items-end justify-center gap-2 lg:gap-4">
                 {/* 2do lugar */}
                 <div className="flex flex-col items-center">
-                  <div className="text-3xl md:text-4xl">{leagueRows[1]?.avatar || '🥈'}</div>
-                  <div className="mt-1 text-xs md:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[1]?.nickname || '—'}</div>
-                  <div className="flex h-16 md:h-20 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-slate-400 to-slate-300 mt-2">
-                    <span className="text-lg md:text-2xl font-black text-slate-800">2</span>
+                  <div className="text-3xl lg:text-4xl">{leagueRows[1]?.avatar || '🥈'}</div>
+                  <div className="mt-1 text-xs lg:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[1]?.nickname || '—'}</div>
+                  <div className="flex h-16 lg:h-20 w-16 lg:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-slate-400 to-slate-300 mt-2">
+                    <span className="text-lg lg:text-2xl font-black text-slate-800">2</span>
                   </div>
-                  <div className="text-[10px] md:text-xs font-bold text-slate-400">{leagueRows[1]?.xpWeek || 0} XP</div>
+                  <div className="text-[10px] lg:text-xs font-bold text-slate-400">{leagueRows[1]?.xpWeek || 0} XP</div>
                 </div>
                 {/* 1er lugar */}
                 <div className="flex flex-col items-center">
-                  <div className="text-4xl md:text-5xl crown-animation">👑</div>
-                  <div className="text-4xl md:text-5xl">{leagueRows[0]?.avatar || '🥇'}</div>
-                  <div className="mt-1 text-xs md:text-sm font-extrabold text-[#FFC800] text-center truncate max-w-[100px]">{leagueRows[0]?.nickname || '—'}</div>
-                  <div className="flex h-24 md:h-28 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-[#FFC800] to-[#FFD700] mt-2 podium-1st">
-                    <span className="text-2xl md:text-3xl font-black text-white">1</span>
+                  <div className="text-4xl lg:text-5xl crown-animation">👑</div>
+                  <div className="text-4xl lg:text-5xl">{leagueRows[0]?.avatar || '🥇'}</div>
+                  <div className="mt-1 text-xs lg:text-sm font-extrabold text-[#FFC800] text-center truncate max-w-[100px]">{leagueRows[0]?.nickname || '—'}</div>
+                  <div className="flex h-24 lg:h-28 w-16 lg:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-[#FFC800] to-[#FFD700] mt-2 podium-1st">
+                    <span className="text-2xl lg:text-3xl font-black text-white">1</span>
                   </div>
-                  <div className="text-[10px] md:text-xs font-bold text-[#FFC800]">{leagueRows[0]?.xpWeek || 0} XP</div>
+                  <div className="text-[10px] lg:text-xs font-bold text-[#FFC800]">{leagueRows[0]?.xpWeek || 0} XP</div>
                 </div>
                 {/* 3er lugar */}
                 <div className="flex flex-col items-center">
-                  <div className="text-3xl md:text-4xl">{leagueRows[2]?.avatar || '🥉'}</div>
-                  <div className="mt-1 text-xs md:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[2]?.nickname || '—'}</div>
-                  <div className="flex h-12 md:h-16 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-amber-700 to-amber-500 mt-2">
-                    <span className="text-lg md:text-2xl font-black text-white">3</span>
+                  <div className="text-3xl lg:text-4xl">{leagueRows[2]?.avatar || '🥉'}</div>
+                  <div className="mt-1 text-xs lg:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[2]?.nickname || '—'}</div>
+                  <div className="flex h-12 lg:h-16 w-16 lg:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-amber-700 to-amber-500 mt-2">
+                    <span className="text-lg lg:text-2xl font-black text-white">3</span>
                   </div>
-                  <div className="text-[10px] md:text-xs font-bold text-amber-500">{leagueRows[2]?.xpWeek || 0} XP</div>
+                  <div className="text-[10px] lg:text-xs font-bold text-amber-500">{leagueRows[2]?.xpWeek || 0} XP</div>
                 </div>
               </div>
             ) : null}
@@ -1748,7 +1748,7 @@ export default function App() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-black text-slate-300">
                         {pos}
                       </div>
-                      <div className="flex-1 font-bold text-sm md:text-base">
+                      <div className="flex-1 font-bold text-sm lg:text-base">
                         {medal} {row.nickname || row.id?.slice(0, 8)}
                       </div>
                       <div className="rounded-full bg-[#FFC800]/10 px-3 py-1 text-xs font-black text-[#FFC800]">
@@ -1783,29 +1783,29 @@ export default function App() {
             </div>
           </div>
         ) : tab === 'friends' ? (
-          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
+          <div className="rounded-3xl bg-black/25 p-4 lg:p-6 ring-1 ring-white/10">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-lg md:text-2xl font-extrabold">👥 Amigos</div>
-                <div className="mt-1 text-xs md:text-sm text-slate-300/80">Agrega amigos, invítalos a batallar y recibe notificaciones.</div>
+                <div className="text-lg lg:text-2xl font-extrabold">👥 Amigos</div>
+                <div className="mt-1 text-xs lg:text-sm text-slate-300/80">Agrega amigos, invítalos a batallar y recibe notificaciones.</div>
               </div>
-              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs md:text-sm font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
+              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs lg:text-sm font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
                 ← Volver
               </button>
             </div>
 
             {/* Buscar y agregar */}
-            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
-              <div className="text-sm md:text-base font-extrabold">🔍 Agregar amigo</div>
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 lg:p-5 ring-1 ring-white/10">
+              <div className="text-sm lg:text-base font-extrabold">🔍 Agregar amigo</div>
               <div className="mt-2 flex gap-2">
                 <input
-                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 md:py-4 text-sm md:text-base font-black ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
+                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 lg:py-4 text-sm lg:text-base font-black ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
                   value={friendQuery}
                   onChange={(e) => setFriendQuery(e.target.value)}
                   placeholder="Buscar por nickname..."
                 />
                 <button
-                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-black text-white hover:bg-[#4AA000] transition-colors"
+                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 lg:px-6 py-3 lg:py-4 text-sm lg:text-base font-black text-white hover:bg-[#4AA000] transition-colors"
                   onClick={async () => {
                     if (!user) return
                     setStatus('Enviando solicitud...')
@@ -1820,46 +1820,46 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
               {/* Solicitudes recibidas */}
-              <div className="rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
-                <div className="text-sm md:text-base font-extrabold">📩 Solicitudes recibidas {reqIn.length > 0 ? `(${reqIn.length})` : ''}</div>
+              <div className="rounded-3xl bg-slate-950/30 p-4 lg:p-5 ring-1 ring-white/10">
+                <div className="text-sm lg:text-base font-extrabold">📩 Solicitudes recibidas {reqIn.length > 0 ? `(${reqIn.length})` : ''}</div>
                 <div className="mt-3 space-y-2">
                   {reqIn.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 md:py-3 ring-1 ring-white/10">
-                      <div className="text-sm md:text-base font-black">{r.fromUserId?.slice(0, 12)}</div>
+                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 lg:px-4 lg:py-3 ring-1 ring-white/10">
+                      <div className="text-sm lg:text-base font-black">{r.fromUserId?.slice(0, 12)}</div>
                       <div className="flex gap-2">
-                        <button className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs md:text-sm font-black text-white hover:bg-[#4AA000]" onClick={() => user && acceptFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
+                        <button className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs lg:text-sm font-black text-white hover:bg-[#4AA000]" onClick={() => user && acceptFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
                           ✓ Aceptar
                         </button>
-                        <button className="rounded-xl bg-rose-500/80 px-3 py-2 text-xs md:text-sm font-black text-white hover:bg-rose-500" onClick={() => user && rejectFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
+                        <button className="rounded-xl bg-rose-500/80 px-3 py-2 text-xs lg:text-sm font-black text-white hover:bg-rose-500" onClick={() => user && rejectFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
                           ✗ Rechazar
                         </button>
                       </div>
                     </div>
                   ))}
-                  {!reqIn.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs md:text-sm text-slate-400">Sin solicitudes pendientes.</div> : null}
+                  {!reqIn.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs lg:text-sm text-slate-400">Sin solicitudes pendientes.</div> : null}
                 </div>
               </div>
 
               {/* Solicitudes enviadas */}
-              <div className="rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
-                <div className="text-sm md:text-base font-extrabold">📤 Solicitudes enviadas {reqOut.length > 0 ? `(${reqOut.length})` : ''}</div>
+              <div className="rounded-3xl bg-slate-950/30 p-4 lg:p-5 ring-1 ring-white/10">
+                <div className="text-sm lg:text-base font-extrabold">📤 Solicitudes enviadas {reqOut.length > 0 ? `(${reqOut.length})` : ''}</div>
                 <div className="mt-3 space-y-2">
                   {reqOut.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 ring-1 ring-white/10">
-                      <div className="text-sm md:text-base font-black">{r.toUserId?.slice(0, 12)}</div>
-                      <div className="rounded-full bg-amber-500/20 px-3 py-1 text-[10px] md:text-xs font-bold text-amber-400">Pendiente</div>
+                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 lg:px-4 ring-1 ring-white/10">
+                      <div className="text-sm lg:text-base font-black">{r.toUserId?.slice(0, 12)}</div>
+                      <div className="rounded-full bg-amber-500/20 px-3 py-1 text-[10px] lg:text-xs font-bold text-amber-400">Pendiente</div>
                     </div>
                   ))}
-                  {!reqOut.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs md:text-sm text-slate-400">No has enviado solicitudes.</div> : null}
+                  {!reqOut.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs lg:text-sm text-slate-400">No has enviado solicitudes.</div> : null}
                 </div>
               </div>
             </div>
 
             {/* Mis amigos con botón de invitar a batalla */}
-            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
-              <div className="text-sm md:text-base font-extrabold">🎮 Mis amigos {friends.length > 0 ? `(${friends.length})` : ''}</div>
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 lg:p-5 ring-1 ring-white/10">
+              <div className="text-sm lg:text-base font-extrabold">🎮 Mis amigos {friends.length > 0 ? `(${friends.length})` : ''}</div>
               <div className="mt-3 space-y-2">
                 {friends.map((f) => {
                   const info = friendInfo[f.id] || {}
@@ -1870,11 +1870,11 @@ export default function App() {
                   const mins = Math.max(1, Math.round(ageSec / 60))
 
                   return (
-                    <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 md:py-4 ring-1 ring-white/10 hover:bg-white/10 transition-colors">
+                    <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 lg:px-4 lg:py-4 ring-1 ring-white/10 hover:bg-white/10 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="text-2xl md:text-3xl">{info.avatar || '🪐'}</div>
+                        <div className="text-2xl lg:text-3xl">{info.avatar || '🪐'}</div>
                         <div>
-                          <div className="text-sm md:text-base font-black">
+                          <div className="text-sm lg:text-base font-black">
                             {info.displayName || f.nickname || f.id?.slice(0, 8)}
                             {online ? <span className="ml-2 rounded-full bg-[#58CC02] px-2 py-1 text-[10px] font-black text-white">EN LÍNEA</span> : null}
                           </div>
@@ -1884,7 +1884,7 @@ export default function App() {
                         </div>
                       </div>
                       <button
-                        className="rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-2 md:px-5 md:py-3 text-xs md:text-sm font-black text-white hover:opacity-90 transition-opacity"
+                        className="rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-2 lg:px-5 lg:py-3 text-xs lg:text-sm font-black text-white hover:opacity-90 transition-opacity"
                         onClick={async () => {
                           if (!user) return
                           setStatus('Creando sala privada...')
@@ -1910,8 +1910,8 @@ export default function App() {
             </div>
 
             {/* Invitaciones a batalla */}
-            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
-              <div className="text-sm md:text-base font-extrabold">⚡ Invitaciones a batalla {invites.length > 0 ? `(${invites.length})` : ''}</div>
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 lg:p-5 ring-1 ring-white/10">
+              <div className="text-sm lg:text-base font-extrabold">⚡ Invitaciones a batalla {invites.length > 0 ? `(${invites.length})` : ''}</div>
               <div className="mt-3 space-y-2">
                 {invites.map((iv) => (
                   <button
@@ -1927,7 +1927,7 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <div className="text-2xl">⚔️</div>
                       <div className="flex-1">
-                        <div className="text-sm md:text-base font-extrabold text-[#FFC800]">
+                        <div className="text-sm lg:text-base font-extrabold text-[#FFC800]">
                           ¡{iv.fromUserId?.slice(0, 10)} te reta a una batalla!
                         </div>
                         <div className="text-xs text-slate-300/70 mt-1">Sala {iv.roomId?.slice(0, 8)} · Toca para unirte</div>
@@ -1936,7 +1936,7 @@ export default function App() {
                     </div>
                   </button>
                 ))}
-                {!invites.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs md:text-sm text-slate-400">Sin invitaciones pendientes.</div> : null}
+                {!invites.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs lg:text-sm text-slate-400">Sin invitaciones pendientes.</div> : null}
               </div>
             </div>
           </div>
@@ -1944,8 +1944,8 @@ export default function App() {
           /* ===== MODO INDIVIDUAL - Quiz o World picker ===== */
           tab === 'play' && lessonId ? (
             /* ===== QUIZ INDIVIDUAL - Cuando estás jugando una lección ===== */
-            <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
-              <div className="flex flex-col gap-2 text-xs md:text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="rounded-3xl bg-black/25 p-4 lg:p-6 ring-1 ring-white/10">
+              <div className="flex flex-col gap-2 text-xs lg:text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="flex items-center gap-2">
                   <div>
                     {lesson?.subject ? subjectTitle(String(lesson.subject)) + ' • ' : ''}
@@ -1967,7 +1967,7 @@ export default function App() {
                 </div>
               ) : null}
 
-              <div className="mt-2 text-lg md:text-2xl font-semibold">{q?.prompt || '—'}</div>
+              <div className="mt-2 text-lg lg:text-2xl font-semibold">{q?.prompt || '—'}</div>
 
               {timerOn ? (
                 <div className="mt-2 flex items-center justify-between rounded-2xl bg-slate-950/30 px-3 py-2 text-xs font-black text-slate-200 ring-1 ring-white/10">
@@ -1977,7 +1977,7 @@ export default function App() {
               ) : null}
 
               {qType === 'multiple_choice' ? (
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+                <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
                   {((q as any).options || []).map((opt: string, i: number) => {
                     const isCorrectAnswer = (q as any).correctIndex ?? (q as any).answer ?? 0
                     const isSelected = alreadyAnswered && i === (q as any)._selectedAnswer
@@ -1988,7 +1988,7 @@ export default function App() {
                       key={i}
                       type="button"
                       disabled={alreadyAnswered}
-                      className={`group relative overflow-hidden rounded-2xl px-4 py-4 md:px-5 md:py-5 text-left text-sm md:text-base font-bold transition-all duration-300 transform active:scale-95 ${alreadyAnswered ? 'scale-105 ring-2' : 'ring-1 ring-white/20'} ${alreadyAnswered ? (isCorrect ? 'ring-green-500 bg-[#58CC02] text-white' : isWrong ? 'ring-red-500 bg-red-500 text-white' : 'ring-white/20 bg-slate-800/50 opacity-50') : 'bg-slate-800 hover:bg-slate-700 hover:ring-white/40 hover:scale-[1.02]'}`}
+                      className={`group relative overflow-hidden rounded-2xl px-4 py-4 lg:px-5 lg:py-5 text-left text-sm lg:text-base font-bold transition-all duration-300 transform active:scale-95 ${alreadyAnswered ? 'scale-105 ring-2' : 'ring-1 ring-white/20'} ${alreadyAnswered ? (isCorrect ? 'ring-green-500 bg-[#58CC02] text-white' : isWrong ? 'ring-red-500 bg-red-500 text-white' : 'ring-white/20 bg-slate-800/50 opacity-50') : 'bg-slate-800 hover:bg-slate-700 hover:ring-white/40 hover:scale-[1.02]'}`}
                       onClick={() => {
                         if (!alreadyAnswered) {
                           (q as any)._selectedAnswer = i
@@ -2371,13 +2371,13 @@ export default function App() {
             )}
 
             {/* World picker */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
+            <div className="mt-4 grid grid-cols-2 lg:grid-cols-3 lg:grid-cols-3 gap-3 lg:gap-4">
               {subjectGroups.filter((g) => g.subject !== 'gen' && !g.subject.startsWith('exam')).map((g) => {
                 const active = world === g.subject
                 return (
                   <button
                     key={g.subject}
-                    className={`rounded-3xl bg-slate-950/40 p-4 md:p-5 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
+                    className={`rounded-3xl bg-slate-950/40 p-4 lg:p-5 text-left ring-1 ring-white/10 hover:bg-slate-950/60 ${active ? 'outline outline-2 outline-[#1CB0F6]' : ''}`}
                     onClick={() => {
                       setWorld(g.subject)
                       setRoutePage(0)
@@ -2394,14 +2394,14 @@ export default function App() {
                         {subjectIcon(g.subject)}
                       </div>
                     </div>
-                    <div className="mt-2 text-base md:text-lg font-extrabold">{subjectTitle(g.subject)}</div>
-                    <div className="mt-2 text-xs md:text-sm text-slate-300/70">{g.lessons.length} lecciones</div>
+                    <div className="mt-2 text-base lg:text-lg font-extrabold">{subjectTitle(g.subject)}</div>
+                    <div className="mt-2 text-xs lg:text-sm text-slate-300/70">{g.lessons.length} lecciones</div>
                   </button>
                 )
               })}
               {/* Mundo Sorpresa - Portal aleatorio */}
               <button
-                className="rounded-3xl bg-gradient-to-br from-[#7C4DFF] via-[#1CB0F6] to-[#FFC800] p-4 md:p-5 text-left ring-1 ring-white/20 hover:opacity-90"
+                className="rounded-3xl bg-gradient-to-br from-[#7C4DFF] via-[#1CB0F6] to-[#FFC800] p-4 lg:p-5 text-left ring-1 ring-white/20 hover:opacity-90"
                 onClick={() => {
                   const picked = pickRandomUnlockedLesson()
                   if (!picked) {
@@ -2424,21 +2424,21 @@ export default function App() {
                   <div className="text-xs text-white/80">Portal</div>
                   <div className="rounded-2xl bg-black/30 px-2 py-1 text-lg">🌀</div>
                 </div>
-                <div className="mt-2 text-base md:text-lg font-extrabold text-white">Mundo Sorpresa</div>
-                <div className="mt-2 text-xs md:text-sm text-white/70">Misión aleatoria</div>
+                <div className="mt-2 text-base lg:text-lg font-extrabold text-white">Mundo Sorpresa</div>
+                <div className="mt-2 text-xs lg:text-sm text-white/70">Misión aleatoria</div>
               </button>
 
               {/* Examen Final - Botón dorado especial */}
               <button
-                className="rounded-3xl bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF8C00] p-4 md:p-5 text-left ring-2 ring-[#FFD700]/50 hover:opacity-90 animate-pulse-slow"
+                className="rounded-3xl bg-gradient-to-br from-[#FFD700] via-[#FFA500] to-[#FF8C00] p-4 lg:p-5 text-left ring-2 ring-[#FFD700]/50 hover:opacity-90 animate-pulse-slow"
                 onClick={() => setExamWorld(true)}
               >
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-white/90 font-black uppercase tracking-wider">Examen</div>
                   <div className="rounded-2xl bg-black/30 px-2 py-1 text-lg">🏆</div>
                 </div>
-                <div className="mt-2 text-base md:text-lg font-extrabold text-white">Examen Final</div>
-                <div className="mt-2 text-xs md:text-sm text-white/80">6 temas · 60 misiones</div>
+                <div className="mt-2 text-base lg:text-lg font-extrabold text-white">Examen Final</div>
+                <div className="mt-2 text-xs lg:text-sm text-white/80">6 temas · 60 misiones</div>
               </button>
             </div>
 
