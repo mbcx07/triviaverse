@@ -196,6 +196,8 @@ export default function App() {
   const [creatingProfile, setCreatingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
 
   // team config
   const [avatar, setAvatar] = useState('🪐')
@@ -544,6 +546,30 @@ export default function App() {
     setSettingsOpen(false)
     setTab('mode')
   }
+
+  // PWA install prompt listener
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+      // Show install option for non-standalone users
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        setShowInstallBanner(true)
+      }
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => {
+      setShowInstallBanner(false)
+      setInstallPrompt(null)
+    })
+    // Hide banner if already in standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBanner(false)
+    }
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+    }
+  }, [])
 
   // Individual mission timer (optional)
   useEffect(() => {
@@ -1435,6 +1461,22 @@ export default function App() {
                 Cerrar
               </button>
             </div>
+
+            {/* Install App button */}
+            {showInstallBanner && installPrompt ? (
+              <button
+                className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-3 text-sm font-black text-white hover:opacity-90 transition-opacity"
+                onClick={async () => {
+                  await installPrompt.prompt()
+                  const result = await installPrompt.userChoice
+                  console.log('[PWA] Install:', result.outcome)
+                  setInstallPrompt(null)
+                  setShowInstallBanner(false)
+                }}
+              >
+                📲 Instalar Triviverso como App
+              </button>
+            ) : null}
 
             <div className="mt-4 rounded-2xl bg-slate-950/30 p-3 ring-1 ring-white/10">
               <div className="flex items-center justify-between">
@@ -3826,6 +3868,37 @@ export default function App() {
                   Cancelar
                 </button>
               </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* PWA Install banner — floating at bottom */}
+        {showInstallBanner && installPrompt && !settingsOpen ? (
+          <div className="fixed bottom-4 left-4 right-4 z-[90] mx-auto w-fit max-w-md">
+            <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#1a1a2e] to-[#16213e] px-5 py-3 shadow-2xl ring-2 ring-[#7C4DFF]/50">
+              <span className="text-2xl">📲</span>
+              <div className="flex-1">
+                <div className="text-sm font-black text-white">Instalar Triviverso</div>
+                <div className="text-xs text-slate-300">Úsala como app nativa</div>
+              </div>
+              <button
+                className="shrink-0 rounded-xl bg-[#7C4DFF] px-4 py-2 text-xs font-black text-white hover:bg-[#6A3DE8]"
+                onClick={async () => {
+                  await installPrompt.prompt()
+                  const result = await installPrompt.userChoice
+                  console.log('[PWA] Install:', result.outcome)
+                  setInstallPrompt(null)
+                  setShowInstallBanner(false)
+                }}
+              >
+                Instalar
+              </button>
+              <button
+                className="shrink-0 rounded-full bg-white/10 p-1 text-xs text-slate-400 hover:text-white"
+                onClick={() => { setShowInstallBanner(false); setInstallPrompt(null) }}
+              >
+                ✕
+              </button>
             </div>
           </div>
         ) : null}
