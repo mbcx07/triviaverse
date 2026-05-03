@@ -990,13 +990,13 @@ export default function App() {
 
       try {
         const qs = await listQuestions(lessonId)
-        // 🎲 Shuffle options para que las respuestas no siempre estén en la misma posición
-        const shuffledQs = qs.map(q => {
+        // 🎲 Shuffle question order & shuffle options per question
+        const shuffled = qs.map(q => {
           if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
           const opts = [...(q as any).options]
           const correctIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
           const correctOpt = opts[correctIdx]
-          // Fisher-Yates shuffle
+          // Fisher-Yates shuffle de opciones
           for (let i = opts.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [opts[i], opts[j]] = [opts[j], opts[i]]
@@ -1004,9 +1004,14 @@ export default function App() {
           const newCorrectIdx = opts.indexOf(correctOpt)
           return { ...q, options: opts, correctIndex: newCorrectIdx }
         })
+        // 🎲 También barajar el orden de las preguntas
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        }
 
         if (cancelled) return
-        setQuestions(shuffledQs)
+        setQuestions(shuffled)
         setResults({})  // Empezar desde cero (reintento)
         setIdx(0)  // Primera pregunta
         setMatchRightsUsed(new Set())
