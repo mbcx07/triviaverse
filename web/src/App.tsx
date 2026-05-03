@@ -1198,34 +1198,104 @@ export default function App() {
 
     const out: Array<{ id: string; title: string; desc: string; ok: boolean }> = []
 
-    // XP trophies (50)
-    for (let i = 1; i <= 50; i++) {
-      const target = i * 100
+    // XP trophies (50) — unique titles with growing XP requirements (exponential curve)
+    const xpTitles = [
+      'Principiante', 'Curioso', 'Estudiante', 'Aprendiz', 'Novato',
+      'Iniciado', 'Explorador', 'Viajero', 'Buscador', 'Descubridor',
+      'Aventurero', 'Trotamundos', 'Navegante', 'Pionero', 'Expedicionario',
+      'Capitán', 'Comandante', 'Estratega', 'Táctico', 'Almirante',
+      'Sabio', 'Erudito', 'Iluminado', 'Vidente', 'Oráculo',
+      'Maestro', 'Gran Maestro', 'Archimago', 'Hechicero', 'Mago Supremo',
+      'Campeón', 'Gladiador', 'Titán', 'Coloso', 'Semidiós',
+      'Héroe', 'Paladín', 'Guardián', 'Protector', 'Salvador',
+      'Leyenda', 'Mito', 'Ícono', 'Estrella', 'Astro',
+      'Fénix', 'Dragón', 'Inmortal', 'Trascendente', 'Eterno'
+    ]
+    // XP targets: start at 100, then grow ~25% each tier → final target ~800k
+    const xpTargets: number[] = []
+    for (let i = 0; i < 50; i++) {
+      if (i === 0) xpTargets.push(100)
+      else xpTargets.push(Math.round(xpTargets[i - 1] * 1.15))
+    }
+    for (let i = 0; i < 50; i++) {
+      const target = xpTargets[i]
       out.push({
         id: `xp-${target}`,
-        title: i <= 5 ? 'Explorador' : i <= 15 ? 'Aventurero' : i <= 30 ? 'Capitán' : 'Leyenda',
-        desc: `Alcanza ${target} XP`,
+        title: xpTitles[i],
+        desc: `Alcanza ${target.toLocaleString()} XP`,
         ok: xpTotal >= target,
       })
     }
 
-    // Streak trophies (25)
-    const streakTargets = [1, 2, 3, 4, 5, 7, 10, 14, 21, 30, 45, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365, 500, 750, 1000]
-    for (const t of streakTargets.slice(0, 25)) {
+    // Streak trophies (25) — unique titles
+    const streakData = [
+      { t: 1, title: 'Primer Paso' },
+      { t: 2, title: 'Repetición' },
+      { t: 3, title: 'Tríada' },
+      { t: 4, title: 'Cuarteto' },
+      { t: 5, title: 'Pentagrama' },
+      { t: 7, title: 'Semana Cumplida' },
+      { t: 10, title: 'Década' },
+      { t: 14, title: 'Quincena' },
+      { t: 21, title: 'Hábito' },
+      { t: 30, title: 'Mensual' },
+      { t: 45, title: 'Comprometido' },
+      { t: 60, title: 'Bimestre' },
+      { t: 90, title: 'Trimestre' },
+      { t: 120, title: 'Cuatrimestre' },
+      { t: 150, title: 'Persistente' },
+      { t: 180, title: 'Semestre' },
+      { t: 210, title: 'Incansable' },
+      { t: 240, title: 'Octomes' },
+      { t: 270, title: 'Inquebrantable' },
+      { t: 300, title: 'Decidico' },
+      { t: 330, title: 'Indetenible' },
+      { t: 365, title: 'Año Triunfal' },
+      { t: 500, title: 'Quinientos' },
+      { t: 750, title: 'Gigante' },
+      { t: 1000, title: 'Milenario' },
+    ]
+    for (const { t, title } of streakData) {
       out.push({
         id: `streak-${t}`,
-        title: t < 7 ? 'Inicio' : t < 30 ? 'Constancia' : t < 120 ? 'Fuego' : 'Imparable',
+        title,
         desc: `Racha de ${t} día${t === 1 ? '' : 's'}`,
         ok: streak >= t,
       })
     }
 
-    // Lessons completed trophies (25)
-    const lessonTargets = [1, 2, 3, 5, 7, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 60, 75, 90, 100, 120, 150, 200, 250, 300]
-    for (const t of lessonTargets.slice(0, 25)) {
+    // Lessons completed trophies (25) — unique titles
+    const lessonData = [
+      { t: 1, title: 'Primer Logro' },
+      { t: 2, title: 'Dúo' },
+      { t: 3, title: 'Trío' },
+      { t: 5, title: 'Pentamisión' },
+      { t: 7, title: 'Sietemisiones' },
+      { t: 10, title: 'Coleccionista' },
+      { t: 12, title: 'Docena' },
+      { t: 15, title: 'Quincena de Misiones' },
+      { t: 18, title: 'Mayoría de Edad' },
+      { t: 20, title: 'Veintena' },
+      { t: 25, title: 'Cuarto de Siglo' },
+      { t: 30, title: 'Trenta Triunfos' },
+      { t: 35, title: 'Imparable' },
+      { t: 40, title: 'Cuarentena' },
+      { t: 45, title: 'Casi Medio Siglo' },
+      { t: 50, title: 'Medio Centenar' },
+      { t: 60, title: 'Sexagésimo' },
+      { t: 75, title: 'Setenta y Cinco' },
+      { t: 90, title: 'Noventa Estrellas' },
+      { t: 100, title: 'Centenario' },
+      { t: 120, title: 'Ciento Veinte' },
+      { t: 150, title: 'Sesquicentenario' },
+      { t: 200, title: 'Bicentenario' },
+      { t: 250, title: 'Cuarto de Millar' },
+      { t: 300, title: 'Tricentenario' },
+    ]
+    for (const { t, title } of lessonData) {
       out.push({
         id: `lessons-${t}`,
-        title: t < 10 ? 'Coleccionista' : t < 50 ? 'Campeón' : t < 150 ? 'Maestro' : 'Gran Maestro',
+        title,
         desc: `Completa ${t} misiones (≥1★)`,
         ok: completedLessons >= t,
       })
@@ -1235,29 +1305,32 @@ export default function App() {
     return out.slice(0, 100)
   }, [user?.streakCount, xpTotal, completedLessons])
 
-  // Trophy unlock notifications
+  // Trophy unlock notifications — only fire once per trophy, never repeat
   useEffect(() => {
     if (!user) return
     const key = `tv_trophies_unlocked_${user.id}`
     const prevRaw = localStorage.getItem(key)
-    const prev = new Set<string>(prevRaw ? JSON.parse(prevRaw) : [])
+    const prev: string[] = prevRaw ? JSON.parse(prevRaw) : []
+    const prevSet = new Set(prev)
 
-    const unlockedNow = trophies.filter((t) => t.ok).map((t) => t.id)
-    const newly = unlockedNow.find((id) => !prev.has(id))
+    const unlockedIds = trophies.filter((t) => t.ok).map((t) => t.id)
+    const newIds = unlockedIds.filter((id) => !prevSet.has(id))
 
-    if (newly) {
-      const t = trophies.find((x) => x.id === newly)
+    // Save unlocked list BEFORE showing toast to prevent re-fires
+    localStorage.setItem(key, JSON.stringify(unlockedIds))
+
+    // Only notify the highest (most recent) new trophy
+    if (newIds.length > 0) {
+      const newest = newIds[newIds.length - 1]
+      const t = trophies.find((x) => x.id === newest)
       if (t) {
-        // avoid setState directly in effect body for lint rule
         queueMicrotask(() => {
           setTrophyToast({ title: t.title, desc: t.desc })
           setTimeout(() => setTrophyToast(null), 4000)
         })
       }
     }
-
-    localStorage.setItem(key, JSON.stringify(unlockedNow))
-  }, [user, trophies])
+  }, [user?.id, trophies])
 
   function pickRandomUnlockedLesson(): Lesson | null {
     if (!lessons.length) return null
