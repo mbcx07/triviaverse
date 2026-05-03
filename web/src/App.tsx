@@ -13,7 +13,6 @@ import {
   loginWithNicknamePin,
   subscribeOpenBattleRooms,
   recordAttempt,
-  changePin,
   ensureTeam,
   resetLessonProgress,
   subscribeUser,
@@ -197,8 +196,6 @@ export default function App() {
   const [creatingProfile, setCreatingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
-  const [oldPin, setOldPin] = useState('')
-  const [newPin, setNewPin] = useState('')
 
   // team config
   const [avatar, setAvatar] = useState('🪐')
@@ -525,24 +522,6 @@ export default function App() {
     }
   }
 
-  async function doChangePin(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user) return
-
-    setError(null)
-    setStatus('Actualizando PIN...')
-    try {
-      await changePin({ userId: user.id, oldPin, newPin })
-      setStatus(null)
-      setOldPin('')
-      setNewPin('')
-      setSettingsOpen(false)
-    } catch (err: any) {
-      setStatus(null)
-      setError(err?.message || 'No se pudo actualizar el PIN.')
-    }
-  }
-
   function logout() {
     ;(window as any).__tv_unsubUser?.()
     ;(window as any).__tv_unsubProgress?.()
@@ -563,8 +542,6 @@ export default function App() {
     setNickname('')
     setPin('')
     setSettingsOpen(false)
-    setOldPin('')
-    setNewPin('')
     setTab('mode')
   }
 
@@ -1507,36 +1484,6 @@ export default function App() {
                 Guardar perfil
               </button>
             </div>
-
-            <form className="mt-4 space-y-3" onSubmit={doChangePin}>
-              <div className="text-sm text-slate-300">Cambiar PIN (4 dígitos)</div>
-
-              <label className="block">
-                <div className="mb-1 text-xs text-slate-300">PIN actual</div>
-                <input
-                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  value={oldPin}
-                  onChange={(e) => setOldPin(e.target.value)}
-                  placeholder="1703"
-                  inputMode="numeric"
-                />
-              </label>
-
-              <label className="block">
-                <div className="mb-1 text-xs text-slate-300">PIN nuevo</div>
-                <input
-                  className="w-full rounded-xl bg-slate-950/60 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="1234"
-                  inputMode="numeric"
-                />
-              </label>
-
-              <button className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-semibold hover:bg-emerald-500">Guardar PIN</button>
-
-              <div className="text-xs text-slate-400">Nota: el PIN se guarda en Firestore en texto plano.</div>
-            </form>
 
             {/* Premium Button */}
             <div className="mt-4">
