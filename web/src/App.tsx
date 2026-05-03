@@ -48,11 +48,14 @@ import {
   subscribeFriendRecords,
   sendFriendMessage,
   subscribeFriendMessages,
+  subscribeChatNotifications,
+  markChatRead,
   type Lesson,
   type Question,
   type User,
   type BattleRecord,
   type FriendMessage,
+  type ChatNotification,
 } from './firestore'
 import { checkAnswer } from './lib/questionCheck'
 import { doc, setDoc, updateDoc, serverTimestamp, collection, query, where, onSnapshot } from 'firebase/firestore'
@@ -428,6 +431,7 @@ export default function App() {
   const [friendChatId, setFriendChatId] = useState<string>('')
   const [friendChatMsgs, setFriendChatMsgs] = useState<FriendMessage[]>([])
   const [friendChatText, setFriendChatText] = useState('')
+  const [chatNotifications, setChatNotifications] = useState<Record<string, ChatNotification>>({})
 
   // Toast notifications
   const [toast, setToast] = useState<string | null>(null)
@@ -953,8 +957,17 @@ export default function App() {
     const unsub = subscribeFriendMessages({ userId: user.id, friendId: friendChatId }, (msgs) => {
       setFriendChatMsgs(msgs)
     })
+    // Mark as read when opening chat
+    markChatRead({ userId: user.id, friendId: friendChatId }).catch(() => {})
     return () => unsub()
   }, [user, friendChatId])
+
+  // Chat notifications subscription
+  useEffect(() => {
+    if (!user) return
+    const unsub = subscribeChatNotifications(user.id, (n) => setChatNotifications(n))
+    return () => unsub()
+  }, [user])
 
   // Auto-scroll friend chat
   useEffect(() => {
@@ -1543,7 +1556,7 @@ export default function App() {
         <header className="sticky top-0 z-50 -mx-4 mb-2 border-b border-white/10 bg-black/20 px-4 py-2 backdrop-blur md:px-6 md:py-3">
           {/* Row 1: Logo + stats */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
+            <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { if (user) setTab('mode') }}>
               <img src={`${baseUrl}logo-transparent.png`} className="h-7 md:h-8 w-auto object-contain" alt="Triviverso" />
               <div className="text-base md:text-xl font-extrabold tracking-tight">Triviverso</div>
             </div>
@@ -1571,7 +1584,7 @@ export default function App() {
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('play')}>🎮 Jugar</button>
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('league')}>🏆 Liga</button>
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('trophies')}>🏅 Trofeos</button>
-              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'chats' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('chats')}>💬 Chats</button>
+              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'chats' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('chats')}>💬 Chats{Object.values(chatNotifications).filter(n => n.unread).length > 0 ? ` ${Object.values(chatNotifications).filter(n => n.unread).length}` : ''}</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setTab('friends')}>👥{reqIn.length > 0 ? ` ${reqIn.length}` : ''}</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setSettingsOpen(true)}>⚙️</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={logout}>🚪</button>
@@ -2796,8 +2809,14 @@ export default function App() {
                   return (
                     <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 ring-1 ring-white/10 hover:bg-white/10 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="text-xl">{info.avatar || '🪐'}</div>
-                        <div className="font-bold text-sm">{info.displayName || f.id.slice(0, 10)}</div>
+                        <div className="relative">
+                          <div className="text-xl">{info.avatar || '🪐'}</div>
+                          {chatNotifications[f.id]?.unread ? <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#58CC02] ring-1 ring-black" /> : null}
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm">{info.displayName || f.id.slice(0, 10)}</div>
+                          {chatNotifications[f.id]?.lastMessage ? <div className="text-xs text-slate-400 truncate max-w-[150px]">{chatNotifications[f.id].lastMessage}</div> : null}
+                        </div>
                       </div>
                       <button
                         className="rounded-xl bg-[#58CC02] px-4 py-2 text-xs font-black text-white"

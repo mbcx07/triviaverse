@@ -1117,6 +1117,15 @@ export async function sendFriendMessage(params: { fromUserId: string; toUserId: 
     text,
     createdAt: serverTimestamp(),
   }, { merge: true })
+  
+  // Also write a chat notification for the recipient
+  const notifRef = doc(dbi, 'users', params.toUserId, 'chatNotifications', params.fromUserId)
+  await setDoc(notifRef, {
+    fromUserId: params.fromUserId,
+    lastMessage: text.slice(0, 100),
+    unread: true,
+    updatedAt: serverTimestamp(),
+  }, { merge: true })
 }
 
 export function subscribeFriendMessages(params: { userId: string; friendId: string }, cb: (msgs: FriendMessage[]) => void): Unsubscribe {
@@ -1153,4 +1162,26 @@ export function subscribeLeaderVotes(roomId: string, callback: (votes: Record<st
     })
     callback(votes)
   })
+}
+
+// --- Chat Notifications ---
+export type ChatNotification = { fromUserId: string; lastMessage: string; unread: boolean; updatedAt?: any }
+
+export function subscribeChatNotifications(userId: string, cb: (notifs: Record<string, ChatNotification>) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'chatNotifications')
+  return onSnapshot(ref, (qs) => {
+    const out: Record<string, ChatNotification> = {}
+    qs.docs.forEach((d) => {
+      const data = d.data() as any
+      out[d.id] = { fromUserId: String(data.fromUserId || ''), lastMessage: String(data.lastMessage || ''), unread: Boolean(data.unread), updatedAt: data.updatedAt }
+    })
+    cb(out)
+  })
+}
+
+export async function markChatRead(params: { userId: string; friendId: string }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', params.userId, 'chatNotifications', params.friendId)
+  await updateDoc(ref, { unread: false, updatedAt: serverTimestamp() })
 }
