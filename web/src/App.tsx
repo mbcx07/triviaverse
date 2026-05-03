@@ -1314,7 +1314,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0b3b] via-[#2a1158] to-[#070B2A] text-slate-100">
-      <div className="mx-auto max-w-md md:max-w-5xl p-4">
+      <div className="mx-auto max-w-md xl:max-w-5xl p-4">
         <header className="sticky top-0 z-50 -mx-4 mb-2 flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur md:px-6 md:py-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setTab('mode'); setUser(null); setShowCreateProfile(false) }}>
             <img src={`${baseUrl}logo-transparent.png`} className="h-8 w-auto object-contain" alt="Triviverso" />
