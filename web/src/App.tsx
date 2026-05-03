@@ -1676,15 +1676,17 @@ export default function App() {
             </div>
 
             {/* Mi posición */}
-            {user && leagueRows.length > 0 ? (
+            {user ? (
               <div className="mt-4 rounded-2xl bg-gradient-to-r from-[#FFC800]/20 to-[#FF9600]/20 p-4 ring-1 ring-[#FFC800]/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="text-2xl">{user.avatar || '🪐'}</div>
                     <div>
-                      <div className="text-sm md:text-base font-extrabold">{user.displayName || user.nickname}</div>
+                      <div className="text-sm font-extrabold">{user.displayName || user.nickname}</div>
                       <div className="text-xs text-slate-300/70">
-                        Posición #{leagueRows.findIndex(r => r.id === user.id) + 1 || '—'} · {leagueRows.find(r => r.id === user.id)?.xpWeek || 0} XP esta semana
+                        {leagueRows.length > 0 
+                          ? `#${leagueRows.findIndex(r => r.id === user.id) + 1 || '?'} de ${leagueRows.length} jugadores`
+                          : 'Cargando ranking...'}
                       </div>
                     </div>
                   </div>
@@ -1695,60 +1697,34 @@ export default function App() {
               </div>
             ) : null}
 
-            {/* Podio Top 3 */}
-            {leagueRows.length >= 3 ? (
-              <div className="mt-6 flex items-end justify-center gap-2 md:gap-4">
-                {/* 2do lugar */}
-                <div className="flex flex-col items-center">
-                  <div className="text-3xl md:text-4xl">{leagueRows[1]?.avatar || '🥈'}</div>
-                  <div className="mt-1 text-xs md:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[1]?.nickname || '—'}</div>
-                  <div className="flex h-16 md:h-20 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-slate-400 to-slate-300 mt-2">
-                    <span className="text-lg md:text-2xl font-black text-slate-800">2</span>
-                  </div>
-                  <div className="text-[10px] md:text-xs font-bold text-slate-400">{leagueRows[1]?.xpWeek || 0} XP</div>
+            {/* Mostrar TODOS los jugadores en tabla simple */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-extrabold text-slate-300/80">
+                  🏆 Top {leagueRows.length} jugadores esta semana
                 </div>
-                {/* 1er lugar */}
-                <div className="flex flex-col items-center">
-                  <div className="text-4xl md:text-5xl crown-animation">👑</div>
-                  <div className="text-4xl md:text-5xl">{leagueRows[0]?.avatar || '🥇'}</div>
-                  <div className="mt-1 text-xs md:text-sm font-extrabold text-[#FFC800] text-center truncate max-w-[100px]">{leagueRows[0]?.nickname || '—'}</div>
-                  <div className="flex h-24 md:h-28 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-[#FFC800] to-[#FFD700] mt-2 podium-1st">
-                    <span className="text-2xl md:text-3xl font-black text-white">1</span>
-                  </div>
-                  <div className="text-[10px] md:text-xs font-bold text-[#FFC800]">{leagueRows[0]?.xpWeek || 0} XP</div>
-                </div>
-                {/* 3er lugar */}
-                <div className="flex flex-col items-center">
-                  <div className="text-3xl md:text-4xl">{leagueRows[2]?.avatar || '🥉'}</div>
-                  <div className="mt-1 text-xs md:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[2]?.nickname || '—'}</div>
-                  <div className="flex h-12 md:h-16 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-amber-700 to-amber-500 mt-2">
-                    <span className="text-lg md:text-2xl font-black text-white">3</span>
-                  </div>
-                  <div className="text-[10px] md:text-xs font-bold text-amber-500">{leagueRows[2]?.xpWeek || 0} XP</div>
-                </div>
+                <div className="text-[10px] text-slate-500">{leagueRows.length} encontrados</div>
               </div>
-            ) : null}
-
-            {/* Tabla de clasificación (4-10) */}
-            <div className="mt-6 space-y-2">
-              <div className="text-sm font-extrabold text-slate-300/80">Clasificación</div>
+              
               {leagueRows.length === 0 ? (
                 <div className="rounded-2xl bg-slate-950/30 p-6 text-center text-sm text-slate-400">
                   No hay datos de la liga esta semana aún. ¡Juega lecciones para ganar XP y aparecer en el ranking!
                 </div>
               ) : (
-                leagueRows.slice(3, 10).map((row, i) => {
-                  const pos = i + 4
-                  const medal = pos === 4 ? '🏅' : ''
+                leagueRows.map((row, i) => {
+                  const pos = i + 1
+                  const isMe = row.id === user?.id
+                  const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : ''
                   return (
-                    <div key={row.id} className={`flex items-center gap-3 rounded-2xl px-3 py-3 ring-1 ring-white/10 transition-all ${row.id === user?.id ? 'bg-[#1CB0F6]/15 ring-[#1CB0F6]/40' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-black text-slate-300">
+                    <div key={row.id} className={`flex items-center gap-3 rounded-2xl px-3 py-3 ring-1 ring-white/10 transition-all ${isMe ? 'bg-[#1CB0F6]/15 ring-[#1CB0F6]/40' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}>
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-black ${pos === 1 ? 'bg-[#FFC800] text-slate-900' : pos === 2 ? 'bg-slate-300 text-slate-800' : pos === 3 ? 'bg-amber-600 text-white' : 'bg-white/10 text-slate-300'}`}>
                         {pos}
                       </div>
-                      <div className="flex-1 font-bold text-sm md:text-base">
-                        {medal} {row.nickname || row.id?.slice(0, 8)}
+                      <div className="flex-1 font-bold text-sm">
+                        {medal} {row.nickname || row.id?.slice(0, 10)}
+                        {isMe ? <span className="ml-2 text-[10px] text-[#1CB0F6]">(tú)</span> : null}
                       </div>
-                      <div className="rounded-full bg-[#FFC800]/10 px-3 py-1 text-xs font-black text-[#FFC800]">
+                      <div className={`rounded-full px-3 py-1 text-xs font-black ${pos === 1 ? 'bg-[#FFC800] text-slate-900' : 'bg-[#FFC800]/10 text-[#FFC800]'}`}>
                         {row.xpWeek || 0} XP
                       </div>
                     </div>
