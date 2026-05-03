@@ -526,6 +526,8 @@ export type BattleRoom = {
   chatPhase?: 'lobby' | 'match' | 'post'
   // Chat messages
   messages?: Array<{ userId: string; text: string; createdAt: any }>
+  // Room display name
+  roomName?: string
   // Ready system (v2)
   readyUsers?: { [userId: string]: boolean }
   countdownStarted?: boolean
@@ -559,6 +561,7 @@ export async function createBattleRoom(params: {
   questionCount?: number
   suddenDeath?: boolean
   visibility?: 'open' | 'private'
+  roomName?: string
 }) {
   const dbi = ensureDb()
   const ref = doc(collection(dbi, 'battleRooms'))
@@ -592,6 +595,7 @@ export async function createBattleRoom(params: {
     hostTeamId: params.teamId,
     chatPhase: 'lobby',
     visibility,
+    roomName: params.roomName || '',
   }
 
   await setDoc(ref, { ...data, createdAt: serverTimestamp() }, { merge: true })
@@ -1015,6 +1019,118 @@ export async function removeFCMToken(params: { userId: string }) {
   const dbi = ensureDb()
   const ref = doc(dbi, 'users', params.userId)
   await updateDoc(ref, { fcmToken: null, fcmTokenUpdatedAt: serverTimestamp() })
+}
+
+// --- Room Cleanup ---
+// Delete rooms with status='open' older than 30 minutes
+export async function cleanupExpiredRooms() {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'battleRooms')
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000)
+  const q = query(ref, where('status', '==', 'open'), limit(100))
+  const qs = await getDocs(q)
+  
+  const batch = writeBatch(dbi)
+  let deleted = 0
+  for (const d of qs.docs) {
+    const data = d.data() as any
+    const created = data.createdAt?.toDate ? data.createdAt.toDate() : null
+    if (created && created < thirtyMinAgo) {
+      batch.delete(d.ref)
+      deleted++
+    }
+  }
+  if (deleted > 0) {
+    await batch.commit()
+  }
+  return deleted
+}
+
+// Delete a finished battle room
+export async function deleteFinishedRoom(roomId: string) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'battleRooms', roomId)
+  await deleteDoc(ref)
+}
+
+// --- Battle Records (friend vs friend) ---
+export type BattleRecord = { wins: number; losses: number; lastBattleAt?: any }
+
+export async function saveBattleRecord(params: { userId: string; friendId: string; won: boolean }) {
+  const dbi = ensureDb()
+  const ref = doc(dbi, 'users', params.userId, 'battleRecords', params.friendId)
+  await runTransaction(dbi, async (tx) => {
+    const snap = await tx.get(ref)
+    const current: BattleRecord = snap.exists()
+      ? { wins: Number((snap.data() as any).wins || 0), losses: Number((snap.data() as any).losses || 0) }
+      : { wins: 0, losses: 0 }
+    if (params.won) {
+      current.wins++
+    } else {
+      current.losses++
+    }
+    current.lastBattleAt = serverTimestamp()
+    tx.set(ref, current as any, { merge: true })
+  })
+}
+
+export async function getFriendRecords(userId: string): Promise<Record<string, BattleRecord>> {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'battleRecords')
+  const qs = await getDocs(query(ref, limit(100)))
+  const out: Record<string, BattleRecord> = {}
+  for (const d of qs.docs) {
+    const data = d.data() as any
+    out[d.id] = { wins: Number(data.wins || 0), losses: Number(data.losses || 0), lastBattleAt: data.lastBattleAt }
+  }
+  return out
+}
+
+export function subscribeFriendRecords(userId: string, cb: (records: Record<string, BattleRecord>) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const ref = collection(dbi, 'users', userId, 'battleRecords')
+  return onSnapshot(ref, (qs) => {
+    const out: Record<string, BattleRecord> = {}
+    for (const d of qs.docs) {
+      const data = d.data() as any
+      out[d.id] = { wins: Number(data.wins || 0), losses: Number(data.losses || 0), lastBattleAt: data.lastBattleAt }
+    }
+    cb(out)
+  })
+}
+
+// --- Friend Chat ---
+export type FriendMessage = { id: string; fromUserId: string; text: string; createdAt?: any }
+
+function friendChatId(a: string, b: string): string {
+  return [a, b].sort().join('_')
+}
+
+export async function sendFriendMessage(params: { fromUserId: string; toUserId: string; text: string }) {
+  const dbi = ensureDb()
+  const chatId = friendChatId(params.fromUserId, params.toUserId)
+  const text = params.text.trim().slice(0, 500)
+  if (!text) return
+  const ref = doc(collection(dbi, 'friendChats', chatId, 'messages'))
+  await setDoc(ref, {
+    fromUserId: params.fromUserId,
+    text,
+    createdAt: serverTimestamp(),
+  }, { merge: true })
+}
+
+export function subscribeFriendMessages(params: { userId: string; friendId: string }, cb: (msgs: FriendMessage[]) => void): Unsubscribe {
+  const dbi = ensureDb()
+  const chatId = friendChatId(params.userId, params.friendId)
+  const ref = collection(dbi, 'friendChats', chatId, 'messages')
+  const q = query(ref, orderBy('createdAt', 'asc'), limit(200))
+  return onSnapshot(q, (qs) => {
+    const out = qs.docs.map((d) => {
+      const data = d.data() as any
+      return { id: d.id, fromUserId: String(data.fromUserId || ''), text: String(data.text || ''), createdAt: data.createdAt }
+    })
+    cb(out)
+  })
 }
 
 // Vote for team leader in a battle room

@@ -44,9 +44,15 @@ import {
   getUserPublic,
   voteTeamLeader,
   subscribeLeaderVotes,
+  cleanupExpiredRooms,
+  subscribeFriendRecords,
+  sendFriendMessage,
+  subscribeFriendMessages,
   type Lesson,
   type Question,
   type User,
+  type BattleRecord,
+  type FriendMessage,
 } from './firestore'
 import { checkAnswer } from './lib/questionCheck'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -127,6 +133,8 @@ function subjectIcon(key: string): string {
       return '🇲🇽'
     case 'exam6':
       return '💜'
+    case 'examen-final':
+      return '🎓'
     default:
       return '⭐'
   }
@@ -158,6 +166,8 @@ function subjectGradient(key: string): string {
       return 'from-[#006847] to-[#CE1126]'
     case 'exam6':
       return 'from-[#7C4DFF] to-[#FF69B4]'
+    case 'examen-final':
+      return 'from-[#FFD700] to-[#FF8C00]'
     default:
       return 'from-[#1CB0F6] to-[#7C4DFF]'
   }
@@ -234,6 +244,7 @@ export default function App() {
   const [battleSuddenDeathWinner, setBattleSuddenDeathWinner] = useState<string | null>(null) // userId del primero en responder bien
   const [battleSubject, setBattleSubject] = useState('esp')
   const [battleSize, setBattleSize] = useState(4)
+  const [battleRoomName, setBattleRoomName] = useState('')
   const [battleQuestionCount, setBattleQuestionCount] = useState(10)
   const [battleTeamCount, setBattleTeamCount] = useState(2) // número de equipos (1-4)
   const [battleTimerConfig, setBattleTimerConfig] = useState(120) // segundos por pregunta configurados
@@ -398,6 +409,20 @@ export default function App() {
   const [reqOut, setReqOut] = useState<Array<{ id: string; toUserId: string }>>([])
   const [invites, setInvites] = useState<Array<{ id: string; fromUserId: string; roomId: string }>>([])
 
+  // Battle records (wins/losses with friends)
+  const [battleRecords, setBattleRecords] = useState<Record<string, BattleRecord>>({})
+  const [showRecordsFriend, setShowRecordsFriend] = useState<string | null>(null)
+
+  // Friend chat
+  const [friendChatId, setFriendChatId] = useState<string>('')
+  const [friendChatMsgs, setFriendChatMsgs] = useState<FriendMessage[]>([])
+  const [friendChatText, setFriendChatText] = useState('')
+
+  // Toast notifications
+  const [toast, setToast] = useState<string | null>(null)
+  // Track previous battle room members for join detection
+  const prevMembersRef = useRef<string[]>([])
+
   const [startModalLesson, setStartModalLesson] = useState<Lesson | null>(null)
   const [portalOpen, setPortalOpen] = useState(false)
   const [celebration, setCelebration] = useState<{ title: string; xpDelta: number; failed?: boolean } | null>(null)
@@ -410,7 +435,7 @@ export default function App() {
   // route pagination (10 missions per page)
   const [routePage, setRoutePage] = useState(0)
 
-  const [tab, setTab] = useState<'mode' | 'home' | 'play' | 'league' | 'trophies' | 'battle' | 'friends'>('mode')
+  const [tab, setTab] = useState<'mode' | 'home' | 'play' | 'league' | 'trophies' | 'battle' | 'friends' | 'chats'>('mode')
   const [menuOpen, setMenuOpen] = useState(false)
 
   // Worlds (subjects). When null, user is on the world picker.
@@ -878,8 +903,23 @@ export default function App() {
     }
   }, [battleRoom?.status, battleRoom?.countdownStarted, battleRoom?.startedAt, battleStatus])
 
-  // Voice PTT: enable/disable mic track
-  // Auto-scroll battle chat
+  // Friend chat subscription (when chat is active)
+  useEffect(() => {
+    if (!user || !friendChatId) return
+    const unsub = subscribeFriendMessages({ userId: user.id, friendId: friendChatId }, (msgs) => {
+      setFriendChatMsgs(msgs)
+    })
+    return () => unsub()
+  }, [user, friendChatId])
+
+  // Auto-scroll friend chat
+  useEffect(() => {
+    if (!friendChatId) return
+    requestAnimationFrame(() => {
+      const el = document.getElementById('friend-chat-scroll')
+      if (el) el.scrollTop = el.scrollHeight
+    })
+  }, [friendChatMsgs.length, friendChatId])
   useEffect(() => {
     if (tab !== 'battle') return
     // wait for DOM paint
@@ -902,11 +942,15 @@ export default function App() {
     ;(window as any).__tv_unsubReqOut = subscribeFriendRequestsOut(user.id, (l) => setReqOut(l))
     ;(window as any).__tv_unsubInvites = subscribeBattleInvites(user.id, (l) => setInvites(l))
 
+    // Subscribe to battle records
+    const unsubRecords = subscribeFriendRecords(user.id, (r) => setBattleRecords(r))
+
     return () => {
       ;(window as any).__tv_unsubFriends?.()
       ;(window as any).__tv_unsubReqIn?.()
       ;(window as any).__tv_unsubReqOut?.()
       ;(window as any).__tv_unsubInvites?.()
+      unsubRecords()
     }
   }, [user])
 
@@ -919,6 +963,49 @@ export default function App() {
     }, 30000)
     return () => clearInterval(t)
   }, [user?.id])
+
+  // 📌 Improvement 1: Auto-cleanup expired rooms every 60s
+  useEffect(() => {
+    if (!user) return
+    const interval = setInterval(() => {
+      cleanupExpiredRooms().catch(() => {})
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [user])
+
+  // 📌 Improvement 3: Detect new members joining battle room
+  useEffect(() => {
+    if (!battleRoom || !user) {
+      prevMembersRef.current = []
+      return
+    }
+    const teams = battleRoom.teams || {}
+    const allMembers: string[] = []
+    for (const key of ['A', 'B', 'C', 'D'] as const) {
+      const m = (teams[key] as any)?.members || []
+      for (const id of m) allMembers.push(String(id))
+    }
+    
+    const prev = prevMembersRef.current
+    const newMembers = allMembers.filter((id) => !prev.includes(id) && id !== user.id)
+    
+    if (prev.length > 0 && newMembers.length > 0) {
+      for (const newId of newMembers) {
+        const info = friendInfo[newId]
+        const name = info?.displayName || newId.slice(0, 8)
+        setToast(`¡${name} se unió a la batalla!`)
+      }
+    }
+    
+    prevMembersRef.current = allMembers
+  }, [battleRoom?.teams, battleRoom?.id])
+
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   // Friend public info (presence)
   useEffect(() => {
@@ -1424,6 +1511,7 @@ export default function App() {
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'play' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('play')}>🎮 Jugar</button>
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('league')}>🏆 Liga</button>
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('trophies')}>🏅 Trofeos</button>
+              <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'chats' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('chats')}>💬 Chats</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setSettingsOpen(true)}>⚙️</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={logout}>🚪</button>
             </div>
@@ -1456,6 +1544,10 @@ export default function App() {
 
         {error ? (
           <div className="mb-3 rounded-xl bg-rose-950/40 p-3 text-sm text-rose-200 ring-1 ring-rose-400/20">{error}</div>
+        ) : null}
+
+        {toast ? (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[130] rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-5 py-3 text-sm font-black text-white shadow-2xl animate-bounce">{toast}</div>
         ) : null}
 
         {settingsOpen && user ? (
@@ -1901,30 +1993,70 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      <button
-                        className="rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-2 md:px-5 md:py-3 text-xs md:text-sm font-black text-white hover:opacity-90 transition-opacity"
-                        onClick={async () => {
-                          if (!user) return
-                          setStatus('Creando sala privada...')
-                          const r = await createBattleRoom({ 
-                            userId: user.id, 
-                            teamId: user.teamId || 'belas', 
-                            subject: 'esp', 
-                            maxPerTeam: 1, 
-                            visibility: 'private' 
-                          })
-                          await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
-                          setStatus('Invitación enviada ⚔️')
-                          setTimeout(() => setStatus(null), 2000)
-                        }}
-                      >
-                        ⚔️ Retar
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          className="rounded-xl bg-[#58CC02] px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm font-black text-white hover:opacity-90 transition-opacity"
+                          onClick={() => { setFriendChatId(f.id); setTab('chats') }}
+                        >
+                          💬
+                        </button>
+                        <button
+                          className="rounded-xl bg-slate-700 px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm font-black text-white hover:bg-slate-600"
+                          onClick={() => setShowRecordsFriend(showRecordsFriend === f.id ? null : f.id)}
+                        >
+                          📊
+                        </button>
+                        <button
+                          className="rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-2 md:px-5 md:py-3 text-xs md:text-sm font-black text-white hover:opacity-90 transition-opacity"
+                          onClick={async () => {
+                            if (!user) return
+                            setStatus('Creando sala privada...')
+                            const r = await createBattleRoom({ 
+                              userId: user.id, 
+                              teamId: user.teamId || 'belas', 
+                              subject: 'esp', 
+                              maxPerTeam: 1, 
+                              visibility: 'private' 
+                            })
+                            await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
+                            setStatus('Invitación enviada ⚔️')
+                            setTimeout(() => setStatus(null), 2000)
+                          }}
+                        >
+                          ⚔️ Retar
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
                 {!friends.length ? <div className="rounded-2xl bg-white/5 p-6 text-center text-sm text-slate-400">Aún no tienes amigos. ¡Busca a alguien por su nickname!</div> : null}
               </div>
+
+              {/* Battle Records expandable */}
+              {showRecordsFriend ? (
+                <div className="mt-3 rounded-2xl bg-slate-800/50 p-4 ring-1 ring-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-bold">📊 Record contra {friendInfo[showRecordsFriend]?.displayName || showRecordsFriend.slice(0, 10)}</div>
+                    <button className="text-xs text-slate-400 hover:text-white" onClick={() => setShowRecordsFriend(null)}>✕</button>
+                  </div>
+                  <div className="mt-2 flex gap-4">
+                    <div className="flex items-center gap-2 rounded-xl bg-[#58CC02]/20 px-4 py-2">
+                      <span className="text-lg">🏆</span>
+                      <div>
+                        <div className="text-xs text-slate-300">Victorias</div>
+                        <div className="text-xl font-black text-[#58CC02]">{battleRecords[showRecordsFriend]?.wins || 0}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-xl bg-rose-500/20 px-4 py-2">
+                      <span className="text-lg">💔</span>
+                      <div>
+                        <div className="text-xs text-slate-300">Derrotas</div>
+                        <div className="text-xl font-black text-rose-400">{battleRecords[showRecordsFriend]?.losses || 0}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {/* Invitaciones a batalla */}
@@ -2582,6 +2714,70 @@ export default function App() {
             ) : null}
           </div>
           )
+        ) : tab === 'chats' ? (
+          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
+            <div className="text-lg md:text-2xl font-extrabold">💬 Chats</div>
+            <div className="mt-1 text-xs md:text-sm text-slate-300/80">Chatea en privado con tus amigos.</div>
+
+            {!friendChatId ? (
+              <div className="mt-4 space-y-2">
+                {friends.map((f: any) => {
+                  const info = friendInfo[f.id] || {}
+                  return (
+                    <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 ring-1 ring-white/10 hover:bg-white/10 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="text-xl">{info.avatar || '🪐'}</div>
+                        <div className="font-bold text-sm">{info.displayName || f.id.slice(0, 10)}</div>
+                      </div>
+                      <button
+                        className="rounded-xl bg-[#58CC02] px-4 py-2 text-xs font-black text-white"
+                        onClick={() => setFriendChatId(f.id)}
+                      >
+                        Chatear
+                      </button>
+                    </div>
+                  )
+                })}
+                {!friends.length ? <div className="text-center text-xs text-slate-400 py-4">Agrega amigos para chatear.</div> : null}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mt-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <button className="text-xs text-slate-400 hover:text-white" onClick={() => { setFriendChatId(''); setFriendChatMsgs([]) }}>← Volver</button>
+                    <span className="text-sm font-bold">{friendInfo[friendChatId]?.displayName || friendChatId.slice(0, 10)}</span>
+                  </div>
+                </div>
+                <div id="friend-chat-scroll" className="h-64 overflow-y-auto rounded-2xl bg-slate-950/40 p-3 space-y-2">
+                  {friendChatMsgs.map((m) => {
+                    const isMe = m.fromUserId === user?.id
+                    return (
+                      <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${isMe ? 'bg-[#1CB0F6] text-white rounded-br-md' : 'bg-slate-700 text-slate-100 rounded-bl-md'}`}>
+                          {m.text}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <form className="mt-3 flex gap-2" onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!friendChatText.trim() || !user) return
+                  sendFriendMessage({ fromUserId: user.id, toUserId: friendChatId, text: friendChatText })
+                  setFriendChatText('')
+                }}>
+                  <input
+                    className="flex-1 rounded-xl bg-slate-950/60 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
+                    value={friendChatText}
+                    onChange={(e) => setFriendChatText(e.target.value)}
+                    placeholder="Escribe un mensaje..."
+                    maxLength={500}
+                  />
+                  <button type="submit" className="rounded-xl bg-[#58CC02] px-4 py-2 text-sm font-black text-white">Enviar</button>
+                </form>
+              </>
+            )}
+          </div>
         ) : tab === 'battle' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             {/* Battle config modal */}
@@ -2879,6 +3075,17 @@ export default function App() {
                 <div className="text-center text-base font-black uppercase tracking-widest text-white">Configurar Batalla</div>
 
                 <div className="mt-4">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Nombre de la sala</div>
+                  <input
+                    className="mt-1 w-full rounded-xl bg-slate-950/60 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
+                    value={battleRoomName}
+                    onChange={(e) => setBattleRoomName(e.target.value)}
+                    placeholder="Nombre de tu sala (opcional)"
+                    maxLength={40}
+                  />
+                </div>
+
+                <div className="mt-4">
                   <div className="text-xs font-extrabold uppercase tracking-wider text-slate-300/80">Materia</div>
                   <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
                     {[
@@ -2887,8 +3094,9 @@ export default function App() {
                       { key: 'cien', label: 'Ciencias', emoji: '🧪' },
                       { key: 'hist', label: 'Historia', emoji: '🏛️' },
                       { key: 'geo', label: 'Geografía', emoji: '🌎' },
-                      { key: 'civ', label: 'Cívica', emoji: '⚖️' },
+                      { key: 'civ', label: 'Cívica', emoji: '🤝' },
                       { key: 'mixed', label: 'Mixto', emoji: '🎲' },
+                      { key: 'examen-final', label: 'Examen Final', emoji: '🎓' },
                     ].map(({ key, label, emoji }) => (
                       <button
                         key={key}
@@ -2997,7 +3205,8 @@ export default function App() {
                         timerSeconds,
                         questionCount,
                         suddenDeath,
-                        visibility: pendingBattleVisibility 
+                        visibility: pendingBattleVisibility,
+                        roomName: battleRoomName,
                       })
                       console.log('[BATALLA] Sala creada:', r.id, 'teamCount:', r.teamCount)
                       setBattleRoomId(r.id)
@@ -3016,7 +3225,7 @@ export default function App() {
                 </button>
                 <button
                   className="mt-2 w-full rounded-2xl bg-slate-800 py-2 text-xs font-bold text-slate-400 ring-1 ring-white/10 hover:bg-slate-700"
-                  onClick={() => setShowBattleConfig(false)}
+                  onClick={() => { setShowBattleConfig(false); setBattleRoomName('') }}
                 >
                   Cancelar
                 </button>
@@ -3174,7 +3383,7 @@ export default function App() {
 
               {battleRoom && battleRoom.status === 'open' ? (
                 <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                  <div className="text-sm font-extrabold">Tu sala</div>
+                  <div className="text-sm font-extrabold">Tu sala{battleRoom.roomName ? `: ${battleRoom.roomName}` : ''}</div>
                   <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                     <div className="flex-1 rounded-2xl bg-black/30 px-3 py-2 text-xs font-black text-[#FFC800] text-center sm:text-left">{battleRoom.id}</div>
                     <div className="flex gap-2 justify-center">
@@ -3532,17 +3741,45 @@ export default function App() {
                 </div>
                 {/* Start countdown button (host only) */}
                 {user?.id === battleRoom.hostUserId ? (
-                  <div className="mt-4 flex items-center justify-between rounded-2xl bg-black/20 px-3 py-2">
-                    <div className="text-xs font-bold text-slate-300/80">Todos listos para iniciar</div>
-                    <button
-                      className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs font-black text-white hover:bg-[#4AA000]"
-                      onClick={async () => {
-                        if (!battleRoomId) return
-                        await startBattleCountdown({ roomId: battleRoomId })
-                      }}
-                    >
-                      ¡EMPEZAR!
-                    </button>
+                  <div className="mt-4 space-y-2">
+                    {/* Invite friends button */}
+                    {friends.length > 0 ? (
+                      <div className="flex items-center justify-between rounded-2xl bg-black/20 px-3 py-2">
+                        <div className="text-xs font-bold text-slate-300/80">Invitar amigos a la batalla</div>
+                        <div className="flex flex-wrap gap-1">
+                          {friends.map((f: any) => {
+                            const info = friendInfo[f.id] || {}
+                            return (
+                              <button
+                                key={f.id}
+                                className="rounded-lg bg-[#7C4DFF]/20 px-2 py-1 text-xs font-bold text-[#7C4DFF] hover:bg-[#7C4DFF]/40"
+                                onClick={async () => {
+                                  if (!user) return
+                                  await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: battleRoomId })
+                                  setStatus(`Invitación enviada a ${info.displayName || f.id.slice(0, 8)} ⚔️`)
+                                  setTimeout(() => setStatus(null), 2000)
+                                }}
+                              >
+                                {info.avatar || '🪐'} {info.displayName || f.id.slice(0, 8)}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                    {/* Start countdown button */}
+                    <div className="flex items-center justify-between rounded-2xl bg-black/20 px-3 py-2">
+                      <div className="text-xs font-bold text-slate-300/80">Todos listos para iniciar</div>
+                      <button
+                        className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs font-black text-white hover:bg-[#4AA000]"
+                        onClick={async () => {
+                          if (!battleRoomId) return
+                          await startBattleCountdown({ roomId: battleRoomId })
+                        }}
+                      >
+                        ¡EMPEZAR!
+                      </button>
+                    </div>
                   </div>
                 ) : null}
               </div>
