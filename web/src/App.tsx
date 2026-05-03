@@ -839,8 +839,7 @@ export default function App() {
     return () => clearInterval(t)
   }, [battleRoom?.status, battleStatus, questionStartedAt])
 
-  // 🎲 Load battle questions: random levels from the subject, respecting questionCount
-  // This replaces the old approach that only loaded from a single deterministic lesson
+  // 🎲 Load battle questions: use real lesson IDs from Firestore filtered by subject
   useEffect(() => {
     if (battleStatus !== 'match') return
     if (battleRoom?.status !== 'started') return
@@ -849,50 +848,65 @@ export default function App() {
     const subject = battleRoom.subject || 'esp'
     const questionCount = Math.max(1, battleRoom.questionCount || 10)
     
-    const filterBad = (q: any) => {
-      const p = (q.prompt || '').toLowerCase()
-      return !p.includes('inicia con') && !p.includes('termina con') && !p.includes('empieza con') && !p.includes('comienza con')
-    }
-    const shuffleOpts = (q: any) => {
-      if (!Array.isArray(q.options) || q.options.length === 0) return q
-      const opts = [...(q as any).options]
-      const cIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
-      const cOpt = opts[cIdx]
-      for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]] }
-      return { ...q, options: opts, correctIndex: opts.indexOf(cOpt) }
-    }
-    
-    // Pick unique random levels
-    const used = new Set<number>()
-    const lessonIds: string[] = []
-    while (lessonIds.length < questionCount) {
-      const n = Math.floor(Math.random() * 50) + 1  // 5° levels (1-50)
-      if (!used.has(n)) { used.add(n); lessonIds.push(`${subject}-${n}`) }
-    }
-    
-    let done = 0
-    const temp: any[] = new Array(questionCount)
-    const unsubs: Array<() => void> = []
-    
-    lessonIds.forEach((lid, slot) => {
-      const unsub = subscribeLessonQuestions(lid, (qs) => {
-        done++
-        const good = qs.filter(filterBad)
-        const pool = good.length > 0 ? good : qs
-        temp[slot] = pool[Math.floor(Math.random() * pool.length)]
-        if (done >= questionCount) {
-          // All loaded, shuffle final order and trim if some failed
-          const out = temp.filter(Boolean).map(shuffleOpts)
-          for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]] }
-          setBattleQuestions(out.slice(0, questionCount))
-          setBattleIdx(0)
-          unsubs.forEach(fn => fn())
+    let cancelled = false
+    ;(async () => {
+      try {
+        // Obtener lecciones reales de Firestore filtradas por subject
+        const allLessons = await listLessons()
+        const subjectLessons = allLessons.filter((l: any) => (l.subject || l.id) === subject || (l.subject || l.id)?.startsWith(subject))
+        
+        if (subjectLessons.length === 0) {
+          console.warn('[BATALLA] No hay lecciones para el subject:', subject, '- usando todas las lecciones')
+          // Fallback: usar todas las lecciones
+          const fallback = allLessons.slice(0, questionCount)
+          if (fallback.length === 0) return
+          const qs = await Promise.all(fallback.map((l: any) => listQuestions(l.id)))
+          if (cancelled) return
+          const out = qs.flat().filter((q: any) => q.prompt && q.type === 'multiple_choice')
+          shuffleAndSet(out, questionCount)
+          return
         }
-      })
-      unsubs.push(unsub)
-    })
+        
+        // Elegir lecciones aleatorias
+        const shuffled = [...subjectLessons].sort(() => Math.random() - 0.5)
+        const picked = shuffled.slice(0, questionCount)
+        
+        // Cargar preguntas de cada lección
+        const allQs: any[] = []
+        for (const l of picked) {
+          const qs = await listQuestions(l.id)
+          const mcQs = qs.filter((q: any) => q.prompt && q.type === 'multiple_choice' && Array.isArray((q as any).options))
+          if (mcQs.length > 0) {
+            allQs.push(mcQs[Math.floor(Math.random() * mcQs.length)])
+          } else {
+            // Cualquier tipo de pregunta
+            const anyQ = qs.find((q: any) => q.prompt)
+            if (anyQ) allQs.push(anyQ)
+          }
+        }
+        
+        if (cancelled) return
+        shuffleAndSet(allQs, questionCount)
+      } catch (err) {
+        console.error('[BATALLA] Error cargando preguntas:', err)
+      }
+    })()
     
-    return () => unsubs.forEach(fn => fn())
+    function shuffleAndSet(qs: any[], limit: number) {
+      const shuffled = qs.map((q: any) => {
+        if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
+        const opts = [...(q as any).options]
+        const cIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
+        const cOpt = opts[cIdx]
+        for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]] }
+        return { ...q, options: opts, correctIndex: opts.indexOf(cOpt) }
+      })
+      for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]] }
+      setBattleQuestions(shuffled.slice(0, limit))
+      setBattleIdx(0)
+    }
+    
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [battleStatus, battleRoom?.id, battleRoom?.status])
 
