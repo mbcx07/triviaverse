@@ -944,18 +944,15 @@ export default function App() {
     const unsub = subscribeWeeklyLeaderboard({
       scope: leagueScope,
       teamId: user.teamId,
-      limitN: 25,
-      cb: async (list) => {
-        // Enrich with avatars from public profiles
-        const enriched = await Promise.all(list.map(async (row) => {
-          try {
-            const pub = await getUserPublic(row.id)
-            return { ...row, avatar: pub?.avatar || '🪐' }
-          } catch {
-            return { ...row, avatar: '🪐' }
-          }
-        }))
-        setLeaders(enriched)
+      limitN: 10,
+      cb: (list) => {
+        // Usar los datos tal cual vienen de Firestore (nickname ya viene incluido)
+        setLeaders(list.map(row => ({
+          ...row,
+          // Si el nickname es un ID largo (firebase auth uid), truncarlo para mostrar
+          nickname: row.nickname && row.nickname.length > 20 ? row.nickname.slice(0, 10) + '...' : row.nickname,
+          avatar: '🪐'
+        })))
       },
     })
 
