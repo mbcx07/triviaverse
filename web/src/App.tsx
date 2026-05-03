@@ -422,6 +422,7 @@ export default function App() {
   const [reqIn, setReqIn] = useState<Array<{ id: string; fromUserId: string }>>([])
   const [reqOut, setReqOut] = useState<Array<{ id: string; toUserId: string }>>([])
   const [invites, setInvites] = useState<Array<{ id: string; fromUserId: string; roomId: string }>>([])
+  const [pendingFriendInvite, setPendingFriendInvite] = useState<string>('') // friendId to invite after config
 
   // Battle records (wins/losses with friends)
   const [battleRecords, setBattleRecords] = useState<Record<string, BattleRecord>>({})
@@ -870,60 +871,63 @@ export default function App() {
     return () => unsub()
   }, [battleRoomId, battleRoom?.status, battleStatus, battleIdx])
 
-  // 🎲 Load battle questions: use real lesson IDs from Firestore filtered by subject
+  // 🎲 Load battle questions: HOST loads them and saves to Firestore, others read from there
   useEffect(() => {
     if (battleStatus !== 'match') return
     if (battleRoom?.status !== 'started') return
     if (battleQuestions.length > 0) return // already loaded
     
+    const isHost = user?.id === battleRoom?.hostUserId
+    
+    // If NOT host, check if questions already in room document
+    if (!isHost && battleRoom?.questions?.length > 0) {
+      setBattleQuestions(battleRoom.questions)
+      setBattleIdx(0)
+      return
+    }
+    
+    // If NOT host and no questions yet, wait (will retry when battleRoom updates)
+    if (!isHost) return
+    
+    // HOST: load questions
     const subject = battleRoom.subject || 'esp'
     const questionCount = Math.max(1, battleRoom.questionCount || 10)
     
-    let cancelled = false
     ;(async () => {
       try {
-        // Obtener lecciones reales de Firestore filtradas por subject
         const allLessons = await listLessons()
-        const subjectLessons = allLessons.filter((l: any) => (l.subject || l.id) === subject || (l.subject || l.id)?.startsWith(subject))
+        const subjectLessons = allLessons.filter((l: any) => 
+          (l.subject || l.id) === subject || (l.subject || l.id)?.startsWith(subject)
+        )
         
         if (subjectLessons.length === 0) {
-          console.warn('[BATALLA] No hay lecciones para el subject:', subject, '- usando todas las lecciones')
-          // Fallback: usar todas las lecciones
           const fallback = allLessons.slice(0, questionCount)
           if (fallback.length === 0) return
           const qs = await Promise.all(fallback.map((l: any) => listQuestions(l.id)))
-          if (cancelled) return
-          const out = qs.flat().filter((q: any) => q.prompt && q.type === 'multiple_choice')
-          shuffleAndSet(out, questionCount)
+          const out = qs.flat().filter((q: any) => q.prompt && q.type === 'multiple_choice' && Array.isArray((q as any).options))
+          saveQuestionsToRoom(out, questionCount)
           return
         }
         
-        // Elegir lecciones aleatorias
         const shuffled = [...subjectLessons].sort(() => Math.random() - 0.5)
         const picked = shuffled.slice(0, questionCount)
-        
-        // Cargar preguntas de cada lección
         const allQs: any[] = []
         for (const l of picked) {
           const qs = await listQuestions(l.id)
           const mcQs = qs.filter((q: any) => q.prompt && q.type === 'multiple_choice' && Array.isArray((q as any).options))
-          if (mcQs.length > 0) {
-            allQs.push(mcQs[Math.floor(Math.random() * mcQs.length)])
-          } else {
-            // Cualquier tipo de pregunta
+          if (mcQs.length > 0) allQs.push(mcQs[Math.floor(Math.random() * mcQs.length)])
+          else {
             const anyQ = qs.find((q: any) => q.prompt)
             if (anyQ) allQs.push(anyQ)
           }
         }
-        
-        if (cancelled) return
-        shuffleAndSet(allQs, questionCount)
+        saveQuestionsToRoom(allQs, questionCount)
       } catch (err) {
         console.error('[BATALLA] Error cargando preguntas:', err)
       }
     })()
     
-    function shuffleAndSet(qs: any[], limit: number) {
+    async function saveQuestionsToRoom(qs: any[], limit: number) {
       const shuffled = qs.map((q: any) => {
         if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
         const opts = [...(q as any).options]
@@ -933,13 +937,18 @@ export default function App() {
         return { ...q, options: opts, correctIndex: opts.indexOf(cOpt) }
       })
       for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]] }
-      setBattleQuestions(shuffled.slice(0, limit))
+      const final = shuffled.slice(0, limit)
+      
+      // Save to Firestore so other clients see the same questions
+      if (battleRoomId) {
+        const ref = doc(db!, 'battleRooms', battleRoomId)
+        await updateDoc(ref, { questions: final }).catch(() => {})
+      }
+      setBattleQuestions(final)
       setBattleIdx(0)
     }
     
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleStatus, battleRoom?.id, battleRoom?.status])
+  }, [battleStatus, battleRoom?.id, battleRoom?.status, battleRoom?.questions, user?.id, battleRoom?.hostUserId])
 
   // Auto-start match when status is 'started' but no countdown (e.g., AI mode)
   useEffect(() => {
@@ -1476,7 +1485,7 @@ export default function App() {
   // Trophy unlock notifications — only fire once per trophy, never repeat
   useEffect(() => {
     if (!user) return
-    const key = `tv_trophies_unlocked_${user.id}`
+    const key = `tv_trophies_v2_${user.id}`
     const prevRaw = localStorage.getItem(key)
     const prev: string[] = prevRaw ? JSON.parse(prevRaw) : []
     const prevSet = new Set(prev)
@@ -1484,11 +1493,10 @@ export default function App() {
     const unlockedIds = trophies.filter((t) => t.ok).map((t) => t.id)
     const newIds = unlockedIds.filter((id) => !prevSet.has(id))
 
-    // Save unlocked list BEFORE showing toast to prevent re-fires
-    localStorage.setItem(key, JSON.stringify(unlockedIds))
-
-    // Only notify the highest (most recent) new trophy
     if (newIds.length > 0) {
+      // Save unlocked list BEFORE showing toast to prevent re-fires
+      localStorage.setItem(key, JSON.stringify(unlockedIds))
+      // Only notify the highest (most recent) new trophy
       const newest = newIds[newIds.length - 1]
       const t = trophies.find((x) => x.id === newest)
       if (t) {
@@ -2090,23 +2098,13 @@ export default function App() {
                         </button>
                         <button
                           className="rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-2 md:px-5 md:py-3 text-xs md:text-sm font-black text-white hover:opacity-90 transition-opacity"
-                          onClick={async () => {
-                            if (!user) return
-                            if (invitedFriendsRef.current.has(f.id)) return
-                            setStatus('Creando sala privada...')
-                            const r = await createBattleRoom({ 
-                              userId: user.id, 
-                              teamId: user.teamId || 'belas', 
-                              subject: 'esp', 
-                              maxPerTeam: 1, 
-                              visibility: 'private' 
-                            })
-                            await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
-                            invitedFriendsRef.current.add(f.id)
-                            setStatus(null)
+                          onClick={() => {
+                            // Go to battle config screen to set up before inviting
+                            setPendingFriendInvite(f.id)
+                            setTab('battle')
                           }}
                         >
-                          {invitedFriendsRef.current.has(f.id) ? '✅ Retado' : '⚔️ Retar'}
+                          ⚔️ Retar
                         </button>
                       </div>
                     </div>
@@ -3305,6 +3303,15 @@ export default function App() {
                       })
                       console.log('[BATALLA] Sala creada:', r.id, 'teamCount:', r.teamCount)
                       setBattleRoomId(r.id)
+                      
+                      // Auto-invite friend if coming from friends screen
+                      if (pendingFriendInvite) {
+                        sendBattleInvite({ fromUserId: user.id, toUserId: pendingFriendInvite, roomId: r.id }).catch(() => {})
+                        setStatus(`Invitación enviada ⚔️`)
+                        setTimeout(() => setStatus(null), 2000)
+                        setPendingFriendInvite('')
+                      }
+                      
                       ;(window as any).__tv_unsubBattle?.()
                       ;(window as any).__tv_unsubBattle = subscribeBattleRoom(r.id, (rr) => setBattleRoom(rr))
                       ;(window as any).__tv_unsubBattleMsgs?.()

@@ -528,6 +528,8 @@ export type BattleRoom = {
   messages?: Array<{ userId: string; text: string; createdAt: any }>
   // Room display name
   roomName?: string
+  // Shared questions (host loads & saves here)
+  questions?: any[]
   // Ready system (v2)
   readyUsers?: { [userId: string]: boolean }
   countdownStarted?: boolean
