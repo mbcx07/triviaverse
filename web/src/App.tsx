@@ -427,6 +427,9 @@ export default function App() {
   const [portalOpen, setPortalOpen] = useState(false)
   const [celebration, setCelebration] = useState<{ title: string; xpDelta: number; failed?: boolean } | null>(null)
   const [exitConfirm, setExitConfirm] = useState(false)
+
+  // Track previous friend requests to detect new ones
+  const prevReqInRef = useRef<string[]>([])
   const [timeLeft, setTimeLeft] = useState<number>(60)
 
   // trophies
@@ -1007,6 +1010,22 @@ export default function App() {
     return () => clearTimeout(t)
   }, [toast])
 
+  // Detect new incoming friend requests → notification
+  useEffect(() => {
+    if (!user) return
+    const current = reqIn.map((r) => r.id)
+    const prev = prevReqInRef.current
+    const newReqs = current.filter((id) => !prev.includes(id))
+    if (prev.length > 0 && newReqs.length > 0) {
+      for (const id of newReqs) {
+        const r = reqIn.find((x) => x.id === id)
+        const name = r?.fromUserId?.slice(0, 10) || 'Alguien'
+        setToast(`📩 ${name} quiere ser tu amigo`)
+      }
+    }
+    prevReqInRef.current = current
+  }, [reqIn, user])
+
   // Friend public info (presence)
   useEffect(() => {
     if (!user) return
@@ -1512,6 +1531,7 @@ export default function App() {
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'league' ? 'bg-[#FFC800]/80 text-slate-900' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('league')}>🏆 Liga</button>
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'trophies' ? 'bg-[#7C4DFF]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('trophies')}>🏅 Trofeos</button>
               <button className={`rounded-lg px-2.5 py-1 text-xs md:text-sm font-semibold ring-1 ring-white/10 ${tab === 'chats' ? 'bg-[#58CC02]/80' : 'bg-slate-800 hover:bg-slate-700'}`} onClick={() => setTab('chats')}>💬 Chats</button>
+              <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setTab('friends')}>👥{reqIn.length > 0 ? ` ${reqIn.length}` : ''}</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={() => setSettingsOpen(true)}>⚙️</button>
               <button className="rounded-lg bg-slate-800 px-2.5 py-1 text-xs md:text-sm font-semibold hover:bg-slate-700 ring-1 ring-white/10" onClick={logout}>🚪</button>
             </div>
@@ -1779,7 +1799,7 @@ export default function App() {
             <div className="text-lg md:text-2xl font-extrabold">Elige modo</div>
             <div className="mt-1 text-xs md:text-sm text-slate-300/80">Individual o Batallas (prototipo).</div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               <button
                 className="rounded-3xl border-b-4 border-[#0e6e94] bg-gradient-to-b from-[#35C6FF] to-[#1CB0F6] p-4 md:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
                 onClick={() => setTab('home')}
@@ -1794,6 +1814,14 @@ export default function App() {
               >
                 <div className="text-sm md:text-base opacity-90">Batallas</div>
                 <div className="mt-1 text-xl md:text-3xl">Compite con otros</div>
+              </button>
+
+              <button
+                className="rounded-3xl border-b-4 border-[#3a9a1e] bg-gradient-to-b from-[#7CDF47] to-[#58CC02] p-4 md:p-6 text-left font-black text-white active:border-b-0 active:translate-y-1"
+                onClick={() => setTab('chats')}
+              >
+                <div className="text-sm md:text-base opacity-90">Chats</div>
+                <div className="mt-1 text-xl md:text-3xl">Amigos y mensajes</div>
               </button>
             </div>
           </div>
