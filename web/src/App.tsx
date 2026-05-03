@@ -419,7 +419,7 @@ export default function App() {
   const [examWorld, setExamWorld] = useState<boolean>(false) // true = showing exam sub-worlds
 
   const [leagueScope, _setLeagueScope] = useState<'team' | 'global'>('team')
-  const [_leaders, setLeaders] = useState<Array<{ id: string; nickname: string; xpWeek: number }>>([])
+  const [leagueRows, setLeaders] = useState<Array<{ id: string; nickname: string; xpWeek: number; avatar?: string }>>([])
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [idx, setIdx] = useState(0)
@@ -945,7 +945,18 @@ export default function App() {
       scope: leagueScope,
       teamId: user.teamId,
       limitN: 25,
-      cb: (list) => setLeaders(list),
+      cb: async (list) => {
+        // Enrich with avatars from public profiles
+        const enriched = await Promise.all(list.map(async (row) => {
+          try {
+            const pub = await getUserPublic(row.id)
+            return { ...row, avatar: pub?.avatar || '🪐' }
+          } catch {
+            return { ...row, avatar: '🪐' }
+          }
+        }))
+        setLeaders(enriched)
+      },
     })
 
     return () => {
@@ -1652,6 +1663,103 @@ export default function App() {
               </button>
             </div>
           </div>
+        ) : tab === 'league' ? (
+          /* ===== LIGA SEMANAL ===== */
+          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg md:text-2xl font-extrabold">🏆 Liga Semanal</div>
+                <div className="mt-1 text-xs md:text-sm text-slate-300/80">
+                  Semana {String(new Date().getFullYear())}-W{String(Math.ceil(new Date().getDate() / 7)).padStart(2, '0')} · Top 10 jugadores
+                </div>
+              </div>
+              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold hover:bg-slate-700" onClick={() => setTab('mode')}>
+                ← Volver
+              </button>
+            </div>
+
+            {/* Mi posición */}
+            {user && leagueRows.length > 0 ? (
+              <div className="mt-4 rounded-2xl bg-gradient-to-r from-[#FFC800]/20 to-[#FF9600]/20 p-4 ring-1 ring-[#FFC800]/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">{user.avatar || '🪐'}</div>
+                    <div>
+                      <div className="text-sm md:text-base font-extrabold">{user.displayName || user.nickname}</div>
+                      <div className="text-xs text-slate-300/70">
+                        Posición #{leagueRows.findIndex(r => r.id === user.id) + 1 || '—'} · {leagueRows.find(r => r.id === user.id)?.xpWeek || 0} XP esta semana
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-[#FFC800]/20 px-3 py-1 text-xs font-black text-[#FFC800]">
+                    {leagueRows.find(r => r.id === user.id)?.xpWeek || 0} XP
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Podio Top 3 */}
+            {leagueRows.length >= 3 ? (
+              <div className="mt-6 flex items-end justify-center gap-2 md:gap-4">
+                {/* 2do lugar */}
+                <div className="flex flex-col items-center">
+                  <div className="text-3xl md:text-4xl">{leagueRows[1]?.avatar || '🥈'}</div>
+                  <div className="mt-1 text-xs md:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[1]?.nickname || '—'}</div>
+                  <div className="flex h-16 md:h-20 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-slate-400 to-slate-300 mt-2">
+                    <span className="text-lg md:text-2xl font-black text-slate-800">2</span>
+                  </div>
+                  <div className="text-[10px] md:text-xs font-bold text-slate-400">{leagueRows[1]?.xpWeek || 0} XP</div>
+                </div>
+                {/* 1er lugar */}
+                <div className="flex flex-col items-center">
+                  <div className="text-4xl md:text-5xl crown-animation">👑</div>
+                  <div className="text-4xl md:text-5xl">{leagueRows[0]?.avatar || '🥇'}</div>
+                  <div className="mt-1 text-xs md:text-sm font-extrabold text-[#FFC800] text-center truncate max-w-[100px]">{leagueRows[0]?.nickname || '—'}</div>
+                  <div className="flex h-24 md:h-28 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-[#FFC800] to-[#FFD700] mt-2 podium-1st">
+                    <span className="text-2xl md:text-3xl font-black text-white">1</span>
+                  </div>
+                  <div className="text-[10px] md:text-xs font-bold text-[#FFC800]">{leagueRows[0]?.xpWeek || 0} XP</div>
+                </div>
+                {/* 3er lugar */}
+                <div className="flex flex-col items-center">
+                  <div className="text-3xl md:text-4xl">{leagueRows[2]?.avatar || '🥉'}</div>
+                  <div className="mt-1 text-xs md:text-sm font-bold text-center truncate max-w-[80px]">{leagueRows[2]?.nickname || '—'}</div>
+                  <div className="flex h-12 md:h-16 w-16 md:w-20 items-center justify-center rounded-t-xl bg-gradient-to-t from-amber-700 to-amber-500 mt-2">
+                    <span className="text-lg md:text-2xl font-black text-white">3</span>
+                  </div>
+                  <div className="text-[10px] md:text-xs font-bold text-amber-500">{leagueRows[2]?.xpWeek || 0} XP</div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Tabla de clasificación (4-10) */}
+            <div className="mt-6 space-y-2">
+              <div className="text-sm font-extrabold text-slate-300/80">Clasificación</div>
+              {leagueRows.length === 0 ? (
+                <div className="rounded-2xl bg-slate-950/30 p-6 text-center text-sm text-slate-400">
+                  No hay datos de la liga esta semana aún. ¡Juega lecciones para ganar XP y aparecer en el ranking!
+                </div>
+              ) : (
+                leagueRows.slice(3, 10).map((row, i) => {
+                  const pos = i + 4
+                  const medal = pos === 4 ? '🏅' : ''
+                  return (
+                    <div key={row.id} className={`flex items-center gap-3 rounded-2xl px-3 py-3 ring-1 ring-white/10 transition-all ${row.id === user?.id ? 'bg-[#1CB0F6]/15 ring-[#1CB0F6]/40' : 'bg-slate-950/30 hover:bg-slate-950/50'}`}>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-black text-slate-300">
+                        {pos}
+                      </div>
+                      <div className="flex-1 font-bold text-sm md:text-base">
+                        {medal} {row.nickname || row.id?.slice(0, 8)}
+                      </div>
+                      <div className="rounded-full bg-[#FFC800]/10 px-3 py-1 text-xs font-black text-[#FFC800]">
+                        {row.xpWeek || 0} XP
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
         ) : tab === 'trophies' ? (
           <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
             <div className="text-lg font-extrabold">Trofeos (100)</div>
@@ -1675,32 +1783,36 @@ export default function App() {
             </div>
           </div>
         ) : tab === 'friends' ? (
-          <div className="rounded-3xl bg-black/25 p-4 ring-1 ring-white/10">
+          <div className="rounded-3xl bg-black/25 p-4 md:p-6 ring-1 ring-white/10">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-lg font-extrabold">Amigos</div>
-                <div className="mt-1 text-xs text-slate-300/80">Estilo Roblox: solicitudes, lista e invitación a batalla.</div>
+                <div className="text-lg md:text-2xl font-extrabold">👥 Amigos</div>
+                <div className="mt-1 text-xs md:text-sm text-slate-300/80">Agrega amigos, invítalos a batallar y recibe notificaciones.</div>
               </div>
-              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
-                Volver
+              <button className="rounded-xl bg-slate-800 px-3 py-2 text-xs md:text-sm font-black hover:bg-slate-700" onClick={() => setTab('mode')}>
+                ← Volver
               </button>
             </div>
 
-            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-              <div className="text-sm font-extrabold">Agregar amigo</div>
+            {/* Buscar y agregar */}
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
+              <div className="text-sm md:text-base font-extrabold">🔍 Agregar amigo</div>
               <div className="mt-2 flex gap-2">
                 <input
-                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 text-sm font-black ring-1 ring-white/10"
+                  className="w-full rounded-2xl bg-slate-950/60 px-3 py-3 md:py-4 text-sm md:text-base font-black ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[#1CB0F6]"
                   value={friendQuery}
                   onChange={(e) => setFriendQuery(e.target.value)}
-                  placeholder="nickname"
+                  placeholder="Buscar por nickname..."
                 />
                 <button
-                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 py-3 text-sm font-black text-white"
+                  className="shrink-0 rounded-2xl bg-[#58CC02] px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-black text-white hover:bg-[#4AA000] transition-colors"
                   onClick={async () => {
                     if (!user) return
+                    setStatus('Enviando solicitud...')
                     await sendFriendRequest({ fromUserId: user.id, toNickname: friendQuery })
+                    setStatus('Solicitud enviada ✅')
                     setFriendQuery('')
+                    setTimeout(() => setStatus(null), 2000)
                   }}
                 >
                   Enviar
@@ -1708,101 +1820,123 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3">
-              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Solicitudes recibidas</div>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {/* Solicitudes recibidas */}
+              <div className="rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
+                <div className="text-sm md:text-base font-extrabold">📩 Solicitudes recibidas {reqIn.length > 0 ? `(${reqIn.length})` : ''}</div>
                 <div className="mt-3 space-y-2">
                   {reqIn.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 ring-1 ring-white/10">
-                      <div className="text-sm font-black">{r.fromUserId}</div>
+                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 md:py-3 ring-1 ring-white/10">
+                      <div className="text-sm md:text-base font-black">{r.fromUserId?.slice(0, 12)}</div>
                       <div className="flex gap-2">
-                        <button className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs font-black text-white" onClick={() => user && acceptFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
-                          Aceptar
+                        <button className="rounded-xl bg-[#58CC02] px-3 py-2 text-xs md:text-sm font-black text-white hover:bg-[#4AA000]" onClick={() => user && acceptFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
+                          ✓ Aceptar
                         </button>
-                        <button className="rounded-xl bg-rose-500/80 px-3 py-2 text-xs font-black text-white" onClick={() => user && rejectFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
-                          Rechazar
+                        <button className="rounded-xl bg-rose-500/80 px-3 py-2 text-xs md:text-sm font-black text-white hover:bg-rose-500" onClick={() => user && rejectFriendRequest({ userId: user.id, fromUserId: r.fromUserId })}>
+                          ✗ Rechazar
                         </button>
                       </div>
                     </div>
                   ))}
-                  {!reqIn.length ? <div className="text-xs text-slate-300/70">Sin solicitudes.</div> : null}
+                  {!reqIn.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs md:text-sm text-slate-400">Sin solicitudes pendientes.</div> : null}
                 </div>
               </div>
 
-              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Solicitudes enviadas</div>
+              {/* Solicitudes enviadas */}
+              <div className="rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
+                <div className="text-sm md:text-base font-extrabold">📤 Solicitudes enviadas {reqOut.length > 0 ? `(${reqOut.length})` : ''}</div>
                 <div className="mt-3 space-y-2">
                   {reqOut.map((r) => (
-                    <div key={r.id} className="rounded-2xl bg-white/5 px-3 py-3 text-sm font-black ring-1 ring-white/10">
-                      {r.toUserId}
+                    <div key={r.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 ring-1 ring-white/10">
+                      <div className="text-sm md:text-base font-black">{r.toUserId?.slice(0, 12)}</div>
+                      <div className="rounded-full bg-amber-500/20 px-3 py-1 text-[10px] md:text-xs font-bold text-amber-400">Pendiente</div>
                     </div>
                   ))}
-                  {!reqOut.length ? <div className="text-xs text-slate-300/70">Sin solicitudes.</div> : null}
+                  {!reqOut.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs md:text-sm text-slate-400">No has enviado solicitudes.</div> : null}
                 </div>
               </div>
+            </div>
 
-              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Mis amigos</div>
-                <div className="mt-3 space-y-2">
-                  {friends.map((f) => {
-                    const info = friendInfo[f.id] || {}
-                    const ts: any = info.lastActiveAt
-                    const ms = ts?.toDate ? ts.toDate().getTime() : ts?.seconds ? ts.seconds * 1000 : 0
-                    const ageSec = ms ? (Date.now() - ms) / 1000 : 999999
-                    const online = ageSec < 90
-                    const mins = Math.max(1, Math.round(ageSec / 60))
+            {/* Mis amigos con botón de invitar a batalla */}
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
+              <div className="text-sm md:text-base font-extrabold">🎮 Mis amigos {friends.length > 0 ? `(${friends.length})` : ''}</div>
+              <div className="mt-3 space-y-2">
+                {friends.map((f) => {
+                  const info = friendInfo[f.id] || {}
+                  const ts: any = info.lastActiveAt
+                  const ms = ts?.toDate ? ts.toDate().getTime() : ts?.seconds ? ts.seconds * 1000 : 0
+                  const ageSec = ms ? (Date.now() - ms) / 1000 : 999999
+                  const online = ageSec < 90
+                  const mins = Math.max(1, Math.round(ageSec / 60))
 
-                    return (
-                      <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 ring-1 ring-white/10">
+                  return (
+                    <div key={f.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-3 md:px-4 md:py-4 ring-1 ring-white/10 hover:bg-white/10 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl md:text-3xl">{info.avatar || '🪐'}</div>
                         <div>
-                          <div className="text-sm font-black">
-                            {(info.avatar || '🪐') + ' '}
-                            {info.displayName || f.nickname || f.id}
+                          <div className="text-sm md:text-base font-black">
+                            {info.displayName || f.nickname || f.id?.slice(0, 8)}
                             {online ? <span className="ml-2 rounded-full bg-[#58CC02] px-2 py-1 text-[10px] font-black text-white">EN LÍNEA</span> : null}
                           </div>
                           <div className="text-xs text-slate-300/70">
-                            @{f.id} {online ? '' : `• hace ${mins} min`}
+                            @{f.id?.slice(0, 10)} {online ? '' : `• hace ${mins} min`}
                           </div>
                         </div>
-                        <button
-                          className="rounded-2xl bg-[#7C4DFF]/60 px-3 py-2 text-xs font-black text-white"
-                          onClick={async () => {
-                            if (!user) return
-                            const maxPerTeam = 1
-                            const subject = 'esp'
-                            const r = await createBattleRoom({ userId: user.id, teamId: user.teamId || 'belas', subject, maxPerTeam, visibility: 'private' })
-                            await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
-                            setTab('battle')
-                          }}
-                        >
-                          Invitar
-                        </button>
                       </div>
-                    )
-                  })}
-                  {!friends.length ? <div className="text-xs text-slate-300/70">Aún no tienes amigos.</div> : null}
-                </div>
+                      <button
+                        className="rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#1CB0F6] px-4 py-2 md:px-5 md:py-3 text-xs md:text-sm font-black text-white hover:opacity-90 transition-opacity"
+                        onClick={async () => {
+                          if (!user) return
+                          setStatus('Creando sala privada...')
+                          const r = await createBattleRoom({ 
+                            userId: user.id, 
+                            teamId: user.teamId || 'belas', 
+                            subject: 'esp', 
+                            maxPerTeam: 1, 
+                            visibility: 'private' 
+                          })
+                          await sendBattleInvite({ fromUserId: user.id, toUserId: f.id, roomId: r.id })
+                          setStatus('Invitación enviada ⚔️')
+                          setTimeout(() => setStatus(null), 2000)
+                        }}
+                      >
+                        ⚔️ Retar
+                      </button>
+                    </div>
+                  )
+                })}
+                {!friends.length ? <div className="rounded-2xl bg-white/5 p-6 text-center text-sm text-slate-400">Aún no tienes amigos. ¡Busca a alguien por su nickname!</div> : null}
               </div>
+            </div>
 
-              <div className="rounded-3xl bg-slate-950/30 p-4 ring-1 ring-white/10">
-                <div className="text-sm font-extrabold">Invitaciones a batalla</div>
-                <div className="mt-3 space-y-2">
-                  {invites.map((iv) => (
-                    <button
-                      key={iv.id}
-                      className="w-full rounded-2xl bg-white/5 px-3 py-3 text-left text-sm font-black ring-1 ring-white/10 hover:bg-white/10"
-                      onClick={async () => {
-                        if (!user) return
-                        setBattleRoomId(iv.roomId)
-                        await joinBattleRoom({ roomId: iv.roomId, userId: user.id, teamId: user.teamId || 'belas' })
-                        setTab('battle')
-                      }}
-                    >
-                      Invitación de {iv.fromUserId} → sala {iv.roomId}
-                    </button>
-                  ))}
-                  {!invites.length ? <div className="text-xs text-slate-300/70">Sin invitaciones.</div> : null}
-                </div>
+            {/* Invitaciones a batalla */}
+            <div className="mt-4 rounded-3xl bg-slate-950/30 p-4 md:p-5 ring-1 ring-white/10">
+              <div className="text-sm md:text-base font-extrabold">⚡ Invitaciones a batalla {invites.length > 0 ? `(${invites.length})` : ''}</div>
+              <div className="mt-3 space-y-2">
+                {invites.map((iv) => (
+                  <button
+                    key={iv.id}
+                    className="w-full rounded-2xl bg-gradient-to-r from-[#FFC800]/10 to-[#FF9600]/10 px-4 py-4 text-left ring-1 ring-[#FFC800]/30 hover:bg-[#FFC800]/20 transition-colors"
+                    onClick={async () => {
+                      if (!user) return
+                      setBattleRoomId(iv.roomId)
+                      await joinBattleRoom({ roomId: iv.roomId, userId: user.id, teamId: user.teamId || 'belas' })
+                      setTab('battle')
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">⚔️</div>
+                      <div className="flex-1">
+                        <div className="text-sm md:text-base font-extrabold text-[#FFC800]">
+                          ¡{iv.fromUserId?.slice(0, 10)} te reta a una batalla!
+                        </div>
+                        <div className="text-xs text-slate-300/70 mt-1">Sala {iv.roomId?.slice(0, 8)} · Toca para unirte</div>
+                      </div>
+                      <div className="rounded-full bg-[#FFC800]/20 px-3 py-1 text-xs font-black text-[#FFC800]">Unirse →</div>
+                    </div>
+                  </button>
+                ))}
+                {!invites.length ? <div className="rounded-2xl bg-white/5 p-4 text-center text-xs md:text-sm text-slate-400">Sin invitaciones pendientes.</div> : null}
               </div>
             </div>
           </div>
