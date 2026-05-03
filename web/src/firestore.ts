@@ -1154,18 +1154,3 @@ export function subscribeLeaderVotes(roomId: string, callback: (votes: Record<st
     callback(votes)
   })
 }
-
-// Subscribe to answer votes for a battle room (per-question votes)
-export function subscribeBattleVotes(roomId: string, callback: (votes: Record<string, { option: number; timestamp: number }>) => void) {
-  const dbi = ensureDb()
-  const ref = collection(dbi, 'battleRooms', roomId, 'votes')
-  return onSnapshot(ref, (qs) => {
-    const votes: Record<string, { option: number; timestamp: number }> = {}
-    qs.docs.forEach((d) => {
-      const data = d.data()
-      const ts = data.timestamp?.toDate ? data.timestamp.toDate().getTime() : data.timestamp?.seconds ? data.timestamp.seconds * 1000 : Date.now()
-      votes[d.id] = { option: data.option as number, timestamp: ts }
-    })
-    callback(votes)
-  })
-}
