@@ -356,31 +356,75 @@ function cienQuestions(n) {
   const ni = Number(n);
   const qs = [];
 
-  if (ni <= 50) {
-    const t1 = CIEN_SYS5[ni % CIEN_SYS5.length];
-    const t2 = CIEN_SYS5[(ni+3) % CIEN_SYS5.length];
+  // Pool grande de preguntas variadas - sin repeticiones de texto exacto
+  const pool5 = [
+    () => { const t = CIEN_SYS5[ni % CIEN_SYS5.length]; return qMC(`El sistema ${t.sys} tiene como función principal:`, [t.func,'Producir sonido','Generar luz','Almacenar agua'], 0, `El sistema ${t.sys} sirve para: ${t.func}.`); },
+    () => { const t = CIEN_SYS5[(ni+2) % CIEN_SYS5.length]; const d = ['Corazón','Riñones','Cerebro y nervios','Glóbulos blancos'].filter(o => o !== t.organ); return qMC(`¿Qué órgano pertenece al sistema ${t.sys}?`, [t.organ, d[0], d[1], d[2]], 0, `${t.organ} es parte del sistema ${t.sys}.`); },
+    () => qMC('¿En qué estado de la materia las partículas están más separadas y se mueven libremente?', ['Gas','Sólido','Líquido','Plasma'], 0, 'En los gases, las partículas tienen mucha energía y se expanden para llenar el recipiente.'),
+    () => qMC('¿Cuál de estos NO es un estado de la materia?', ['Energía','Sólido','Líquido','Gas'], 0, 'Los estados clásicos son sólido, líquido, gas y plasma. La energía no es un estado de la materia.'),
+    () => qMC('El ciclo del agua comienza con la evaporación. ¿Qué sucede después?', ['Condensación (se forman nubes)','Precipitación (lluvia)','Filtración','Solidificación'], 0, 'Evaporación → Condensación (nubes) → Precipitación → Escorrentía.'),
+    () => qMC('Las plantas realizan la fotosíntesis usando: luz solar + CO₂ + agua para producir:', ['Glucosa y oxígeno','Proteínas','Solo dióxido de carbono','Nitrógeno'], 0, 'Fotosíntesis: 6CO₂ + 6H₂O + luz → C₆H₁₂O₆ (glucosa) + 6O₂.'),
+    () => qMC('¿Qué gas liberan las plantas durante la fotosíntesis?', ['Oxígeno (O₂)','Dióxido de carbono','Nitrógeno','Hidrógeno'], 0, 'Las plantas absorben CO₂ y liberan O₂, el gas que los animales necesitan para respirar.'),
+    () => qMC('Un ecosistema con poca lluvia, temperaturas extremas y plantas como cactus es:', ['Desierto','Selva tropical','Bosque templado','Tundra'], 0, 'El desierto tiene adaptaciones para conservar agua: hojas espina, tallos carnosos (cactus).'),
+    () => qMC('¿Qué capa de la Tierra es líquida y genera el campo magnético?', ['Núcleo externo','Corteza','Manto','Núcleo interno'], 0, 'El núcleo externo es de hierro y níquel líquidos; su movimiento genera el campo magnético terrestre.'),
+    () => qMC('La cadena alimenticia: pasto → conejo → zorro. ¿Quién es el productor?', ['El pasto','El conejo','El zorro','Todos son productores'], 0, 'El pasto es productor: fabrica su propio alimento con fotosíntesis. El conejo y el zorro son consumidores.'),
+    () => qMC('¿Cuál de estos animales es vertebrado?', ['Rana','Caracol','Medusa','Estrella de mar'], 0, 'La rana tiene columna vertebral (anfibio). Caracol, medusa y estrella de mar son invertebrados.'),
+    () => qMC('¿Cuál es la principal fuente de energía para la Tierra?', ['El Sol','La Luna','Los volcanes','El viento'], 0, 'El Sol proporciona luz y calor; impulsa el clima, la fotosíntesis y el ciclo del agua.'),
+    () => qMC('Los animales que se alimentan solo de plantas se llaman:', ['Herbívoros','Carnívoros','Omnívoros','Insectívoros'], 0, 'Herbívoros: comen plantas. Carnívoros: carne. Omnívoros: ambos.'),
+    () => { const t = CIEN_RENEWA[ni % CIEN_RENEWA.length]; return qMC(`¿Qué tipo de energía es la ${t.toLowerCase()}?`, ['Renovable','No renovable','Fósil','Nuclear'], 0, `${t} es renovable: se regenera naturalmente y no se agota.`); },
+    () => { const t = CIEN_NONRE[ni % CIEN_NONRE.length]; const a = CIEN_RENEWA[(ni+1) % CIEN_RENEWA.length]; return qMC(`El ${t} es un recurso:`, ['No renovable (se agota)','Renovable (no se agota)','Inagotable','Artificial'], 0, `${t} tarda millones de años en formarse y se consume más rápido de lo que se regenera.`); },
+    () => qMC('El esqueleto humano adulto tiene aproximadamente:', ['206 huesos','50 huesos','500 huesos','1000 huesos'], 0, 'Un adulto tiene ~206 huesos. Los bebés nacen con ~300 que se fusionan al crecer.'),
+    () => qMC('¿Qué órgano bombea la sangre por todo el cuerpo?', ['El corazón','Los pulmones','El cerebro','El hígado'], 0, 'El corazón es un músculo que bombea ~5 litros de sangre por minuto.'),
+    () => qMC('¿Qué vitamina produce nuestro cuerpo al exponerse al sol?', ['Vitamina D','Vitamina C','Vitamina A','Vitamina B12'], 0, 'La piel produce vitamina D con la luz solar; ayuda a absorber calcio para los huesos.'),
+    () => qMC('¿Cuál es el planeta más grande del Sistema Solar?', ['Júpiter','Saturno','Tierra','Marte'], 0, 'Júpiter es el más grande: 11 veces el diámetro de la Tierra, con su Gran Mancha Roja.'),
+    () => qMC('¿Cuántos planetas hay en el Sistema Solar?', ['8 planetas','9 planetas','7 planetas','10 planetas'], 0, 'Son 8: Mercurio, Venus, Tierra, Marte, Júpiter, Saturno, Urano y Neptuno.'),
+    () => qMC('¿Qué fuerza nos mantiene pegados al suelo?', ['La gravedad','El magnetismo','La fricción','La inercia'], 0, 'La gravedad terrestre atrae todo hacia el centro del planeta (~9.8 m/s²).'),
+    () => qMC('Al mezclar agua con aceite, ¿qué ocurre?', ['No se mezclan (son inmiscibles)','Se mezclan perfectamente','El aceite se evapora','El agua se vuelve aceite'], 0, 'Agua y aceite no se mezclan porque el agua es polar y el aceite no polar.'),
+    () => qTF('El agua hierve a 100°C al nivel del mar.', true, 'A presión atmosférica normal (nivel del mar), el agua hierve a 100°C.'),
+    () => qTF('Todos los metales son atraídos por un imán.', false, 'Solo los metales ferromagnéticos (hierro, níquel, cobalto) son atraídos. El aluminio o el cobre no.'),
+    () => qTF('Los murciélagos son mamíferos.', true, 'Los murciélagos son los únicos mamíferos que vuelan; tienen pelo y amamantan a sus crías.'),
+    () => qMatch('Relaciona cada animal con su grupo:', [
+      { left: 'Serpiente', right: 'Reptil' },
+      { left: 'Sapo', right: 'Anfibio' },
+    ], 'Serpiente=Reptil (escamas, sangre fría). Sapo=Anfibio (piel húmeda, metamorfosis).'),
+    () => qMatch('Relaciona cada órgano con su sistema:', [
+      { left: 'Pulmones', right: 'Respiratorio' },
+      { left: 'Estómago', right: 'Digestivo' },
+    ], 'Pulmones = Sistema respiratorio. Estómago = Sistema digestivo.'),
+    () => qOrder('Ordena los planetas del más cercano al más lejano del Sol:', ['Mercurio','Venus','Tierra','Marte'], 'Mercurio → Venus → Tierra → Marte (planetas interiores/rocosos).'),
+    () => qOrder('Ordena los niveles de organización de menor a mayor:', ['Célula','Tejido','Órgano','Sistema'], 'Célula → Tejido → Órgano → Sistema (organismo).'),
+  ];
 
-    qs.push(qMC(`El sistema ${t1.sys} tiene como función:`, [t1.func,'Producir sonido','Generar luz','Almacenar agua'], 0, `El sistema ${t1.sys} sirve para: ${t1.func}.`));
-    const organDistractors = ['Corazón','Riñones','Cerebro y nervios','Glóbulos blancos'].filter(o => o !== t2.organ);
-    qs.push(qMC(`¿Qué órgano pertenece al sistema ${t2.sys}?`, [t2.organ, organDistractors[0], organDistractors[1], organDistractors[2]], 0, `${t2.organ} es parte del sistema ${t2.sys}.`));
-    qs.push(qMatch('Relaciona sistema con su función:', [
-      { left: t1.sys, right: t1.func },
-      { left: t2.sys, right: t2.func },
-    ], `${t1.func}. ${t2.func}.`));
+  const pool6 = [
+    () => { const t = CIEN_SYS6[ni % CIEN_SYS6.length]; return qMC(`El sistema ${t.sys.trim()} se encarga principalmente de:`, [t.func,'Bombear sangre','Digerir alimentos','Mover los huesos'], 0, `El sistema ${t.sys.trim()}: ${t.func}.`); },
+    () => qMC('La velocidad de la luz en el vacío es aproximadamente:', ['300,000 kilómetros por segundo','300 kilómetros por segundo','3,000 kilómetros por segundo','30 kilómetros por segundo'], 0, 'La luz recorre ~300,000 km en un segundo; puede dar 7 vueltas a la Tierra en 1 segundo.'),
+    () => qMC('¿Qué fuerza se opone al movimiento entre dos superficies en contacto?', ['Fricción','Gravedad','Inercia','Elasticidad'], 0, 'La fricción o roce actúa en dirección contraria al movimiento.'),
+    () => qMF('¿Qué instrumento mide la temperatura?', ['Termómetro','Barómetro','Cronómetro','Dinamómetro'], 0, 'Termómetro: temperatura. Barómetro: presión. Cronómetro: tiempo.'),
+    () => qOrder('Ordena los estados de la materia de MENOR a MAYOR energía cinética:', ['Sólido','Líquido','Gas','Plasma'], 'Sólido (partículas fijas) → Líquido (fluyen) → Gas (se expanden) → Plasma (ionizado, muy energético).'),
+    () => qTF('El volumen se mide en metros cúbicos (m³), no en metros cuadrados.', true, 'm³ mide espacio tridimensional (volumen). m² mide superficie plana (área).'),
+    () => qMC('¿Cuál de estos recursos energéticos es NO renovable?', ['Petróleo','Energía solar','Viento','Energía geotérmica'], 0, 'El petróleo tarda millones de años en formarse y se consume mucho más rápido de lo que se regenera.'),
+    () => qMC('¿Cuál es la capa más extensa del interior de la Tierra?', ['Manto (~2,900 km)','Núcleo externo (~2,200 km)','Corteza (~30-50 km)','Núcleo interno (~1,200 km)'], 0, 'El manto ocupa ~84% del volumen terrestre; es roca semifundida en convección.'),
+    () => qMC('¿Qué tipo de roca se forma por el enfriamiento del magma?', ['Ígnea','Sedimentaria','Metamórfica','Caliza'], 0, 'Rocas ígneas (granito, basalto) se forman al enfriarse el magma. Sedimentarias: por acumulación.'),
+    () => qMC('¿Qué gas de la atmósfera es el más abundante?', ['Nitrógeno (78%)','Oxígeno (21%)','Dióxido de carbono','Hidrógeno'], 0, 'El nitrógeno (N₂) compone ~78% del aire; el oxígeno ~21%.'),
+  ];
 
-    qs.push(qMC(`Los estados de la materia son: ${CIEN_STATES.slice(0,3).join(', ')}. Cuando el agua se calienta y se evapora, las partículas...`, ['Se separan y se vuelven gas','Se acercan y se solidifican','Se mantienen igual','Se multiplican'], 0, `Al calentarse, las partículas ganan energía cinética y se separan: sólido → líquido → gas.`));
-    qs.push(qOrder('Ordena correctamente el ciclo del agua:', CIEN_WATER, 'Evaporación (el agua sube) → Condensación (forman nubes) → Precipitación (lluvia) → Escorrentía (regreso al mar/río)'));
-    qs.push(qTF('Las plantas realizan fotosíntesis: absorben dióxido de carbono y liberan oxígeno.', true, 'Fotosíntesis: CO₂ + luz + agua → glucosa + O₂. Las plantas producen el oxígeno que respiramos.'));
-    qs.push(qMC(`Un ecosistema con alta biodiversidad, lluvias todo el año y árboles de más de 20 m es una:`, ['Selva húmeda tropical','Pradera','Desierto','Tundra'], 0, 'La selva tropical tiene la mayor biodiversidad del planeta: clima cálido y húmedo todo el año.'));
-  } else {
-    const t6 = CIEN_SYS6[ni % CIEN_SYS6.length];
-    qs.push(qMC(`El sistema ${t6.sys.trim()} se encarga de:`, [t6.func,'Bombear sangre','Digerir alimentos','Mover los huesos'], 0, `El sistema ${t6.sys.trim()}: ${t6.func}.`));
-    qs.push(qMC('¿Cuál es la velocidad aproximada de la luz?', ['300,000 km/s','300 km/s','30,000 km/s','3,000,000 km/s'], 0, 'La luz viaja a ~300,000 km por segundo en el vacío.'));
-    qs.push(qMC('¿Qué fuerza hace que un auto en movimiento se detenga si no se frena?', ['Fricción (roce)','Gravedad','Inercia','Magnetismo'], 0, 'La fricción es la fuerza de roce entre superficies que se opone al movimiento y lo frena.'));
-    qs.push(qOrder('Ordena estados de la materia de MENOS a MÁS energía cinética:', ['Sólido','Líquido','Gas','Plasma'], 'Sólido (partículas fijas) → Líquido (fluyen) → Gas (se expanden) → Plasma (ionizado)'));
-    qs.push(qTF('El volumen se mide en metros cuadrados (m²).', false, 'El volumen = metros cúbicos (m³), porque es espacio 3D. El m² mide área (2D).'));
-    qs.push(qMC(`¿Cuál de estos recursos es NO-renovable?`, ['Petróleo','Energía solar','Viento','Calor geotérmico'], 0, 'El petróleo se forma en millones de años; se agota en décadas: es no-renovable.'));
-    qs.push(qMC('La capa de la Tierra más gruesa es:', ['Manto (~2,900 km)','Núcleo externo (~2,200 km)',' Corteza (~30-50 km)','Atmósfera'], 0, 'El manto es la capa más grande del interior terrestre, entre la corteza y el núcleo.'));
+  // Elegir preguntas variadas sin repetir template exacto
+  const selected = new Set<number>()
+  const pool = ni <= 50 ? pool5 : pool6
+  const count = Math.min(pool.length, 5 + Math.floor(Math.random() * 3)) // 5-7 preguntas variadas
+  
+  while (qs.length < count) {
+    const idx = (ni * 7 + qs.length * 13) % pool.length
+    if (!selected.has(idx)) {
+      selected.add(idx)
+      qs.push(pool[idx]())
+    } else {
+      // Buscar el siguiente no usado
+      for (let i = 0; i < pool.length && qs.length < count; i++) {
+        if (!selected.has(i)) { selected.add(i); qs.push(pool[i]()) }
+      }
+      break
+    }
   }
 
   return qs;

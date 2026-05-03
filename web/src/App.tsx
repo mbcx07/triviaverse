@@ -1179,7 +1179,15 @@ export default function App() {
       try {
         const qs = await listQuestions(lessonId)
         // 🎲 Shuffle question order & shuffle options per question
-        const shuffled = qs.map(q => {
+        // 🚫 Filter out duplicate prompts
+        const seenPrompts = new Set<string>()
+        const uniqueQs = qs.filter(q => {
+          const prompt = (q.prompt || '').trim().toLowerCase()
+          if (seenPrompts.has(prompt)) return false
+          seenPrompts.add(prompt)
+          return true
+        })
+        const shuffled = uniqueQs.map(q => {
           if (!Array.isArray((q as any).options) || (q as any).options.length === 0) return q
           const opts = [...(q as any).options]
           const correctIdx = (q as any).correctIndex ?? (q as any).answer ?? 0
