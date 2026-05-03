@@ -260,9 +260,28 @@ export default function App() {
 
   // Daily Challenge state
   const [dailyChallenge, setDailyChallenge] = useState<{ questions: any[]; idx: number; lives: number; completed: boolean; rewardClaimed: boolean; correctCount: number } | null>(null)
+  
+  // Load daily challenge from localStorage on mount
+  useEffect(() => {
+    if (!user) return
+    try {
+      const key = `tv_daily_${user.id}_${new Date().toISOString().slice(0, 10)}`
+      const saved = localStorage.getItem(key)
+      if (saved) setDailyChallenge(JSON.parse(saved))
+    } catch { /* ignore */ }
+  }, [user])
   const [dcAnswered, setDcAnswered] = useState(false)
   const [dcFeedback, setDcFeedback] = useState<{ correct: boolean; correctIndex: number } | null>(null)
   const [dcSelected, setDcSelected] = useState<number | null>(null)
+
+  // Persist daily challenge to localStorage on changes
+  useEffect(() => {
+    if (!user || !dailyChallenge) return
+    try {
+      const key = `tv_daily_${user.id}_${new Date().toISOString().slice(0, 10)}`
+      localStorage.setItem(key, JSON.stringify(dailyChallenge))
+    } catch { /* ignore */ }
+  }, [dailyChallenge, user])
 
   // Battle: vote for an answer (can change while timer is active)
   async function submitBattleVote(option: number) {
@@ -2474,15 +2493,18 @@ export default function App() {
             ) : dailyChallenge.completed && !dailyChallenge.rewardClaimed ? (
               <div className="rounded-3xl border-b-4 border-[#58CC02] bg-gradient-to-b from-[#7DFE00] to-[#58CC02] p-4 text-center">
                 <div className="text-base font-black text-slate-900">🎉 ¡Completado!</div>
-                <div className="mt-1 text-xs font-bold text-slate-800">Bonus: +50 XP</div>
+                <div className="mt-1 text-xs font-bold text-slate-800">Bonus: +{dailyChallenge.lives === 3 ? 50 : dailyChallenge.lives === 2 ? 30 : dailyChallenge.lives === 1 ? 15 : 5} XP ({dailyChallenge.lives} ❤️)</div>
                 <button
                   className="mt-2 w-full rounded-2xl bg-[#4AA000] py-2 text-sm font-black text-white"
                   onClick={async () => {
                     if (!user) return
+                    const lives = dailyChallenge?.lives || 0
+                    // XP based on remaining lives: 3=50, 2=30, 1=15, 0=5
+                    const bonusCorrect = lives === 3 ? 6 : lives === 2 ? 4 : lives === 1 ? 3 : 2
                     await recordAttempt({
                       userId: user.id, lessonId: `daily-${new Date().toISOString().slice(0, 10)}`,
                       questionId: 'daily-challenge', answerRaw: 'completed', wasCorrect: true,
-                      answeredCount: 5, correctCount: 5,
+                      answeredCount: bonusCorrect, correctCount: bonusCorrect,
                     })
                     setDailyChallenge((d: any) => d ? { ...d, rewardClaimed: true } : d)
                   }}
