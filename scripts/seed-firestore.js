@@ -244,81 +244,62 @@ function espQuestions(n) {
   const ai_idx = (ni*7) % ESP_ADJS.length;
   const noun = ESP_NOUNS[ni_idx], verb = ESP_VERBS[vi_idx], adj = ESP_ADJS[ai_idx];
 
-  // Q1: Tipo de palabra
-  if (ni <= 33) {
-    qs.push(qMC(`¿"${noun}" es...`, ['Un sustantivo','Un verbo','Un adjetivo','Un adverbio'], 0, `"${noun}" es un sustantivo: nombra seres, lugares o cosas.`));
-    qs.push(qMC(`¿"${verb}" es...`, ['Un verbo','Un sustantivo','Un adjetivo','Un artículo'], 0, `"${verb}" es un verbo: expresa una acción o estado.`));
-  } else if (ni <= 66) {
-    qs.push(qMC(`¿"${adj}" es...`, ['Un adjetivo','Un verbo','Un sustantivo','Una preposición'], 0, `"${adj}" es un adjetivo: describe o califica a un sustantivo.`));
-    qs.push(qMC(`"Rápidamente" es un...`, ['Adverbio de modo','Adjetivo','Sustantivo','Verbo'], 0, `Los adverbios terminados en -mente modifican al verbo: responden ¿cómo?`));
-  } else {
-    qs.push(qMC(`¿"${ESP_PREPS[ni%ESP_PREPS.length]}" es...`, ['Una preposición','Un verbo','Un adjetivo','Una conjunción'], 0, `Las preposiciones establecen relaciones entre palabras: lugar, tiempo, dirección.`));
-    qs.push(qMC(`¿Cuál es un pronombre posesivo?`, ['mío','muy','aunque','sobre'], 0, `"Mío" indica posesión: "El libro es mío."`));
-  }
+  // Pool variado de preguntas de español sin repeticiones fijas
+  const pool = [
+    // Tipo de palabra
+    () => qMC(`La palabra "${noun}" es un:`, ['Sustantivo','Verbo','Adjetivo','Adverbio'], 0, `"${noun}" es un sustantivo: nombra personas, animales, objetos, lugares o ideas.`),
+    () => qMC(`La palabra "${verb}" es un:`, ['Verbo','Sustantivo','Adjetivo','Artículo'], 0, `"${verb}" es un verbo: expresa una acción, estado o proceso.`),
+    () => qMC(`La palabra "${adj}" es un:`, ['Adjetivo','Verbo','Sustantivo','Preposición'], 0, `"${adj}" es un adjetivo: describe o califica a un sustantivo.`),
+    () => { const p = ESP_PREPS[ni % ESP_PREPS.length]; return qMC(`La palabra "${p}" es una:`, ['Preposición','Verbo','Adjetivo','Conjunción'], 0, `"${p}" es una preposición: relaciona palabras indicando lugar, tiempo, dirección, etc.`); },
+    () => qMC('¿Cuál de estas palabras es un adverbio?', ['Rápidamente','Hermoso','Cantar','Mesa'], 0, 'Las palabras terminadas en -mente son adverbios de modo. Responde ¿cómo?'),
+    () => qMC('¿Cuál de estas palabras es un pronombre personal?', ['Él','El','Allí','Y'], 0, '"Él" con tilde es pronombre personal. "El" sin tilde es artículo.'),
+    
+    // Puntuación y ortografía
+    () => qMC('¿Qué signo cierra una pregunta directa?', ['Signo de interrogación (?)','Punto (.)','Coma (,)','Punto y coma (;)'], 0, 'Las preguntas directas en español llevan ¿ al inicio y ? al final.'),
+    () => qMC('La coma (,) dentro de una oración sirve principalmente para:', ['Separar elementos de una lista','Terminar la oración','Indicar pregunta','Unir dos oraciones iguales'], 0, 'La coma enumera, separa, aclara o indica pausa breve en la lectura.'),
+    () => qMC('¿Qué palabra lleva tilde diacrítica para diferenciarse de su par sin tilde?', ['Tú (pronombre)','Tu (posesivo)','El (artículo)','Mi (posesivo)'], 0, '"Tú" con tilde = pronombre personal (tú eres). "Tu" sin tilde = posesivo (tu libro).'),
+    () => qMC('¿En qué caso se usa correctamente la letra mayúscula?', ['Al inicio de un nombre propio (México)','Después de una coma','En medio de una palabra','En cualquier palabra'], 0, 'Los nombres propios de personas, países, ciudades y la primera palabra de una oración llevan mayúscula.'),
+    () => qMC('¿Cuál es la diferencia entre "por qué" (separado con tilde) y "porque" (junto sin tilde)?', ['Por qué = pregunta; porque = respuesta o causa','Son iguales','Por qué = causa; porque = pregunta','No existe diferencia'], 0, '"Por qué" interroga. "Porque" explica la causa. "Porqué" es sustantivo (el porqué).'),
+    () => qMC('¿Qué palabra está escrita correctamente?', ['Huevo (con h)','Uevo (sin h)','Guevo','Huebo'], 0, '"Huevo" lleva h porque las palabras que empiezan con hue- llevan h (hueso, huella, huérfano).'),
+    
+    // Comprensión lectora y tipos de texto
+    () => qMC('Una receta de cocina con ingredientes y pasos es un texto:', ['Instructivo','Narrativo','Poético','Dialogado'], 0, 'Los textos instructivos indican pasos para lograr un objetivo: recetas, manuales, tutoriales.'),
+    () => qMC('Una noticia de periódico es un texto:', ['Informativo','Instructivo','Literario','Publicitario'], 0, 'La noticia informa hechos reales de manera objetiva: responde qué, quién, cuándo, dónde, cómo y por qué.'),
+    () => qMC('Un cuento con hadas, dragones y magia pertenece al género:', ['Fantasía','Noticia','Biografía','Ensayo'], 0, 'La fantasía incluye elementos mágicos o sobrenaturales que no existen en el mundo real.'),
+    () => qMC('¿Cuál es el propósito principal de un texto argumentativo?', ['Convencer o persuadir al lector','Contar una historia divertida','Dar instrucciones paso a paso','Describir un paisaje'], 0, 'Los textos argumentativos defienden una opinión con argumentos para convencer al lector.'),
+    () => qMC('La moraleja de una fábula es:', ['La enseñanza o lección que deja la historia','El nombre del autor','El lugar donde ocurre','El personaje principal'], 0, 'La moraleja es la lección de vida que se aprende al final de la fábula.'),
+    
+    // Sujeto y predicado
+    () => qMC(`En la oración "El ${noun} ${verb}", ¿cuál es el sujeto?`, [`El ${noun}`, verb, 'No tiene sujeto', 'Es impersonal'], 0, `"El ${noun}" es el sujeto: es quien realiza la acción de ${verb}.`),
+    () => qMC('¿Qué es el predicado de una oración?', ['Todo lo que se dice del sujeto (incluye el verbo)','Solo el verbo','Solo el sujeto','Los signos de puntuación'], 0, 'El predicado contiene el verbo y los complementos que expresan lo que hace o le pasa al sujeto.'),
+    () => qMC('En una oración imperativa, el verbo expresa:', ['Una orden, ruego o prohibición','Una pregunta','Una afirmación','Una duda'], 0, 'Las oraciones imperativas dan órdenes: ¡Ven aquí! ¡Cierra la puerta!'),
+    () => qMC('¿Qué tipo de oración es "¡Qué bonito día hace hoy!"?', ['Exclamativa','Interrogativa','Enunciativa','Imperativa'], 0, 'Las oraciones exclamativas expresan emoción o sentimiento y llevan signos ¡!'),
+    () => qMC('¿Cuál de estas oraciones tiene sujeto tácito (no expresado)?', ['Compré fruta en el mercado','Juan compró fruta','Los niños compran fruta','El mercado vende fruta'], 0, '"Compré fruta" tiene sujeto tácito (YO): no aparece escrito pero se sobreentiende.'),
+    
+    // Gramática
+    () => qMC(`Completa: "__ ${noun}s están en __ ${noun}."`, ['Los / la','El / el','Un / una','Los / el'], 0, '"Los" es artículo masculino plural y "la" es artículo femenino singular.'),
+    () => qMC('La palabra "y" en "mesa y silla" funciona como:', ['Conjunción (une dos elementos)','Preposición','Adjetivo','Sustantivo'], 0, '"Y" es conjunción copulativa: une palabras, frases u oraciones del mismo nivel.'),
+    () => qMC('¿Cuál es el artículo indefinido masculino singular?', ['Un','El','Los','La'], 0, '"Un" es artículo indefinido: se refiere a algo no determinado (un libro cualquiera, no uno específico).'),
+    
+    // Vocabulario
+    () => { const s = ESP_NOUNS[(ni*5) % ESP_NOUNS.length]; const sc = ESP_SYNONYMS[s] || s; const w1 = ESP_ADJS[(ni+2) % ESP_ADJS.length]; const w2 = ESP_VERBS[(ni+1) % ESP_VERBS.length]; const w3 = ESP_NOUNS[(ni+7) % ESP_NOUNS.length]; return qMC(`¿Cuál es sinónimo de "${s}"?`, [sc, w1, w2, w3], 0, `"${sc}" es sinónimo de "${s}": tienen significado parecido o equivalente.`); },
+    () => { const a = ESP_ADJS[(ni*7) % ESP_ADJS.length]; const ant = ESP_ADJS[((ni*7)+5) % ESP_ADJS.length]; return qMC(`Lo contrario de "${a}" podría ser:`, [ant, a, ESP_ADJS[(ni+1) % ESP_ADJS.length], ESP_NOUNS[ni_idx]], 0, `Los antónimos son palabras con significado opuesto.`); },
+    () => qMC('Las palabras que suenan igual pero tienen distinto significado se llaman:', ['Homónimas','Sinónimas','Antónimas','Parónimas estrictas'], 0, 'Homónimas: "vino" (bebida) y "vino" (de venir). Suenan y se escriben igual pero significan cosas diferentes.'),
+  ]
 
-  // Q2: Puntuación y ortografía
-  if (ni <= 33) {
-    qs.push(qMC(`¿Qué tipo de oración es "El perro ladró"?`, ['Enunciativa (afirma un hecho)','Interrogativa (pregunta)','Imperativa (ordena)','Exclamativa (expresa emoción)'], 0, `"El perro ladró" afirma un hecho: es enunciativa y termina con punto.`));
-    qs.push(qMC(`"¿Cuándo llegas?" es una oración...`, ['Interrogativa directa','Enunciativa','Imperativa','Desiderativa'], 0, `Las preguntas con ¿? son interrogativas directas.`));
-  } else if (ni <= 66) {
-    qs.push(qMC(`"Llegó tarde; por eso no entró." La punto y coma indica...`, ['Causa o consecuencia','Tiempo','Lugar','Contraste'], 0, `Punto y coma + "por eso/pero" indica consecuencia o contraste entre oraciones.`));
-    qs.push(qMC(`¿En qué tipo de palabra se coloca tilde diacrítica?`, ['Pronombres (él, tú, mí)','Sustantivos','Adjetivos','Verbos'], 0, `Tilde diacrítica: él/elle, tú/tu, mí/mi, qué/que, cómo/como, etc. Distinguen significado o función.`));
-  } else {
-    qs.push(qMC(`"Fue al mercado y compró frutas." ¿Dónde lleva coma?`, ['No lleva coma','Después de "mercado"','Antes de "y"','Antes de "frutas"'], 0, `Cuando el verbo tiene el mismo sujeto, no se separa con coma antes de 'y'.`));
-    qs.push(qMC(`¿"Periódico" y "periódico" (verbo) son palabras...`, ['Homónimas (igual sonido, distinto significado)','Sinónimas','Antónimas','Agudas'], 0, `"Periódico" (sustantivo: diario) vs "periódico" (verbo pasar): homónimas.`));
-  }
-
-  // Q3: Comprensión lectora — tipos de texto
-  if (ni <= 33) {
-    qs.push(qMC(`Una receta de cocina es un texto...`, ['Instructivo','Narrativo','Poético','Informativo'], 0, `La receta enseña pasos para hacer algo: es un texto instructivo.`));
-    qs.push(qMC(`¿Qué es una fábula?`, ['Cuento breve con animales que enseña una lección moral','Poema sobre la naturaleza','Noticia de un periódico','Historia de la ciencia'], 0, `Las fábulas son cuentos con animales que dan una enseñanza moral (Ej.: Esopo, La Fontaine).`));
-  } else if (ni <= 66) {
-    qs.push(qMC(`¿Cuál es el propósito de un texto informativo?`, ['Presentar hechos, datos y explicaciones','Inventar una historia','Persuadir al lector','Escribir un poema'], 0, `El texto informativo comunica conocimientos: enciclopedias, artículos, reportes.`));
-    qs.push(qMC(`En un instructivo, ¿dónde se menciona el material necesario?`, ['Al inicio, antes de los pasos','En las ilustraciones','Como pie de página','Al final'], 0, `Estructura típica de instructivo: Material → Pasos → Resultado.`));
-  } else {
-    qs.push(qMC(`En un artículo de enciclopedia, ¿dónde suele estar la idea principal?`, ['En el primer párrafo','En las notas al pie','En las ilustraciones','En el índice'], 0, `La idea principal de un apartado suele estar en el primer párrafo; los siguientes desarrollan.`));
-    qs.push(qMC(`Un editorial de periódico es un texto...`, ['Argumentativo (opina y persuade)','Narrativo','Instructivo','Lírico'], 0, `El editorial presenta la opinión del medio sobre un tema: busca persuadir al lector.`));
-  }
-
-  // Q4: Sujeto y predicado
-  if (ni <= 33) {
-    qs.push(qMC(`En "La maestra explica la lección", el sujeto es:`, ['La maestra','explica','la lección','La'], 0, `El sujeto es "La maestra": el ser que realiza la acción de explicar.`));
-    qs.push(qMC(`En "Los niños juegan en el parque", ¿dónde termina el sujeto?`, ['Antes de "juegan"','Después de "juegan"','En "en el parque"','No hay sujeto'], 0, `El sujeto "Los niños" termina justo antes del verbo "juegan".`));
-  } else if (ni <= 66) {
-    qs.push(qMC(`"Nosotros estudiamos en la biblioteca." El sujeto es...`, ['Simple (plural)','Compuesto (dos núcleos)','Impersonal','Tácito'], 0, `"Nosotros" es un solo núcleo del sujeto: sujeto simple (en plural).`));
-    qs.push(qMC(`¿Qué tipo de predicado tiene "El viento mueve las hojas"?`, ['Verbal','Nominal','Impersonal','Inverso'], 0, `El núcleo es el verbo "mueve": predicado verbal.`));
-  } else {
-    qs.push(qMC(`"Es necesario leer todos los días." El sujeto es...`, ['Tácito (no expresado)','"Es necesario"','"Leer todos los días"','"Todos los días"'], 0, `Las oraciones impersonales con "es + adjetivo" no tienen sujeto: se sobrentiende "algo".`));
-    qs.push(qMC(`¿Qué tipo de oración es "¡Cierra la puerta!"?`, ['Imperativa (ordena)','Interrogativa','Exclamativa simple','Enunciativa'], 0, `El imperativo ordena o pide algo: ¡Cierra! = orden directa.`));
-  }
-
-  // Q5: Gramática — artículos, pronombres, conjunciones
-  if (ni <= 33) {
-    qs.push(qMC(`Completa: "__ libros están en __ mesa."`, ['Los / la','El / el','Un / una','Los / el'], 0, `"Los libros" (artículo + sustantivo masc. pl.) + "la mesa" (artículo + sust. fem. sg.).`));
-    qs.push(qMC(`¿"${ESP_PREPS[ni%ESP_PREPS.length]}" es...?`, ['Preposición','Verbo','Adjetivo','Conjunción'], 0, `"${ESP_PREPS[ni%ESP_PREPS.length]}" indica relación entre palabras: lugar, tiempo, dirección.`));
-  } else if (ni <= 66) {
-    qs.push(qMC(`¿Cuál es un determinante posesivo?`, ['mi','muy','con','para'], 0, `"Mi" indica posesión: "mi libro". Los posesivos acompañan al sustantivo.`));
-    qs.push(qMC(`En "Juan y María estudian", "y" es una...`, ['Conjunción coordinante','Preposición','Artículo','Interjección'], 0, `"Y" une palabras o oraciones del mismo nivel: conjunción coordinante.`));
-  } else {
-    qs.push(qMC(`"Aunque llueva, saldré." "Aunque" aquí es...`, ['Conjunción subordinada concessiva','Conjunción coordinante','Preposición','Adverbio'], 0, `"Aunque llueva" indica concesión: a pesar de que llueva, haré algo.`));
-    qs.push(qMC(`¿"Desconcertantemente" es...?`, ['Adverbio','Adjetivo','Sustantivo','Verbo'], 0, `Palabras en -mente son adverbios: forma femenina del adjetivo + sufijo -mente.`));
-  }
-
-  // Q6: Vocabulario — sinónimos, antónimos, homónimos
-  if (ni <= 33) {
-    const syn = ESP_NOUNS[(ni*5)%ESP_NOUNS.length];
-    const synCorrect = ESP_SYNONYMS[syn] || syn;
-    const synWrong1 = ESP_ADJS[(ni*5+2)%ESP_ADJS.length];
-    const synWrong2 = ESP_VERBS[(ni*5+1)%ESP_VERBS.length];
-    const synWrong3 = ESP_NOUNS[(ni*5+7)%ESP_NOUNS.length];
-    qs.push(qMC(`Sinónimo de "${syn}"`, [synCorrect,synWrong1,synWrong2,synWrong3], 0, `"${synCorrect}" es sinónimo de "${syn}": tienen significado parecido.`));
-    qs.push(qMC(`Antónimo de "subir"`, ['Bajar','Correr','Volar','Saltar'], 0, `Subir ↔ Bajar: antónimos de dirección vertical.`));
-  } else if (ni <= 66) {
-    qs.push(qMC(`Antónimo de "honesto"`, ['Deshonesto','Amable','Valiente','Feliz'], 0, `Honesto ↔ Deshonesto: antónimos de veracidad.`));
-    qs.push(qMC(`"Valla" (cerca) y "Vaya" (de ir) son...`, ['Homónimas','Sinónimas','Antónimas','Parónimas'], 0, `Se escriben diferente pero suenan igual: homónimas (parónimas si se consideran ambos aspectos).`));
-  } else {
-    qs.push(qMC(`"Cazar" y "casar" son...`, ['Parónimas (suenan parecido, diferentes)','Homónimas (suenan igual)','Sinónimas','Antónimas'], 0, `Parónimas: suenan parecido pero tienen escritura y significado diferentes.`));
-    qs.push(qMC(`Diferencia entre "ser" y "estar":`, ['"Ser" = cualidades permanentes; "estar" = estados temporales','Son exactamente lo mismo','"Estar" es más formal','"Ser" es solo para personas'], 0, `"Soy alto" (cualidad) vs "Estoy cansado" (estado temporal).`));
+  // Elegir preguntas variadas sin repetir
+  const used = new Set<number>()
+  while (qs.length < 8) {
+    const idx = (ni * 3 + qs.length * 7) % pool.length
+    if (!used.has(idx)) {
+      used.add(idx)
+      qs.push(pool[idx]())
+    } else {
+      for (let i = 0; i < pool.length && qs.length < 8; i++) {
+        if (!used.has(i)) { used.add(i); qs.push(pool[i]()) }
+      }
+      break
+    }
   }
 
   return qs;
@@ -399,7 +380,7 @@ function cienQuestions(n) {
     () => { const t = CIEN_SYS6[ni % CIEN_SYS6.length]; return qMC(`El sistema ${t.sys.trim()} se encarga principalmente de:`, [t.func,'Bombear sangre','Digerir alimentos','Mover los huesos'], 0, `El sistema ${t.sys.trim()}: ${t.func}.`); },
     () => qMC('La velocidad de la luz en el vacío es aproximadamente:', ['300,000 kilómetros por segundo','300 kilómetros por segundo','3,000 kilómetros por segundo','30 kilómetros por segundo'], 0, 'La luz recorre ~300,000 km en un segundo; puede dar 7 vueltas a la Tierra en 1 segundo.'),
     () => qMC('¿Qué fuerza se opone al movimiento entre dos superficies en contacto?', ['Fricción','Gravedad','Inercia','Elasticidad'], 0, 'La fricción o roce actúa en dirección contraria al movimiento.'),
-    () => qMF('¿Qué instrumento mide la temperatura?', ['Termómetro','Barómetro','Cronómetro','Dinamómetro'], 0, 'Termómetro: temperatura. Barómetro: presión. Cronómetro: tiempo.'),
+    () => qMC('¿Qué instrumento mide la temperatura?', ['Termómetro','Barómetro','Cronómetro','Dinamómetro'], 0, 'Termómetro: temperatura. Barómetro: presión. Cronómetro: tiempo.'),
     () => qOrder('Ordena los estados de la materia de MENOR a MAYOR energía cinética:', ['Sólido','Líquido','Gas','Plasma'], 'Sólido (partículas fijas) → Líquido (fluyen) → Gas (se expanden) → Plasma (ionizado, muy energético).'),
     () => qTF('El volumen se mide en metros cúbicos (m³), no en metros cuadrados.', true, 'm³ mide espacio tridimensional (volumen). m² mide superficie plana (área).'),
     () => qMC('¿Cuál de estos recursos energéticos es NO renovable?', ['Petróleo','Energía solar','Viento','Energía geotérmica'], 0, 'El petróleo tarda millones de años en formarse y se consume mucho más rápido de lo que se regenera.'),
@@ -468,46 +449,39 @@ const HIST_WORLD = [
 function histQuestions(n) {
   const ni = Number(n);
   const qs = [];
+  const pre = HIST_PRE[ni % HIST_PRE.length];
+  const mx = HIST_MX[ni % HIST_MX.length];
+  const wld = HIST_WORLD[ni % HIST_WORLD.length];
+  const pre2 = HIST_PRE[(ni+3) % HIST_PRE.length];
+  const mx2 = HIST_MX[(ni+5) % HIST_MX.length];
 
-  if (ni <= 50) {
-    const pre = HIST_PRE[ni % HIST_PRE.length];
-    const pre2 = HIST_PRE[(ni+2) % HIST_PRE.length];
-    const mx = HIST_MX[ni % HIST_MX.length];
-    const mx2 = HIST_MX[(ni+4) % HIST_MX.length];
+  const pool = [
+    () => qMC(`Los ${pre.name} habitaron en:`, [pre.loc,'Europa','Sudamérica','Asia Central'], 0, `${pre.name}: ${pre.loc} (${pre.yrs}).`),
+    () => qMC(`¿Cuál fue un logro de los ${pre.name}?`, [pre.feat,'Viajes espaciales','Construcción de autos','Internet'], 0, `${pre.name}: ${pre.feat}.`),
+    () => qMC(`El evento "${mx.name}" ocurrió en:`, [String(mx.yr),'1800','1900','2000'], 0, `${mx.name}: ${mx.yr}. Líder: ${mx.hero}.`),
+    () => qMC(`Personaje clave de "${mx.name}":`, [mx.hero,'Benito Juárez','Porfirio Díaz','Lázaro Cárdenas'], 0, `${mx.hero} fue clave en ${mx.name} (${mx.yr}).`),
+    () => qMC(`${wld.name} se caracteriza por:`, [wld.feat,'Viajes espaciales','Televisión','Internet'], 0, `${wld.name}: ${wld.feat}.`),
+    () => qMC('¿En qué año inició la Independencia de México?', ['1810','1821','1910','1857'], 0, 'El Grito de Dolores fue el 16 de septiembre de 1810 con Miguel Hidalgo.'),
+    () => qMC('¿Qué civilización construyó las pirámides de Giza?', ['Egipcia','Maya','Azteca','Romana'], 0, 'Los egipcios construyeron las pirámides hace más de 4,500 años como tumbas faraónicas.'),
+    () => qMC('Capital del Imperio Azteca:', ['Tenochtitlán','Teotihuacán','Chichén Itzá','Monte Albán'], 0, 'Tenochtitlán (1325) sobre el lago de Texcoco, hoy Ciudad de México.'),
+    () => qMC('La Revolución Mexicana inició en:', ['1910','1810','1521','2000'], 0, 'En 1910 Francisco I. Madero convocó contra la dictadura de Porfirio Díaz.'),
+    () => qMC('¿Quién fue Benito Juárez?', ['Presidente de México, impulsó las Leyes de Reforma','Conquistador español','Emperador azteca','Pintor renacentista'], 0, 'Juárez fue el primer presidente indígena; separó la Iglesia del Estado.'),
+    () => qMC('¿Qué fue la Colonia en México?', ['300 años bajo dominio español (1521-1821)','Época independiente','Era de los dinosaurios','Período prehispánico'], 0, 'Nueva España fue colonia española de 1521 a 1821.'),
+    () => qMC('Los mayas destacaron en:', ['Astronomía, matemáticas y escritura','Navegación oceánica','Fabricación de autos','Industria textil'], 0, 'Los mayas crearon calendarios precisos, el cero y escritura jeroglífica.'),
+    () => qMatch('Relaciona civilización con su territorio:', [{ left: pre.name, right: pre.loc }, { left: pre2.name, right: pre2.loc }], `${pre.name}: ${pre.loc}. ${pre2.name}: ${pre2.loc}.`),
+    () => qMatch('Relaciona evento con su fecha:', [{ left: mx.name, right: String(mx.yr) }, { left: mx2.name, right: String(mx2.yr) }], `${mx.name}: ${mx.yr}. ${mx2.name}: ${mx2.yr}.`),
+    () => qTF('México fue colonia de Francia.', false, 'México fue colonia de España (Nueva España) durante 300 años, no de Francia.'),
+    () => qTF('Los mayas inventaron el cero en América.', true, 'Los mayas desarrollaron el concepto del cero de forma independiente al Viejo Mundo.'),
+    () => qOrder('Ordena del más antiguo al más reciente:', ['Prehistoria','Antiguo Egipto','Imperio Romano','Revolución Mexicana'], 'Prehistoria → Egipto (~3100 a.C.) → Roma (753 a.C.) → Revolución (1910).'),
+    () => qOrder('Ordena los períodos de México:', ['Prehispánico','Colonia','Independencia','Revolución'], 'Prehispánico → Colonia (1521) → Independencia (1821) → Revolución (1910).'),
+  ];
 
-    qs.push(qMC(`${pre.name} (${pre.yrs}): ¿En qué región se desarrollaron?`, [pre.loc,'Europa','América del Sur','Asia Central'], 0, `${pre.name} se desarrollaron en ${pre.loc}.`));
-    qs.push(qMC(`¿Qué característica cultural destaca de la civilización ${pre.name}?`, [pre.feat.split(',')[0],'Escritura alfabética','Aviones','Sistema democrático'], 0, `Los ${pre.name} se distinguieron por: ${pre.feat}.`));
-    qs.push(qMatch('Relaciona civilización prehispánica con su legado cultural:', [
-      { left: pre.name, right: pre.feat.split(',')[0] },
-      { left: pre2.name, right: pre2.feat.split(',')[0] },
-    ], `${pre.feat}. ${pre2.feat}.`));
-
-    qs.push(qMC(`La ${mx.name} (${mx.yr}) tuvo como consecuencia:`, [mx.result,'Mayor territorio','Paz total','Independencia total'], 0, `${mx.name}: ${mx.result}.`));
-    // Evitar duplicados: opciones incorrectas que no coincidan con el héroe correcto
-    const wrongHeroes = ['Hernán Cortés', 'Benito Juárez', 'Porfirio Díaz', 'Miguel Hidalgo', 'Venustiano Carranza'].filter(h => h !== mx2.hero);
-    qs.push(qMC(`¿Quién fue el principal protagonista de la ${mx2.name}?`, [mx2.hero, wrongHeroes[0], wrongHeroes[1], wrongHeroes[2]], 0, `${mx2.hero} fue el protagonista de ${mx2.name}.`));
-    qs.push(qOrder('Ordena cronológicamente (del más antiguo al más reciente):', [
-      'Olmecas (~1500 a.C.)','Mayas (~250 d.C.)','Guerra de Independencia (1810)','Revolución Mexicana (1910)'
-    ], 'Olmecas → Mayas → Independencia → Revolución'));
-    qs.push(qMC('¿Cuántos años duró la Guerra de Independencia de México (1810-1821)?', ['11 años','5 años','100 años','3 años'], 0, '1810 (Grito de Dolores) a 1821 (Tratado de Córdoba) = 11 años de guerra.'));
-    qs.push(qTF(`La ${mx.name} ocurrió en el año ${mx.yr}.`, true, `${mx.name}: ${mx.yr}.`));
-  } else {
-    const w = HIST_WORLD[ni % HIST_WORLD.length];
-    const w2 = HIST_WORLD[(ni+3) % HIST_WORLD.length];
-
-    qs.push(qMC(`${w.name} (${w.yrs}): ¿En qué consistió su mayor logro cultural?`, [w.feat.split(',')[0],'Construcción de satélites','Escritura digital','Energía nuclear'], 0, `${w.feat}.`));
-    qs.push(qMC(`¿En qué continente se desarrolló ${w.name}?`, [w.loc.split(' ')[0]==='Europa'?'Europa':w.loc.split(' ')[0]==='África'?'África':w.loc.split(' ')[0]==='Asia'?'Asia':w.loc.split(' ')[0]==='América'?'América':'Europa','América','África','Asia'], 0, `${w.name} tuvo lugar en ${w.loc}.`));
-    qs.push(qMatch('Relaciona época histórica con un aporte cultural:', [
-      { left: w.name, right: w.feat.split(',')[0] },
-      { left: w2.name, right: w2.feat.split(',')[0] },
-    ], `${w.feat}. ${w2.feat}.`));
-
-    qs.push(qMC('¿Qué civilización construyó las pirámides de Giza?', ['Egipcios','Mayas','Romanos','Griegos'], 0, 'Los egipcios (~siglo XXVI a.C.) construyeron las pirámides de Giza como tumbas para sus faraones.'));
-    qs.push(qTF('La Revolución Industrial (~1760) ocurrió antes que la Revolución Francesa (1789).', true, 'La Revolución Industrial comenzó ~1760 en Gran Bretaña; la Revolución Francesa fue en 1789. 1760 < 1789, por lo tanto la Industrial sí ocurrió antes.'));
-    qs.push(qOrder('Ordena: Antigüedad → Edad Media → Época moderna:', ['Grecia y Roma antiguas','Edad Media (siglos V-XV)','Renacimiento y Edad Moderna (siglos XIV-XVII)'], 'Grecia/Roma → Edad Media → Renacimiento'));
-    qs.push(qMC('¿Qué documento proclamó los derechos de libertad, propiedad y resistencia a la opresión?', ['Declaración de los Derechos del Hombre y del Ciudadano (1789)','Carta Magna (1215)','Constitución de EE.UU. (1787)','Tratado de Versalles (1919)'], 0, 'La Declaración de 1789, tras la Revolución Francesa, estableció derechos universales.'));
+  const used = new Set();
+  while (qs.length < 8) {
+    const idx = (ni * 5 + qs.length * 11) % pool.length;
+    if (!used.has(idx)) { used.add(idx); qs.push(pool[idx]()); }
+    else { for (let i = 0; i < pool.length && qs.length < 8; i++) { if (!used.has(i)) { used.add(i); qs.push(pool[i]()); } } break; }
   }
-
   return qs;
 }
 
@@ -578,62 +552,40 @@ const GEO_CONTINENTS = [
 function geoQuestions(n) {
   const ni = Number(n);
   const qs = [];
+  const st = GEO_ST[ni % GEO_ST.length];
+  const st2 = GEO_ST[(ni+10) % GEO_ST.length];
+  const river = GEO_RIVERS[ni % GEO_RIVERS.length];
+  const mount = GEO_MOUNTS[ni % GEO_MOUNTS.length];
+  const cont = GEO_CONTINENTS[ni % GEO_CONTINENTS.length];
 
-  if (ni <= 50) {
-    const st = GEO_ST[ni % GEO_ST.length];
-    const st2 = GEO_ST[(ni+8) % GEO_ST.length];
-    const st3 = GEO_ST[(ni+16) % GEO_ST.length];
+  const pool = [
+    () => qMC(`¿Cuál es la capital de ${st.st}?`, [st.cap,'Ciudad de México','Guadalajara','Monterrey'], 0, `La capital de ${st.st} es ${st.cap}.`),
+    () => qMC(`¿En qué zona de México está ${st.st}?`, [st.zona,'Norte','Sur','Sureste'], 0, `${st.st} está en la zona ${st.zona} de México.`),
+    () => qMC(`¿Qué océano está al oeste de México?`, ['Océano Pacífico','Océano Atlántico','Mar Caribe','Océano Índico'], 0, 'El Pacífico baña la costa oeste desde Baja California hasta Chiapas.'),
+    () => qMC('¿Cuántas entidades federativas tiene México?', ['32','31','50','26'], 0, '31 estados + 1 Ciudad de México = 32 entidades federativas.'),
+    () => qMC(`El río ${river.r} (${river.km}) está en:`, [river.cont,'África','Oceanía','Europa'], 0, `${river.r}: ${river.note}.`),
+    () => qMC('¿Cuál es el río más largo del mundo?', ['Nilo (6,650 km)','Amazonas (6,400 km)','Yangtsé (6,300 km)','Misisipi (3,734 km)'], 0, 'El Nilo en África es el más largo con 6,650 km.'),
+    () => qMC('¿Cuántos continentes hay?', ['7','5','6','8'], 0, 'África, Antártida, Asia, Europa, América del Norte, América del Sur y Oceanía = 7.'),
+    () => qMC(`El ${mount.m} (${mount.alt}) está en la cordillera:`, [mount.cord,'Alpes','Rocosas','Himalaya'], 0, `${mount.m} se ubica en ${mount.cont}, cordillera ${mount.cord}.`),
+    () => qMC('¿Qué mapa muestra diferencias de altitud?', ['Mapa hipsográfico','Mapa político','Mapa demográfico','Mapa de carreteras'], 0, 'El mapa hipsográfico usa curvas de nivel o colores para altitudes.'),
+    () => qMC('Principal causa del cambio climático:', ['Emisiones de CO₂ por combustibles fósiles','Variaciones orbitales','Volcanes','Rayos solares'], 0, 'La quema de petróleo, gas y carbón libera CO₂ que atrapa el calor.'),
+    () => qMC('¿Cuál es el continente más grande?', ['Asia (44.58 millones km²)','África','América del Norte','Europa'], 0, 'Asia es el más extenso con 44.58 millones de km².'),
+    () => qMC('El continente más poblado es:', ['Asia (~4,700 millones)','África','Europa','América del Norte'], 0, 'Asia concentra más del 60% de la población mundial.'),
+    () => qMatch('Relaciona estado con su capital:', [{ left: st.st, right: st.cap }, { left: st2.st, right: st2.cap }], `${st.st}: ${st.cap}. ${st2.st}: ${st2.cap}.`),
+    () => qMatch('Relaciona río con su característica:', [{ left: river.r, right: river.note }, { left: GEO_RIVERS[(ni+2)%GEO_RIVERS.length].r, right: GEO_RIVERS[(ni+2)%GEO_RIVERS.length].note }], 'Ríos del mundo y sus datos clave.'),
+    () => qTF('La Península de Yucatán tiene costas en el Golfo de México y el Mar Caribe.', true, 'Yucatán está rodeada por el Golfo al norte/oeste y el Caribe al este.'),
+    () => qTF('El Amazonas es el río más largo del mundo.', false, 'El Nilo es el más largo (6,650 km). El Amazonas es el de mayor volumen.'),
+    () => qTF('Asia es el continente más grande.', true, 'Asia tiene 44.58 millones km², casi 5 veces Europa.'),
+    () => qOrder('Ordena estados mexicanos de norte a sur:', ['Baja California','Zacatecas','Guerrero','Chiapas'], 'Baja California (noroeste) → Zacatecas → Guerrero → Chiapas (sur).'),
+    () => qOrder('Ordena océanos por tamaño (mayor a menor):', ['Pacífico','Atlántico','Índico','Ártico'], 'Pacífico (más grande) → Atlántico → Índico → Ártico (más pequeño).'),
+  ];
 
-    qs.push(qMC(`¿Cuál es la capital del estado de ${st.st}?`, [st.cap,'Ciudad de México','Guadalajara','Monterrey'], 0, `La capital de ${st.st} es ${st.cap}.`));
-    const geoZones = ['Norte','Centro','Sur','Este','Oeste','Sureste','Noroeste','Noreste','Golfo'];
-    const geoZoneCorrect = st.zona;
-    const geoZoneOptions = geoZones.filter(z => z !== geoZoneCorrect);
-    // Pick 3 distractors deterministically
-    const sel = []; for (let i = 0; i < 3; i++) sel.push(geoZoneOptions[(ni*3+i*5) % geoZoneOptions.length]);
-    sel.splice((ni*3)%3, 0, geoZoneCorrect);
-    qs.push(qMC(`¿${st.st} se encuentra en qué zona de México?`, sel, sel.indexOf(geoZoneCorrect), `${st.st} está en la zona ${geoZoneCorrect} de México.`));
-    qs.push(qMatch('Relaciona estado con su capital:', [
-      { left: st.st, right: st.cap },
-      { left: st2.st, right: st2.cap },
-    ], `${st.cap} capital de ${st.st}. ${st2.cap} capital de ${st2.st}.`));
-
-    qs.push(qMC(`¿Qué océano baña la costa occidental de México?`, ['Océano Pacífico','Océano Atlántico','Mar Caribe','Océano Índico'], 0, 'El Océano Pacífico está al oeste de México, desde Baja California hasta Chiapas.'));
-    // Hemisferio — pregunta significativa con países reales
-    const hemiQs = [
-      {q:'¿En qué hemisferio está la mayor parte de Brasil?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está la mayor parte de Rusia?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está Australia?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está Canadá?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está Egipto?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está Argentina?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está Japón?',a:'Hemisferio Norte',w:['Hemisferio Sur','Hemisferio Oriental','Hemisferio Occidental']},
-      {q:'¿En qué hemisferio está Sudáfrica?',a:'Hemisferio Sur',w:['Hemisferio Norte','Hemisferio Oriental','Hemisferio Occidental']},
-    ];
-    const hemi = hemiQs[ni % hemiQs.length];
-    qs.push(qMC(hemi.q, [hemi.a, ...hemi.w], 0, `${hemi.q.replace('¿','').replace('?','')} = ${hemi.a}.`));
-    qs.push(qMC('México tiene un total de entidades federativas igual a:', ['32','31','50','26'], 0, '31 estados + 1 Ciudad de México = 32 entidades federativas.'));
-    qs.push(qOrder('Ordena estos estados de norte a sur:', ['Baja California','Zacatecas','Guerrero'], 'Baja California (noroeste) → Zacatecas (centro-norte) → Guerrero (sur)' ));
-    qs.push(qTF('La Península de Yucatán tiene costas en el Golfo de México y en el Mar Caribe.', true, 'Yucatán y Quintana Roo en el Caribe; Tabasco y Veracruz en el Golfo.'));
-  } else {
-    const river = GEO_RIVERS[ni % GEO_RIVERS.length];
-    const river2 = GEO_RIVERS[(ni+2) % GEO_RIVERS.length];
-    const mount = GEO_MOUNTS[ni % GEO_MOUNTS.length];
-    const cont = GEO_CONTINENTS[ni % GEO_CONTINENTS.length];
-
-    qs.push(qMC(`¿Cuál es el río más largo del mundo?`, ['Río Nilo','Río Amazonas','Río Yangtsé','Río Misisipi'], 0, `El Nilo tiene ${GEO_RIVERS[0].km}, el Amazonas ${GEO_RIVERS[1].km}: el Nilo es el más largo.`));
-    qs.push(qMC(`${river.r} (${river.km}) se encuentra en ${river.cont}. Es conocido por:`, [river.note,'Ser el más profundo','Tener iguanas','Ser navegable'], 0, `${river.r}: ${river.note}.`));
-    qs.push(qMatch('Relaciona río con su dato clave:', [
-      { left: river.r, right: river.note },
-      { left: river2.r, right: river2.note },
-    ], `${river.note}. ${river2.note}.`));
-
-    qs.push(qMC(`¿Cuántos continentes hay en el planeta?`, ['7','5','6','8'], 0, 'Los 7 continentes: África, Antártida, Asia, Europa, América del Norte, América del Sur y Oceanía.'));
-    qs.push(qMC(`${mount.m} (${mount.alt}) se encuentra en ${mount.cont}, en la cordillera:`, [mount.cord,'Alpes','Rocosas Canadienses','Himalaya'], 0, `${mount.m} está en ${mount.cont}, cordillera ${mount.cord}.`));
-    qs.push(qMC('¿Qué tipo de mapa muestra las diferencias de altitud de un terreno?', ['Mapa hipsográfico','Mapa político','Mapa demográfico','Mapa de carreteras'], 0, 'El mapa hipsográfico usa curvas de nivel o colores para representar la altitud.'));
-    qs.push(qTF('El continente más grande en superficie es Asia.', true, `Asia: ${GEO_CONTINENTS[2].area}. África: ${GEO_CONTINENTS[0].area}.`));
-    qs.push(qMC('¿Cuál es la PRINCIPAL causa del cambio climático actual?', ['Emisiones de CO₂ por quema de combustibles fósiles','Variaciones naturales de la órbita terrestre','Actividad volcánica','Rayos solares'], 0, 'La quema de petróleo, gas y carbón libera CO₂ que atrapa calor: causa principal del calentamiento actual.'));
+  const used = new Set();
+  while (qs.length < 8) {
+    const idx = (ni * 7 + qs.length * 13) % pool.length;
+    if (!used.has(idx)) { used.add(idx); qs.push(pool[idx]()); }
+    else { for (let i = 0; i < pool.length && qs.length < 8; i++) { if (!used.has(i)) { used.add(i); qs.push(pool[i]()); } } break; }
   }
-
   return qs;
 }
 
@@ -670,43 +622,38 @@ const CIV_DEM = [
 function civQuestions(n) {
   const ni = Number(n);
   const qs = [];
+  const art = CIV_ARTS[ni % CIV_ARTS.length];
+  const art2 = CIV_ARTS[(ni+3) % CIV_ARTS.length];
+  const val = CIV_VALS[ni % CIV_VALS.length];
+  const val2 = CIV_VALS[(ni+2) % CIV_VALS.length];
+  const dem = CIV_DEM[ni % CIV_DEM.length];
+  const dem2 = CIV_DEM[(ni+2) % CIV_DEM.length];
 
-  if (ni <= 50) {
-    const art = CIV_ARTS[ni % CIV_ARTS.length];
-    const art2 = CIV_ARTS[(ni+3) % CIV_ARTS.length];
-    const val = CIV_VALS[ni % CIV_VALS.length];
-    const val2 = CIV_VALS[(ni+2) % CIV_VALS.length];
+  const pool = [
+    () => qMC(`${art.a} de la Constitución establece:`, [art.t,'El presidente puede todo','Elecciones cada 100 años','Solo adultos tienen derechos'], 0, `${art.a}: ${art.t}.`),
+    () => qMC(`El valor "${val.v}" se demuestra al:`, [val.ex, val.no,'No cumplir tareas','Ignorar a los demás'], 0, `"${val.v}": ${val.ex}.`),
+    () => qMC('¿Para qué sirven las reglas en la escuela?', ['Mantener orden, respeto y seguridad','Castigar siempre','Separar grupos','Impedir hablar'], 0, 'Las reglas crean un ambiente seguro para que todos puedan aprender.'),
+    () => qMC('¿Quién protege tus derechos humanos en México?', ['CNDH (Comisión Nacional de Derechos Humanos)','El Ejército','Hacienda','El banco'], 0, 'La CNDH recibe quejas sobre violaciones de derechos humanos.'),
+    () => qMC('¿Qué significa equidad en la escuela?', ['Dar a cada quien lo que necesita para igualdad de condiciones','Tratar igual a todos','Excluir diferencias','Dar más al que pide'], 0, 'Equidad reconoce condiciones distintas y ofrece apoyos diferenciados.'),
+    () => qMC('¿Qué es presunción de inocencia?', ['Toda persona es inocente hasta que se demuestre lo contrario','Los ricos son inocentes','El gobierno decide','La policía siempre acierta'], 0, 'Nadie puede ser tratado como culpable sin una sentencia judicial.'),
+    () => qMC(`"${dem.d}" en democracia significa:`, [dem.r,'Obligación del gobierno','Un castigo','Una ley forzosa'], 0, `En democracia: ${dem.d} = ${dem.r}.`),
+    () => qMC('Votar directamente sobre una ley es un:', ['Referéndum','Plebiscito','Elección','Censo'], 0, 'El referéndum somete una ley aprobada a votación ciudadana directa.'),
+    () => qMC('¿Por qué es importante la división de poderes?', ['Evita que un grupo concentre todo el poder','Hace todo más rápido','Da más poder al presidente','Aumenta impuestos'], 0, 'Ejecutivo, Legislativo y Judicial se controlan mutuamente (checks and balances).'),
+    () => qMC('¿Qué es el estado de derecho?', ['Todos, incluido el gobierno, están sujetos a las leyes','El gobierno hace lo que quiere','No hay leyes','Solo los jueces deciden'], 0, 'Nadie está por encima de la ley.'),
+    () => qMatch('Relaciona valor con su ejemplo:', [{ left: val.v, right: val.ex }, { left: val2.v, right: val2.ex }], `"${val.v}": ${val.ex}. "${val2.v}": ${val2.ex}.`),
+    () => qMatch('Relaciona concepto democrático con su significado:', [{ left: dem.d, right: dem.r }, { left: dem2.d, right: dem2.r }], `${dem.d}: ${dem.r}. ${dem2.d}: ${dem2.r}.`),
+    () => qTF('Todos los niños del mundo tienen los mismos derechos.', true, 'La Convención de la ONU (1989) garantiza derechos universales a menores de 18 años.'),
+    () => qTF('Todos los países han firmado todos los tratados de derechos humanos.', false, 'No todos los países han ratificado todos los tratados internacionales de derechos humanos.'),
+    () => qOrder('Ordena los pasos para resolver un conflicto:', CIV_CONFLICT, CIV_CONFLICT.join(' → ')),
+    () => qOrder('Ordena el proceso de creación de una ley en México:', ['Iniciativa','Discusión en Congreso','Votación','Promulgación en DOF'], 'Iniciativa → Discusión → Votación → Promulgación.'),
+  ];
 
-    qs.push(qMC(`${art.a} de la Constitución establece que:`, [art.t,'El presidente puede eliminar leyes','Las elecciones son cada 100 años','Solo los adultos tienen derechos humanos'], 0, `${art.a}: ${art.t}.`));
-    qs.push(qMC(`El valor "${val.v}" se demuestra cuando alguien:`, [val.ex,val.no,'No cumple sus tareas','Ignora a los demás'], 0, `"${val.v}": ${val.ex}.`));
-    qs.push(qMatch('Relaciona valor con un ejemplo concreto:', [
-      { left: val.v, right: val.ex },
-      { left: val2.v, right: val2.ex },
-    ], `"${val.v}": ${val.ex}. "${val2.v}": ${val2.ex}.`));
-
-    qs.push(qMC('¿Para qué sirven las reglas de convivencia en la escuela?', ['Mantener orden, respeto y seguridad para todas y todos','Castigar a quienes se portan mal','Separar a los grupos de amigos','Impedir que la gente hable'], 0, 'Las reglas crean un ambiente seguro y de respeto donde todas y todos pueden aprender.'));
-    qs.push(qMC('¿Qué institución protege tus derechos humanos en México?', ['Comisión Nacional de los Derechos Humanos (CNDH)','El Ejército','La Secretaría de Hacienda','El banco nacional'], 0, 'La CNDH recibe quejas de quienes consideran vulnerados sus derechos humanos.'));
-    qs.push(qOrder('Ordena los pasos para resolver un conflicto de manera pacífica:', CIV_CONFLICT, `${CIV_CONFLICT.join(' → ')}`));
-    qs.push(qTF('Todos los niños y adolescentes del mundo tienen los mismos derechos, sin importar su origen, género, religión o discapacidad.', true, 'La Convención sobre los Derechos del Niño (ONU, 1989) establece derechos universales para menores de 18 años.'));
-    qs.push(qMC('¿Qué significa "equidad" en la escuela?', ['Dar a cada quien lo que necesita para participar en igualdad de condiciones','Tratar exactamente igual a todas las personas','No dejar que nadie participe si es diferente','Dar más a quien más pide'], 0, 'La equidad reconoce que cada persona parte de condiciones distintas y puede necesitar apoyos diferentes.'));
-  } else {
-    const dem = CIV_DEM[ni % CIV_DEM.length];
-    const dem2 = CIV_DEM[(ni+2) % CIV_DEM.length];
-
-    qs.push(qMC(`¿Qué significa "presunción de inocencia"?`, ['Toda persona es inocente hasta que se demuestre lo contrario','Los ricos son inocentes','El gobierno decide quién es inocente','La policía siempre tiene razón'], 0, 'Principio jurídico fundamental: nadie puede ser tratado como culpable sin sentencia.'));
-    qs.push(qMC(`La "${dem.d}" en una democracia significa:`, [dem.r,'Una obligación del gobierno','Un castigo','Una ley obligatoria'], 0, `En una democracia: ${dem.d} = ${dem.r}.`));
-    qs.push(qMatch('Relaciona concepto democrático con su significado:', [
-      { left: dem.d, right: dem.r },
-      { left: dem2.d, right: dem2.r },
-    ], `${dem.d}: ${dem.r}. ${dem2.d}: ${dem2.r}.`));
-
-    qs.push(qMC('¿Qué permite a la ciudadanía votar directamente sobre una ley específica?', ['Referéndum','Elección de delegados','Manifestación pacifica','Iniciativa de ley'], 0, 'El referéndum somete una ley ya aprobada por el Congreso a votación ciudadana directa.'));
-    qs.push(qMC('¿Por qué es importante la división de poderes?', ['Evita que un solo grupo concentre demasiado poder y lo abuse','Sirve para hacer trámites más rápido','Permite que el presidente tenga más poder','Ayuda a cobrar más impuestos'], 0, 'Separación de poderes: legislativo, ejecutivo y judicial se controlan mutuamente (checks and balances).'));
-    qs.push(qTF('Todos los países del mundo han ratificado todos los tratados de derechos humanos.', false, 'No todos los países han firmado o ratificado todos los tratados internacionales de derechos humanos.'));
-    qs.push(qOrder('Ordena el proceso de creación de una ley en México:', ['Iniciativa (diputado, presidente o ciudadano)','Discusión y aprobación en el Congreso','Votación','Promulgación y publicación en el DOF'], 'Iniciativa → Discusión → Votación → Promulgación'));
-    qs.push(qMC('¿Qué significa "estado de derecho"?', ['Todas las personas e instituciones están sujetas y protegidas por las leyes','El gobierno puede hacer lo que quiera','Las leyes no se aplican a nadie','Solo los jueces deciden todo'], 0, 'Nadie, ni ciudadanos ni gobernantes, está por encima de la ley.'));
+  const used = new Set();
+  while (qs.length < 8) {
+    const idx = (ni * 3 + qs.length * 7) % pool.length;
+    if (!used.has(idx)) { used.add(idx); qs.push(pool[idx]()); }
+    else { for (let i = 0; i < pool.length && qs.length < 8; i++) { if (!used.has(i)) { used.add(i); qs.push(pool[i]()); } } break; }
   }
-
   return qs;
 }
 
