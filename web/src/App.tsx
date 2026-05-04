@@ -1108,6 +1108,25 @@ export default function App() {
     prevReqInRef.current = current
   }, [reqIn, user])
 
+  // Detect new chat messages → toast notification
+  const prevChatNotifsRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!user) return
+    const currentUnread = Object.entries(chatNotifications)
+      .filter(([, n]) => n.unread)
+      .map(([id]) => id)
+    const prev = prevChatNotifsRef.current
+    const newOnes = currentUnread.filter(id => !prev.has(id))
+    if (prev.size > 0 && newOnes.length > 0) {
+      for (const id of newOnes) {
+        const name = id.slice(0, 10) || 'Alguien'
+        const msg = chatNotifications[id]?.lastMessage?.slice(0, 30) || ''
+        setToast(`💬 ${name}: ${msg}`)
+      }
+    }
+    prevChatNotifsRef.current = new Set(currentUnread)
+  }, [chatNotifications, user])
+
   // Friend public info (presence)
   useEffect(() => {
     if (!user) return
